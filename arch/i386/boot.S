@@ -10,34 +10,30 @@
 # 4. hand over execution to OluxOS kernel
 #
 
-BOOTSECT=0x7c00
-
-    .file       "boot.S"
     .text
     .code16
     .global      _start
     
 _start:
-                jmpl    $BOOTSECT, $_BootEntry 
+                jmp     _BootEntry 
 
 _BootEntry:
 
                 # initialize ds, es, ss with the value of cs
-                xor     %ax, %ax
-                mov     BOOTSECT, %ds
-                mov     BOOTSECT, %ss
-                mov     $0x2000, %sp
-                call    PrintBootMessage
-
+                mov     $0x7c00, %ax
+                mov     %ax, %ds
+                mov     $0x2000, %ax
+                mov     %ax, %ss
+                mov     $0x1000, %ax
+                mov     %ax, %sp
 
 _LOOP:
-                mov    $250,%cx
+                call    PrintBootMessage
+                mov     $250, %cx
 _FOR:
                 dec     %cx
-                jcxz    _NEXT
+                jcxz    _LOOP
                 jmp     _FOR
-_NEXT:
-                jmp     _LOOP
 
 
 
@@ -50,7 +46,5 @@ PrintBootMessage:
                 ret
 
 _BootMessage:
-
-    # 13 is ascii '\r', 10 is ascii '\n'
     .ascii      "\r\nLoading OluxOS kernel ......\r\n\r\n"
     __LengthOfBootMessage = . - _BootMessage
