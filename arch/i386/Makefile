@@ -22,7 +22,8 @@ floppy.img:
 
 	
 dump:
-	$(OBJDUMP) -m i386 -b binary -D boot.bin
+	#$(OBJDUMP) -m i386 -b binary -D boot.bin
+	#echo ""
 	ndisasm boot.bin
 
 
