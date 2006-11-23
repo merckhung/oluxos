@@ -14,7 +14,7 @@ boot.bin: boot.o
 
 
 boot.o: boot.S
-	$(AS) -o $@ $<
+	$(AS) -a=boot.lst -o $@ $<
 	
 
 floppy.img:
@@ -28,4 +28,4 @@ dump:
 
 
 clean:
-	rm -f *.o *.bin *.img
+	rm -f *.o *.bin *.img *.lst

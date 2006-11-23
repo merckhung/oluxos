@@ -11,8 +11,8 @@
  *  1. initialize registers
  *  2. print booting message
  *  3. setup segment descriptors
- *  //4. enable gate A20
- *  //5. enable protected mode
+ *  4. enable gate A20
+ *  5. enable protected mode
  * 
  * LABEL    : Subroutine
  * _LABEL   : Replacement of flow control
@@ -22,7 +22,7 @@
 
 
 BOOTSEG     =   0x07C0
-INITSEG     =   0x0400
+INITSEG     =   0x0500
 
 
 
@@ -365,7 +365,7 @@ __gdt:
     // Limit(19:16) = 0xfh      
     // P            = 1b        (present in memory)
     // DPL          = 00b       (privilege level 0)
-    // S            = 1b        (system segment)
+    // S            = 1b        (Code/Data segment)
     // Type         = 1010b     (code, execute/read)
     // AVL          = 0b        (reserved for OS)
     // D/B          = 1b        (32-bit)
@@ -383,7 +383,7 @@ __gdt:
     // Limit(19:16) = 0xfh
     // P            = 1b        (present in memory)
     // DPL          = 00b       (privilege level 0)
-    // S            = 1b        (system segment)
+    // S            = 1b        (Code/Data segment)
     // Type         = 0010b     (read/write)
     // AVL          = 0b
     // D/B          = 1b        (32-bit)
