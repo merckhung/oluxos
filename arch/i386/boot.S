@@ -10,9 +10,10 @@
  *
  *  1. initialize registers
  *  2. print booting message
- *  3. setup segment descriptors
+ *  3. setup global segment descriptors
  *  4. enable gate A20
  *  5. enable protected mode
+ *  6. jump to protected mode
  * 
  * LABEL    : Subroutine
  * _LABEL   : Replacement of flow control
@@ -20,24 +21,37 @@
  *
  */
 
+.file       "boot.S"
+
 
 BOOTSEG     =   0x07C0
-INITSEG     =   0x0500
-
+INITSEG     =   0x1000
 
 
 /******************************************************************************
  * Code Segment
  */
-.code16
 .text
-.global      _boot
-    
+.code16
+.global     _boot, __data_seg
+
 
 _boot:
+    jmp     _bpb
+    nop
+
+    .byte   0
+    .long   0
+    .long   0
+    .word   0
+    .byte   0
+    .byte   0
+    .word   0
+
+_bpb:
 
     //
-    // Move boot code itself to 0x0400(1MB position)
+    // Move boot code itself to 0x1000(1MB position)
     //
     // Setup DS:SI as source pointer
     //       ES:DI as destination pointer
@@ -58,7 +72,7 @@ _boot:
     // startint move boot code
     rep     movsw
 
-    // Jump to new location of boot code (0x400:_start)
+    // Jump to new location of boot code
     ljmp    $INITSEG, $(_start - _boot)
 
     
@@ -94,13 +108,21 @@ _start:
     call    sys_print
 
 
+    // Calculate offset of 32bit code start
+    xor     %eax, %eax
+    mov     %cs, %ax
+    shll    $4, %eax
+    addl    $(_32bit_mode_start - _boot), %eax
+    movl    %eax, (__code32 - _boot)
+
+
     // Convert to linear address
     xorl    %eax, %eax
     movw    %ds, %ax
     shll    $4, %eax
-    addl    $__gdt, %eax
-    movl    %eax, (__gdtptr + 2)
-    lgdt    __gdtptr
+    addl    $(__gdt - _boot), %eax
+    movl    %eax, (__gdtptr - _boot + 2)
+    lgdt    (__gdtptr - _boot)
 
 
     // Disbale interrupt
@@ -119,11 +141,11 @@ _start:
     mov     %eax, %cr0
 
 
-    //ljmp    $INITSEG, $(_32bit_mode_start - _boot)
-
-
-__loophere:
-    jmp     __loophere
+    // jmpi instruction
+    .byte   0x66, 0xea
+__code32:
+    .long   0
+    .word   __code_seg
 
 
 
@@ -135,13 +157,17 @@ __loophere:
 /*
  * sys_print -- print string on console
  *
- * Input :
+ * Input:
  *  SI      = Buffer pointer
  *  EBX     = Cursor position
  *  DX      = String length
  *
  * Output:
  *  EBX     = Lastest cursor position
+ *
+ * Modified:
+ *  AX
+ *  ES
  *
  * Note: 80x25 text mode
  *
@@ -219,12 +245,16 @@ _sys_print_next_char:
 /*
  * sys_delay -- Delay and show busy state
  *
- * Input :
+ * Input:
  *  EBX     = Cursor position
  *  ECX     = Delay counter
  *  
  * Output:
  *  None
+ *
+ * Modified:
+ *  None
+ *
  */
 sys_delay:
 
@@ -254,91 +284,32 @@ sys_delay:
 
 
 
-###############################################################################
-# Subroutines -- Interrupt Services
-###############################################################################
-
-
-/*
- * int80 -- interrupt serivce 0x80
+/******************************************************************************
+ * Protected Mode 32bit Code Segment
  */
-int80:
-
-    // Setup ES with 0xB800 (Video memory)
-    mov     $0xB800, %ax
-    mov     %ax, %es
-
-    xor     %bp, %bp
-    xor     %si, %si
-
-    // 'A'
-    movb    $0x41, %al
-
-_intlp:
-    // Fill in ASCII code
-    movb    %al, %es:(%bp, %si)
-
-    // go to next ASCII code
-    inc     %al
-
-    // move to next byte (+2)
-    inc     %si
-    inc     %si
-
-    // if( counter < 20 ) ?
-    cmp     $3, %si
-    jnz     _intlp
-
-    iret
-
-
-/*
- * install_int80 -- Install interrupt service 0x80
- */
-install_int80:
-
-    push    %ax
-    push    %bx
-    push    %es
-
-    mov     $0, %ax
-    mov     %ax, %es
-    movw    $0x80, %bx
-
-    // install Ooffset
-    movw    $(int80 - _start), %es:(, %ebx, 4)
-
-    // install segment
-    movw    $INITSEG, %es:2(, %ebx, 4)
-
-    pop     %es
-    pop     %bx
-    pop     %ax
-
-    ret
-
-
-
-###############################################################################
-# 32-bit mode boot code
-###############################################################################
 .code32
+.text
 _32bit_mode_start:
 
-/*
-    mov     $(__datasd - __gdt), %ax
+
+    // Setup DS, ES, GS, FS
+    mov     $__data_seg, %ax
+    mov     %ax, %ds
+    mov     %ax, %es
     mov     %ax, %gs
+    mov     %ax, %fs
+   
 
-    mov     $0xb800, %edi
+    mov     $0xb8000, %edi
 
-    //mov     $0x41, %al
-    //mov     %al, %gs:(%edi)
-*/
+    mov     $0x41, %al
+    mov     %al, (%edi)
+    mov     %al, 2(%edi)
+    mov     %al, 4(%edi)
 
 
 _32loop_here:
     jmp     _32loop_here
-
 
 
 
@@ -355,7 +326,7 @@ _32loop_here:
  */
 __gdt:
 
-    // 2 NULL segment descriptors
+    // 1 NULL segment descriptors
     .fill 2, 8, 0
 
     //
@@ -371,9 +342,10 @@ __gdt:
     // D/B          = 1b        (32-bit)
     // G            = 1b        (4kb, limit unit)
     //
+__code_seg = . - __gdt
     .word   0xffff
     .word   0x0000
-    .word   0x9aff
+    .word   0x9a00
     .word   0x00cf
 
     //
@@ -389,10 +361,10 @@ __gdt:
     // D/B          = 1b        (32-bit)
     // G            = 1b        (4kb, limit unit)
     //
-__datasd:
+__data_seg = . - __gdt
     .word   0xffff
     .word   0x0000
-    .word   0x92ff
+    .word   0x9200
     .word   0x00cf
     __len_of_gdt = . - __gdt
 
@@ -433,3 +405,5 @@ __delaychar:
     __len_of_delaychar = . - __delaychar
 
 
+.fill   40, 1, 0
+.word   0xaa55

@@ -15,16 +15,22 @@ boot.bin: boot.o
 
 boot.o: boot.S
 	$(AS) -a=boot.lst -o $@ $<
-	
+
 
 floppy.img:
 	dd if=boot.bin of=OluxOS_floppy.img conv=sync ibs=1474560
 
 	
 dump:
-	#$(OBJDUMP) -m i386 -b binary -D boot.bin
-	#echo ""
+	$(OBJDUMP) -m i386 -b binary -D boot.bin
+
+
+nasm:
 	ndisasm boot.bin
+
+
+emu:
+	qemu -hda ./OluxOS_floppy.img -m 256
 
 
 clean:
