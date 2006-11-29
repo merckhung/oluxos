@@ -1,0 +1,4 @@
+device (fd0) /dev/loop0
+root (fd0)
+setup (fd0)
+quit
