@@ -11,31 +11,122 @@
 #include "console.h"
 
 
-static volatile unsigned char *video_mem = VIDEO_TEXT_ADDR;
+static volatile unsigned char *VideoRamPtr = VIDEO_TEXT_ADDR;
+static unsigned char xPos = 0;
+static unsigned char yPos = 0;
 
 
-void ia32_printf( void ) {
+void ia32_TcPrint( const char *Format, ... ) {
 
-    char *hello = "Welcome to Olux Operating System!";
 
-    int len = strlen( hello );
-    int i, j;
+    for( ; *Format ; Format++ ) {
     
-    for( i = 0, j = 0 ; j < len  ; i += 2, j++ ) {
-    
-        *(video_mem + i) = hello[ j ];
+        ia32_TcPutChar( *Format );
     }
 }
 
 
-void ia32_cls( void ) {
+void ia32_TcClear( void ) {
 
-    int len = 160 * 25;
     int i;
 
-    for( i = 0 ; i < len ; i++ ) {
+    for( i = 0 ; i < (COLUMN * 2 * LINE) ; i++ ) {
     
-        *(video_mem + i) = ( i % 2 ) ? 0x07 : 0x00; 
+        *(VideoRamPtr + i) = ( i % 2 ) ? 0x07 : 0x00; 
+    }
+}
+
+
+#define ia32_PtOutB( Value, Port ) \
+__asm__ __volatile__ ( "outb %%al, %%dx" :: "a" (Value), "d" (Port) )
+
+
+void ia32_TcCursorSet( unsigned char x, unsigned char y ) {
+
+
+    if( x >= COLUMN ) {
+    
+        x = COLUMN - 1;
+    }
+
+    if( y >= LINE ) {
+    
+        y = LINE - 1;
+    }
+
+    xPos = x;
+    yPos = y;
+
+    ia32_PtOutB( 0x0e, CRTC_ADDR );
+    ia32_PtOutB( 0x99, CRTC_DATA );
+    ia32_PtOutB( 0x0f, CRTC_ADDR );
+    ia32_PtOutB( 0x76, CRTC_DATA );
+}
+
+
+void ia32_TcPutChar( unsigned char Character ) {
+
+
+    if( Character == '\n' ) {
+    
+        xPos = 0;
+        yPos++;
+        if( yPos >= LINE ) {
+    
+            ia32_TcRollUp( 1 );
+            yPos = LINE - 1;
+        }
+
+        return;
+    }
+
+    *(VideoRamPtr + (yPos * COLUMN * 2) + (xPos * 2)) = Character;
+
+    xPos++;
+    if( xPos >= COLUMN ) {
+    
+        xPos = 0;
+        yPos++;
+        if( yPos >= LINE ) {
+    
+            ia32_TcRollUp( 1 );
+            yPos = LINE - 1;
+        }
+    }
+}
+
+
+void ia32_TcRollUp( unsigned char Lines ) {
+
+    int i, sp, ep;
+
+
+    if( Lines >= LINE ) {
+    
+        ia32_TcClear();
+        return;
+    }
+    
+    
+    if( Lines == 0 ) {
+    
+        return;
+    }
+
+
+    sp = Lines * COLUMN * 2;
+    ep = (LINE - Lines) * COLUMN * 2;
+    for( i = 0 ; i < (COLUMN * 2 * LINE) ; i++ ) {
+    
+        if( i >= ep ) {
+        
+            *(VideoRamPtr + i) = ( i % 2 ) ? 0x07 : 0x00;
+        } 
+        else {
+        
+            *(VideoRamPtr + i) = *(VideoRamPtr + sp);
+            sp++;
+        }
     }
 }
 

@@ -50,6 +50,10 @@ _start:
     lgdt    (__gdtptr)
 
 
+    // Setup Stack Pointer
+    mov     $__stack + STACK_SIZE, %esp
+
+
     // Setup DS, ES, GS, FS
     mov     $__data_seg, %ax
     mov     %ax, %ds
@@ -60,7 +64,7 @@ _start:
 
 
     // Initialize stack segment
-    movl    $(stack + STACK_SIZE), %esp
+    movl    $(__stack + STACK_SIZE), %esp
 
 
     // Reset flags
@@ -144,7 +148,6 @@ __gdtptr:
 /******************************************************************************
  * Stack
  */
-    .comm   stack, STACK_SIZE
-
+.common     __stack, STACK_SIZE
 
 
