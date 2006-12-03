@@ -8,7 +8,7 @@
  * page.c -- OluxOS IA32 paging routines
  *
  */
-#include "page.h"
+#include <ia32/page.h>
 
 
 static volatile unsigned long int *PDEPtr;

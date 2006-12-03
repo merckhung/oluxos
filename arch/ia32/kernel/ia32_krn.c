@@ -8,6 +8,9 @@
  * ia32_krn.c -- OluxOS IA32 kernel entry point
  *
  */
+#include <ia32/console.h>
+#include <ia32/page.h>
+#include <ia32/debug.h>
 
 
 void ia32_krn_entry( void ) {
@@ -17,9 +20,7 @@ void ia32_krn_entry( void ) {
     ia32_TcClear();
     ia32_TcPrint( "Copyright (C) 2006 Olux Organization all rights reserved.\n" );
     ia32_TcPrint( "Welcome to OluxOS v0.1\n" );
-
+    ia32_DbgDumpRegs();
 
     for( ; ; );
-
-
 }

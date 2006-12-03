@@ -13,7 +13,7 @@ SIZE				=	$(CROSS_COMPILE)size
 STRINGS				=	$(CROSS_COMPILE)strings
 STRIP				=	$(CROSS_COMPILE)strip
 
-CFLAGS				=
+CFLAGS				=	-I../../../include
 LDFLAGS				=	
 OBJS				=	ia32_krn.o
 

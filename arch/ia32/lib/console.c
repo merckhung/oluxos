@@ -8,20 +8,70 @@
  * console.c -- OluxOS IA32 text mode console routines
  *
  */
-#include "console.h"
+#include <ia32/console.h>
 
 
-static volatile unsigned char *VideoRamPtr = VIDEO_TEXT_ADDR;
+static volatile unsigned char *VideoRamPtr = (unsigned char *)VIDEO_TEXT_ADDR;
 static unsigned char xPos = 0;
 static unsigned char yPos = 0;
 
 
-void ia32_TcPrint( const char *Format, ... ) {
+void ia32_TcPrint( const char *format, ... ) {
 
+    int i;
+    char **arg = (char **) &format;
+    arg++;
 
-    for( ; *Format ; Format++ ) {
+    for( ; *format ; format++ ) {
     
-        ia32_TcPutChar( *Format );
+        if( *format == '%' ) {
+        
+            switch( *(format + 1) ) {
+            
+                case 'U' :
+                case 'u' :
+                    ia32_TcPutChar( itoa( *arg ) );
+                    break;
+
+                case '8' :
+                    if( *(format + 2) == 'U' || *(format + 2) == 'u' ) {
+                    
+                        char res[ 8 ];
+                        litoa( res, *arg );
+
+                        for( i = 7 ; i >= 0 ; i-- ) {
+                        
+                            ia32_TcPutChar( res[ i ] ); 
+                        }
+                        format++;
+                    }
+                    break;
+
+                case '4' :
+                    if( *(format + 2) == 'U' || *(format + 2) == 'u' ) {
+                    
+                        char res[ 4 ];
+                        witoa( res, *arg );
+
+                        for( i = 3 ; i >= 0 ; i-- ) {
+                        
+                            ia32_TcPutChar( res[ i ] ); 
+                        }
+                        format++;
+                    }
+                    break;
+
+                default :
+                    break;
+            }
+
+            format++;
+            arg++;
+        }
+        else {
+
+            ia32_TcPutChar( *format );
+        }
     }
 }
 
