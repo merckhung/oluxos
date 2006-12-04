@@ -15,7 +15,7 @@ STRIP				=	$(CROSS_COMPILE)strip
 
 CFLAGS				=	-I../../../include
 LDFLAGS				=	
-OBJS				=	console.o routine.o debug.o
+OBJS				=	console.o routine.o io.o kdb.o debug.o
 
 
 all: $(OBJS)

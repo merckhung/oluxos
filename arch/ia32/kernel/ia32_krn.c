@@ -24,3 +24,5 @@ void ia32_krn_entry( void ) {
 
     for( ; ; );
 }
+
+

@@ -39,7 +39,8 @@ void ia32_MmPageInit( void ) {
 
     // Setup CR3 and enable Page
     __asm__ __volatile__ (
-        "movl   %0, %%cr3\n"
+        "movl   %0, %%eax\n"
+        "movl   %%eax, %%cr3\n"
         "movl   %%cr0, %%eax\n"
         "orl    $0x80000000, %%eax\n"
         "movl   %%eax, %%cr0\n"

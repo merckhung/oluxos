@@ -8,6 +8,7 @@
  * console.c -- OluxOS IA32 text mode console routines
  *
  */
+#include <ia32/io.h>
 #include <ia32/console.h>
 
 
@@ -87,10 +88,6 @@ void ia32_TcClear( void ) {
 }
 
 
-#define ia32_PtOutB( Value, Port ) \
-__asm__ __volatile__ ( "outb %%al, %%dx" :: "a" (Value), "d" (Port) )
-
-
 void ia32_TcCursorSet( unsigned char x, unsigned char y ) {
 
 
@@ -111,6 +108,7 @@ void ia32_TcCursorSet( unsigned char x, unsigned char y ) {
     ia32_PtOutB( 0x99, CRTC_DATA );
     ia32_PtOutB( 0x0f, CRTC_ADDR );
     ia32_PtOutB( 0x76, CRTC_DATA );
+    ia32_PtInB( 0x0e );
 }
 
 

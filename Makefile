@@ -3,7 +3,7 @@ all:
 	make -C arch/ia32/kernel
 	make -C arch/ia32/lib
 	make -C arch/ia32/mm
-	ld -cref -M -s -N -T arch/ia32/multiboot/multiboot.lds -o OluxOS.krn arch/ia32/multiboot/multiboot.o arch/ia32/kernel/ia32_krn.o arch/ia32/lib/console.o arch/ia32/lib/debug.o arch/ia32/lib/routine.o arch/ia32/mm/page.o > OluxOS.map
+	ld -cref -M -s -N -T arch/ia32/multiboot/multiboot.lds -o OluxOS.krn arch/ia32/multiboot/multiboot.o arch/ia32/kernel/ia32_krn.o arch/ia32/lib/console.o arch/ia32/lib/debug.o arch/ia32/lib/routine.o arch/ia32/lib/io.o arch/ia32/mm/page.o > OluxOS.map
 
 
 clean:
