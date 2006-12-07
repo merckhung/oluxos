@@ -36,9 +36,9 @@ void ia32_IntSetupIDT( void ) {
     
         IDTTable[ i ].Flag      = 0x8f;
         IDTTable[ i ].SegSelect = 0x08;
-        IDTTable[ i ].OffsetLSW = (__u16)(((__u16)ia32_IntHandler) & 0xffff);
+        IDTTable[ i ].OffsetLSW = (__u16)(((__u32)ia32_IntHandler) & 0xffff);
         IDTTable[ i ].OffsetMSW = (__u16)((((__u32)ia32_IntHandler) >> 16) && 0xffff);
-    }
+   }
 
 
     // Setup interrupt handler
@@ -46,7 +46,7 @@ void ia32_IntSetupIDT( void ) {
     
         IDTTable[ i ].Flag      = 0x8e;
         IDTTable[ i ].SegSelect = 0x08;
-        IDTTable[ i ].OffsetLSW = (__u16)(((__u16)ia32_IntHandler) & 0xffff);
+        IDTTable[ i ].OffsetLSW = (__u16)(((__u32)ia32_IntHandler) & 0xffff);
         IDTTable[ i ].OffsetMSW = (__u16)((((__u32)ia32_IntHandler) >> 16) && 0xffff);
     }
 

@@ -13,9 +13,9 @@ SIZE				=	$(CROSS_COMPILE)size
 STRINGS				=	$(CROSS_COMPILE)strings
 STRIP				=	$(CROSS_COMPILE)strip
 
-CFLAGS				=	-I../../../include
+CFLAGS				=	-I../include
 LDFLAGS				=	
-OBJS				=	console.o io.o pci.o debug.o
+OBJS				=	routine.o
 
 
 all: $(OBJS)

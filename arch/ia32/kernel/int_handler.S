@@ -14,13 +14,16 @@
 
 
 ia32_IntHandler:
+
     // pop error code
     popl    %eax
-    movl    $12345678, %ebx
-    movl    $87654321, %ecx
-    movl    $0xfafafafa, %edx
 
-    // stop here
+    // Write some thing
+    mov     $0xb8000, %esi
+    incb    (%esi)
+    mov     $0xb8001, %esi
+    incb    (%esi)
+
 CHECK:
     jmp     CHECK
 

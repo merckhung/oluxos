@@ -24,8 +24,8 @@ void ia32_krn_entry( void ) {
     ia32_TcPrint( "Copyright (C) 2006 Olux Organization all rights reserved.\n" );
     ia32_TcPrint( "Welcome to OluxOS v0.1\n\n" );
     ia32_IntSetupIDT();
-    //ia32_DbgDumpRegs();
     ia32_PCIDetectDevice();
+    ia32_DbgDumpRegs();
 
     for( ; ; );
 }
