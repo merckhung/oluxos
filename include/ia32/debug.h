@@ -10,37 +10,40 @@
 
 typedef struct {
 
-    unsigned long int eax;
-    unsigned long int ebx;
-    unsigned long int ecx;
-    unsigned long int edx;
+    __u32 eax;
+    __u32 ebx;
+    __u32 ecx;
+    __u32 edx;
 
-    unsigned long int esi;
-    unsigned long int edi;
-    unsigned long int ebp;
-    unsigned long int esp;
+    __u32 esi;
+    __u32 edi;
+    __u32 ebp;
+    __u32 esp;
 
-    unsigned long int efl;
+    __u32 efl;
 
-    unsigned int cs;
-    unsigned int ds;
-    unsigned int es;
-    unsigned int fs;
-    unsigned int gs;
-    unsigned int ss;
+    __u16 cs;
+    __u16 ds;
+    __u16 es;
+    __u16 fs;
+    __u16 gs;
+    __u16 ss;
 
-    unsigned long int gdt;
-    unsigned long int ldt;
-    unsigned long int idt;
+    __u64 gdt;
 
-    unsigned long int cr0;
-    unsigned long int cr2;
-    unsigned long int cr3;
-    unsigned long int cr4;
+    __u64 ldt;
+
+    __u64 idt;
+
+    __u32 cr0;
+    __u32 cr2;
+    __u32 cr3;
+    __u32 cr4;
 
 } ia32_DbgRegs_t;
 
 
-static ia32_DbgRegs_t ia32_DbgRegs;
+void ia32_DbgDumpRegs( void );
+
 
 

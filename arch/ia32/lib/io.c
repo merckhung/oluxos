@@ -8,31 +8,91 @@
  * io.c -- OluxOS IA32 Input/Output routines
  *
  */
+#include <ia32/types.h>
 
 
-void ia32_PtOutB( const unsigned char value, const unsigned int port ) {
+void ia32_IoOutByte( const __u8 value, const __u16 port ) {
 
     __asm__ __volatile__ (          \
-        "outb   %%al, %%dx"         \
+        "outb   %%al, %%dx\n"       \
         :: "a" (value), "d" (port)  \
     );
 }
 
 
-unsigned char ia32_PtInB( const unsigned int port ) {
+__u8 ia32_IoInByte( const __u16 port ) {
 
-    unsigned char value;
+    __u8 value;
 
     __asm__ __volatile__ (      \
-        "mov    %1, %%dx\n"     \
         "inb    %%dx, %%al\n"   \
-        "mov    %%al, %0\n"     \
-        : "=m" (value)          \
-        : "m" (port)            \
-        : "al", "dx"            \
+        : "=a" (value)          \
+        : "d" (port)            \
     );
 
     return value;
+}
+
+
+void ia32_IoOutWord( const __u16 value, const __u16 port ) {
+
+    __asm__ __volatile__ (          \
+        "outw   %%ax, %%dx\n"       \
+        :: "a" (value), "d" (port)  \
+    );
+}
+
+
+__u16 ia32_IoInWord( const __u16 port ) {
+
+    __u16 value;
+
+    __asm__ __volatile__ (      \
+        "inw    %%dx, %%ax\n"   \
+        : "=a" (value)          \
+        : "d" (port)            \
+    );
+
+    return value;
+}
+
+
+void ia32_IoOutDWord( const __u32 value, const __u16 port ) {
+
+    __asm__ __volatile__ (          \
+        "outl   %%eax, %%dx\n"      \
+        :: "a" (value), "d" (port)  \
+    );
+}
+
+
+__u32 ia32_IoInDWord( const __u16 port ) {
+
+    __u32 value;
+
+    __asm__ __volatile__ (      \
+        "inl   %%dx, %%eax\n"  \
+        : "=a" (value)          \
+        : "d" (port)            \
+    );
+
+    return value;
+}
+
+
+void ia32_IoCli( void ) {
+
+    __asm__ __volatile__ (  \
+        "cli\n"             \
+    );
+}
+
+
+void ia32_IoSti( void ) {
+
+    __asm__ __volatile__ (  \
+        "sti"               \
+    );
 }
 
 

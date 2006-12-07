@@ -8,19 +8,20 @@
  * console.c -- OluxOS IA32 text mode console routines
  *
  */
+#include <ia32/types.h>
 #include <ia32/io.h>
 #include <ia32/console.h>
 
 
 static volatile unsigned char *VideoRamPtr = (unsigned char *)VIDEO_TEXT_ADDR;
-static unsigned char xPos = 0;
-static unsigned char yPos = 0;
+static __u8 xPos = 0;
+static __u8 yPos = 0;
 
 
-void ia32_TcPrint( const char *format, ... ) {
+void ia32_TcPrint( const __s8 *format, ... ) {
 
-    int i;
-    char **arg = (char **) &format;
+    __s8 i;
+    __s8 **arg = (__s8 **) &format;
     arg++;
 
     for( ; *format ; format++ ) {
@@ -29,13 +30,15 @@ void ia32_TcPrint( const char *format, ... ) {
         
             switch( *(format + 1) ) {
             
-                case 'U' :
-                case 'u' :
+
+                case 'X' :
+                case 'x' :
                     ia32_TcPutChar( itoa( *arg ) );
                     break;
 
+
                 case '8' :
-                    if( *(format + 2) == 'U' || *(format + 2) == 'u' ) {
+                    if( *(format + 2) == 'X' || *(format + 2) == 'x' ) {
                     
                         char res[ 8 ];
                         litoa( res, *arg );
@@ -48,8 +51,9 @@ void ia32_TcPrint( const char *format, ... ) {
                     }
                     break;
 
+
                 case '4' :
-                    if( *(format + 2) == 'U' || *(format + 2) == 'u' ) {
+                    if( *(format + 2) == 'X' || *(format + 2) == 'x' ) {
                     
                         char res[ 4 ];
                         witoa( res, *arg );
@@ -62,8 +66,9 @@ void ia32_TcPrint( const char *format, ... ) {
                     }
                     break;
 
+
                 default :
-                    break;
+                    continue;
             }
 
             format++;
@@ -79,16 +84,21 @@ void ia32_TcPrint( const char *format, ... ) {
 
 void ia32_TcClear( void ) {
 
-    int i;
+    __u16 i;
 
     for( i = 0 ; i < (COLUMN * 2 * LINE) ; i++ ) {
     
         *(VideoRamPtr + i) = ( i % 2 ) ? 0x07 : 0x00; 
     }
+
+    ia32_TcCursorSet( 0, 0 );
 }
 
 
-void ia32_TcCursorSet( unsigned char x, unsigned char y ) {
+void ia32_TcCursorSet( __u8 x, __u8 y ) {
+
+
+    __u16 offset;
 
 
     if( x >= COLUMN ) {
@@ -104,15 +114,18 @@ void ia32_TcCursorSet( unsigned char x, unsigned char y ) {
     xPos = x;
     yPos = y;
 
-    ia32_PtOutB( 0x0e, CRTC_ADDR );
-    ia32_PtOutB( 0x99, CRTC_DATA );
-    ia32_PtOutB( 0x0f, CRTC_ADDR );
-    ia32_PtOutB( 0x76, CRTC_DATA );
-    ia32_PtInB( 0x0e );
+    offset = (yPos * COLUMN) + xPos;
+
+    ia32_IoOutByte( 0x0e, CRTC_ADDR );
+    ia32_IoOutByte( (__u8)((offset >> 8) & 0xff) , CRTC_DATA );
+
+
+    ia32_IoOutByte( 0x0f, CRTC_ADDR );
+    ia32_IoOutByte( (__u8)(offset & 0xff) , CRTC_DATA );
 }
 
 
-void ia32_TcPutChar( unsigned char Character ) {
+void ia32_TcPutChar( __s8 Character ) {
 
 
     if( Character == '\n' ) {
@@ -125,6 +138,7 @@ void ia32_TcPutChar( unsigned char Character ) {
             yPos = LINE - 1;
         }
 
+        ia32_TcCursorSet( xPos, yPos );
         return;
     }
 
@@ -141,12 +155,14 @@ void ia32_TcPutChar( unsigned char Character ) {
             yPos = LINE - 1;
         }
     }
+
+    ia32_TcCursorSet( xPos, yPos );
 }
 
 
-void ia32_TcRollUp( unsigned char Lines ) {
+void ia32_TcRollUp( __u8 Lines ) {
 
-    int i, sp, ep;
+    __u16 i, sp, ep;
 
 
     if( Lines >= LINE ) {

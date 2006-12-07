@@ -15,7 +15,7 @@ STRIP				=	$(CROSS_COMPILE)strip
 
 CFLAGS				=	-I../../../include
 LDFLAGS				=	
-OBJS				=	ia32_krn.o
+OBJS				=	ia32_krn.o interrupt.o int_handler.o
 
 
 all: $(OBJS)

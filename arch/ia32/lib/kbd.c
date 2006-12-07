@@ -8,6 +8,7 @@
  * kdb.c -- OluxOS IA32 keyboard routines
  *
  */
+#include <ia32/types.h>
 #include <ia32/io.h>
 
 

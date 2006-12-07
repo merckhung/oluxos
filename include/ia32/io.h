@@ -8,7 +8,16 @@
  */
 
 
-void ia32_PtOutB( const unsigned char value, const unsigned int port );
-unsigned char ia32_PtInB( const unsigned int port );
+void ia32_IoOutByte( const __u8 value, const __u16 port );
+__u8 ia32_IoInByte( const __u16 port );
+
+void ia32_IoOutWord( const __u16 value, const __u16 port );
+__u16 ia32_IoInWord( const __u16 port );
+
+void ia32_IoOutDWord( const __u32 value, const __u16 port );
+__u32 ia32_IoInDWord( const __u16 port );
+
+void ia32_IoCli( void );
+void ia32_IoSti( void );
 
 

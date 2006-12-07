@@ -8,7 +8,11 @@
  * debug.c -- OluxOS IA32 debug routines
  *
  */
+#include <ia32/types.h>
 #include <ia32/debug.h>
+
+
+static ia32_DbgRegs_t ia32_DbgRegs;
 
 
 #define ia32_DbgSaveRegs()      \
@@ -78,12 +82,18 @@ void ia32_DbgDumpRegs( void ) {
 
     ia32_DbgSaveRegs();
     ia32_TcPrint( "\n"
-                  "EAX = %8U, EBX = %8U, ECX = %8U, EDX = %8U\n"
-                  "ESI = %8U, EDI = %8U, EBP = %8U, ESP = %8U\n\n"
-                  "CR0 = %8U, CR2 = %8U, CR3 = %8U, CR4 = %8U\n\n"
-                  "CS = %4U, DS = %4U, ES = %4U, FS = %4U\n"
-                  "GS = %4U, SS = %4U, EFL = %8U\n\n"
-                  "GDT = %8U, LDT = %8U, IDT = %8U\n"
+                  "General Purpose Registers:\n"
+                  "EAX = %8X, EBX = %8X, ECX = %8X, EDX = %8X\n"
+                  "ESI = %8X, EDI = %8X, EBP = %8X, ESP = %8X\n\n"
+                  "Control Registers:\n"
+                  "CR0 = %8X, CR2 = %8X, CR3 = %8X, CR4 = %8X\n\n"
+                  "Segment & Flags Registers:\n"
+                  "CS = %4X, DS = %4X, ES = %4X, FS = %4X\n"
+                  "GS = %4X, SS = %4X, EFL = %8X\n\n"
+                  "Descriptor Registers:\n"
+                  "GDT Base = %8X, GDT Limit = %4X\n"
+                  "LDT Base = %8X, LDT Limit = %4X\n"
+                  "IDT Base = %8X, IDT Limit = %4X\n"
                     , ia32_DbgRegs.eax
                     , ia32_DbgRegs.ebx
                     , ia32_DbgRegs.ecx
@@ -103,9 +113,12 @@ void ia32_DbgDumpRegs( void ) {
                     , ia32_DbgRegs.gs
                     , ia32_DbgRegs.ss
                     , ia32_DbgRegs.efl
-                    , ia32_DbgRegs.gdt
-                    , ia32_DbgRegs.ldt
-                    , ia32_DbgRegs.idt );
+                    , (__u32)((ia32_DbgRegs.gdt >> 16) & 0xffffffff)
+                    , (__u32)(ia32_DbgRegs.gdt & 0xffff)
+                    , (__u32)((ia32_DbgRegs.ldt >> 16) & 0xffffffff)
+                    , (__u16)(ia32_DbgRegs.ldt & 0xffff)
+                    , (__u32)((ia32_DbgRegs.idt >> 16) & 0xffffffff)
+                    , (__u16)(ia32_DbgRegs.idt & 0xffff) );
 
 }
 

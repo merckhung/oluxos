@@ -8,32 +8,33 @@
  * page.c -- OluxOS IA32 paging routines
  *
  */
+#include <ia32/types.h>
 #include <ia32/page.h>
 
 
-static volatile unsigned long int *PDEPtr;
-static volatile unsigned long int *PTEPtr;
+static volatile __u32 *PDEPtr;
+static volatile __u32 *PTEPtr;
 
 
 void ia32_MmPageInit( void ) {
 
     int i;
-    unsigned long int filladdr = 0;
+    __u32 filladdr = 0;
 
 
     // Initialize Page Directory Entries
-    PDEPtr = (unsigned long int *)PAGEADDR;
-    PTEPtr = (unsigned long int *)((unsigned long int)PDEPtr + 0x1000);
+    PDEPtr = (__u32 *)PAGEADDR;
+    PTEPtr = (__u32 *)((__u32)PDEPtr + 0x1000);
     for( i = 0 ; i < PDENUM ; i++ ) {
     
-        *(PDEPtr + i) = ((unsigned long int)PTEPtr + i * 0x1000) | 0x00000003;
+        *(PDEPtr + i) = ((__u32)PTEPtr + i * 0x1000) | 0x00000003;
     }
 
 
     // Initialize Page Table Entries
     for( i = 0 ; i < PTENUM ; i++ ) {
 
-        *(PTEPtr + i) = (unsigned long int)(filladdr + i * 0x1000) | 0x00000003;
+        *(PTEPtr + i) = (__u32)(filladdr + i * 0x1000) | 0x00000003;
     }
 
 

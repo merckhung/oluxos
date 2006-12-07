@@ -16,10 +16,11 @@
 #define     CRTC_ADDR   0x3d4
 #define     CRTC_DATA   0x3d5
 
-void ia32_TcPrint( const char *format, ... );
+
+void ia32_TcPrint( const __s8 *format, ... );
 void ia32_TcClear( void );
-void ia32_TcCursorSet( unsigned char x, unsigned char y );
-void ia32_TcPutChar( unsigned char Character );
-void ia32_TcRollUp( unsigned char Lines );
+void ia32_TcCursorSet( __u8 x, __u8 y );
+void ia32_TcPutChar( __s8 Character );
+void ia32_TcRollUp( __u8 Lines );
 
 

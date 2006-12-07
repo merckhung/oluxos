@@ -8,9 +8,10 @@
  * routine.c -- OluxOS IA32 generic routines
  *
  */
+#include <ia32/types.h>
 
 
-char itoa( const unsigned char value ) {
+char itoa( const __u8 value ) {
 
     if( value > 15 ) {
     
@@ -26,9 +27,9 @@ char itoa( const unsigned char value ) {
 }
 
 
-void litoa( char *result, const unsigned long int value ) {
+void litoa( __s8 *result, const __u32 value ) {
 
-    int i;
+    __u8 i;
 
     for( i = 0 ; i < 8 ; i++ ) {
     
@@ -37,14 +38,15 @@ void litoa( char *result, const unsigned long int value ) {
 }
 
 
-void witoa( char *result, const unsigned int value ) {
+void witoa( __s8 *result, const __u16 value ) {
 
-    int i;
+    __u8 i;
 
     for( i = 0 ; i < 4 ; i++ ) {
     
         result[ i ] = itoa( (unsigned char)((value >> (i * 4)) & 0x000f) );
     }
 }
+
 
 
