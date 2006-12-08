@@ -1,20 +1,59 @@
-all:
-	make -C arch/ia32/multiboot
-	make -C arch/ia32/kernel
-	make -C arch/ia32/lib
-	make -C arch/ia32/mm
-	make -C lib
-	ld -cref -M -s -N -T arch/ia32/multiboot/multiboot.lds -o OluxOS.krn arch/ia32/multiboot/multiboot.o arch/ia32/kernel/ia32_krn.o arch/ia32/kernel/interrupt.o arch/ia32/kernel/int_handler.o arch/ia32/lib/console.o arch/ia32/lib/debug.o lib/routine.o arch/ia32/lib/io.o arch/ia32/mm/page.o arch/ia32/lib/pci.o > OluxOS.map
+MAJOR_VERSION		=	0
+MINOR_VERSION 		=	1
+EXTRA_VERSION		=
+
+
+AS                  =   $(CROSS_COMPILE)as
+AR                  =   $(CROSS_COMPILE)ar
+CC                  =   $(CROSS_COMPILE)gcc
+CPP                 =   $(CC) -E
+LD                  =   $(CROSS_COMPILE)ld
+NM                  =   $(CROSS_COMPILE)nm
+OBJCOPY             =   $(CROSS_COMPILE)objcopy
+OBJDUMP             =   $(CROSS_COMPILE)objdump
+RANLIB              =   $(CROSS_COMPILE)ranlib
+READELF             =   $(CROSS_COMPILE)readelf
+SIZE                =   $(CROSS_COMPILE)size
+STRINGS             =   $(CROSS_COMPILE)strings
+STRIP               =   $(CROSS_COMPILE)strip
+
+
+CROSS_COMPILE       =
+
+
+ASFLAGS				=
+CFLAGS              =   -Iinclude -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer
+LDFLAGS             =	-cref -M -s -N -T arch/$(ARCH)/multiboot/multiboot.lds
+MAKEFLAGS			+=	--no-print-directory --no-builtin-rules --no-builtin-variables --quiet
+
+
+QUITE				?=	QUITE_
+
+QUITE_CMD_CC		?=	CC		$@
+	  CMD_CC		?=	$(CC) $(CFLAGS) -c -o $@ $<
+
+QUITE_CMD_LD		?=	LD		$@
+	  CMD_LD		?=	$(LD) $(LDFLAGS) -o $@ $+ > $@.map
+
+
+ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
+VPATH				=	arch/$(ARCH)/kernel arch/$(ARCH)/lib arch/$(ARCH)/mm arch/$(ARCH)/multiboot lib
+OBJECTS				=	ia32_krn.o interrupt.o int_handler.o console.o debug.o io.o kbd.o pci.o page.o multiboot.o routine.o
+
+
+
+OluxOS.krn: $(OBJECTS)
+	@echo '   $($(QUITE)CMD_LD)'
+	$(CMD_LD)
+
+
+%.o: %.c
+	@echo '   $($(QUITE)CMD_CC)'
+	$(CMD_CC)
 
 
 clean:
-	make -C arch/ia32/multiboot clean
-	make -C arch/ia32/kernel clean
-	make -C arch/ia32/lib clean
-	make -C arch/ia32/mm clean
-	make -C lib clean
-	make -C image clean
-	rm -f OluxOS.krn *.map *.img
+	$(RM) *.krn *.map *.img *.o
 
 
 img:
@@ -26,12 +65,6 @@ emu:
 	qemu -fda OluxOS.img -m 256
 
 
-dump:
-	objdump -m i386 -b binary -D OluxOS.krn | less
-
-
-nasm:
-	ndisasm OluxOS.krn | less
-
-
 over: clean all img emu
+
+

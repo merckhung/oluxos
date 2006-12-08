@@ -12,12 +12,11 @@
 #include <ia32/console.h>
 #include <ia32/page.h>
 #include <ia32/pci.h>
+#include <ia32/interrupt.h>
 #include <ia32/debug.h>
 
 
 void ia32_krn_entry( void ) {
-
-    int i;
 
     ia32_MmPageInit();
     ia32_TcClear();

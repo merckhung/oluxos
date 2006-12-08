@@ -11,6 +11,7 @@
 #include <ia32/types.h>
 #include <ia32/io.h>
 #include <ia32/pci.h>
+#include <ia32/console.h>
 
 
 __u8 ia32_PCIReadConfigByte( __u32 address, __u8 offset ) {

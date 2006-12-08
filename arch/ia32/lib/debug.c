@@ -10,6 +10,7 @@
  */
 #include <ia32/types.h>
 #include <ia32/debug.h>
+#include <ia32/console.h>
 
 
 static ia32_DbgRegs_t ia32_DbgRegs;

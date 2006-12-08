@@ -11,6 +11,7 @@
 #include <ia32/types.h>
 #include <ia32/io.h>
 #include <ia32/console.h>
+#include <ia32/routine.h>
 
 
 static volatile unsigned char *VideoRamPtr = (unsigned char *)VIDEO_TEXT_ADDR;
@@ -20,7 +21,7 @@ static __u8 yPos = 0;
 
 void ia32_TcPrint( const __s8 *format, ... ) {
 
-    __s8 i, digit;
+    __s8 digit;
     __s8 **arg = (__s8 **) (&format) + 1;
 
     for( ; *format ; format++ ) {
