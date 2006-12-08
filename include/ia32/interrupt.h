@@ -35,4 +35,7 @@ void ia32_IntInitHandler( void );
 void ia32_IntSetupIDT( void );
 void ia32_IntHandler( void );
 
+void ia32_IntDisable( void );
+void ia32_IntEnable( void );
+
 

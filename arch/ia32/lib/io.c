@@ -80,19 +80,3 @@ __u32 ia32_IoInDWord( const __u16 port ) {
 }
 
 
-void ia32_IoCli( void ) {
-
-    __asm__ __volatile__ (  \
-        "cli\n"             \
-    );
-}
-
-
-void ia32_IoSti( void ) {
-
-    __asm__ __volatile__ (  \
-        "sti"               \
-    );
-}
-
-

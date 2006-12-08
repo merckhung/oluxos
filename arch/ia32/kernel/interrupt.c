@@ -76,3 +76,19 @@ void ia32_IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag ) {
 }
 
 
+void ia32_IntDisable( void ) {
+
+    __asm__ __volatile__ (  \
+        "cli\n"             \
+    );
+}
+
+
+void ia32_IntEnable( void ) {
+
+    __asm__ __volatile__ (  \
+        "sti"               \
+    );
+}
+
+

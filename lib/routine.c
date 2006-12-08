@@ -27,26 +27,3 @@ char itoa( const __u8 value ) {
 }
 
 
-void litoa( __s8 *result, const __u32 value ) {
-
-    __u8 i;
-
-    for( i = 0 ; i < 8 ; i++ ) {
-    
-        result[ i ] = itoa( (unsigned char)((value >> (i * 4)) & 0x0000000f) );
-    }
-}
-
-
-void witoa( __s8 *result, const __u16 value ) {
-
-    __u8 i;
-
-    for( i = 0 ; i < 4 ; i++ ) {
-    
-        result[ i ] = itoa( (unsigned char)((value >> (i * 4)) & 0x000f) );
-    }
-}
-
-
-

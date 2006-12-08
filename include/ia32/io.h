@@ -17,7 +17,4 @@ __u16 ia32_IoInWord( const __u16 port );
 void ia32_IoOutDWord( const __u32 value, const __u16 port );
 __u32 ia32_IoInDWord( const __u16 port );
 
-void ia32_IoCli( void );
-void ia32_IoSti( void );
-
 

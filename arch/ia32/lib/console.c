@@ -20,58 +20,41 @@ static __u8 yPos = 0;
 
 void ia32_TcPrint( const __s8 *format, ... ) {
 
-    __s8 i;
-    __s8 **arg = (__s8 **) &format;
-    arg++;
+    __s8 i, digit;
+    __s8 **arg = (__s8 **) (&format) + 1;
 
     for( ; *format ; format++ ) {
     
         if( *format == '%' ) {
-        
-            switch( *(format + 1) ) {
+
+            format++;
+            digit = 0;
+            if( (*format >= '0') && (*format <= '8') ) {
             
+                digit = *format - '0';
+                format++;
+            }
+
+            switch( *format ) {
 
                 case 'X' :
                 case 'x' :
-                    ia32_TcPutChar( itoa( *arg ) );
-                    break;
 
-
-                case '8' :
-                    if( *(format + 2) == 'X' || *(format + 2) == 'x' ) {
+                    // Auto sizing
+                    if( !digit ) {
                     
-                        char res[ 8 ];
-                        litoa( res, *arg );
-
-                        for( i = 7 ; i >= 0 ; i-- ) {
-                        
-                            ia32_TcPutChar( res[ i ] ); 
-                        }
-                        format++;
+                        digit = sizeof( **arg ) * 8;
+                    }
+                    for( digit-- ; digit >= 0 ; digit-- ) {
+                    
+                        ia32_TcPutChar( itoa( (__s8)( (((__u32)(*arg)) >> (digit * 4)) & 0xf) ) );
                     }
                     break;
-
-
-                case '4' :
-                    if( *(format + 2) == 'X' || *(format + 2) == 'x' ) {
-                    
-                        char res[ 4 ];
-                        witoa( res, *arg );
-
-                        for( i = 3 ; i >= 0 ; i-- ) {
-                        
-                            ia32_TcPutChar( res[ i ] ); 
-                        }
-                        format++;
-                    }
-                    break;
-
 
                 default :
                     continue;
             }
 
-            format++;
             arg++;
         }
         else {
