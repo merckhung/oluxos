@@ -42,8 +42,8 @@ QUIET_CMD_LD		?=	LD		$@
 
 ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
 VPATH				=	arch/$(ARCH)/kernel:arch/$(ARCH)/lib:arch/$(ARCH)/mm:arch/$(ARCH)/multiboot:lib
-OBJECTS				=	string.o console.o ia32_krn.o interrupt.o int_handler.o debug.o io.o kbd.o pci.o page.o multiboot.o
-OBJECTS				+=	
+OBJECTS				=	string.o console.o ia32_krn.o interrupt.o int_handler.o debug.o io.o kbd.o pci.o page.o
+OBJECTS				+=	multiboot.o timer.o
 OBJECTLIST			=	object.lst
 
 

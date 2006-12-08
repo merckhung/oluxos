@@ -14,7 +14,7 @@
 #include <string.h>
 
 
-static volatile unsigned char *VideoRamPtr = (unsigned char *)VIDEO_TEXT_ADDR;
+static volatile __u8 *VideoRamPtr = (unsigned char *)VIDEO_TEXT_ADDR;
 static __u8 xPos = 0;
 static __u8 yPos = 0;
 

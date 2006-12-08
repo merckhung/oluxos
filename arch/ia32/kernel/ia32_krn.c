@@ -13,6 +13,7 @@
 #include <ia32/page.h>
 #include <ia32/pci.h>
 #include <ia32/interrupt.h>
+#include <ia32/timer.h>
 #include <ia32/debug.h>
 
 
@@ -25,6 +26,7 @@ void ia32_krn_entry( void ) {
     ia32_IntSetupIDT();
     ia32_PCIDetectDevice();
     ia32_DbgDumpRegs();
+    ia32_TmInitTimer();
 
     for( ; ; );
 }

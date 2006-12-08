@@ -10,7 +10,7 @@
  */
 
 
-.global ia32_IntHandler
+.global ia32_IntHandler, ia32_TmIntHandler
 
 
 ia32_IntHandler:
