@@ -15,12 +15,14 @@
 static struct ia32_IDTEntry_t IDTTable[ INTTBL_SIZE ];
 
 
-void ia32_IntInitHandler( void ) {
+void ia32_IntInitIDT( void ) {
 
+    __u16 i;
 
-
-
-
+    for( i = 0 ; i < INTTBL_SIZE ; i++ ) {
+    
+        
+    }
 }
 
 

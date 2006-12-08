@@ -23,7 +23,7 @@ CROSS_COMPILE       =
 
 
 ASFLAGS				=
-CFLAGS              =   -Iinclude -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer
+CFLAGS              =   -Iinclude -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nostdinc
 LDFLAGS             =	-cref -M -s -N -T arch/$(ARCH)/multiboot/multiboot.lds
 MAKEFLAGS			+=	--no-print-directory --no-builtin-rules --no-builtin-variables --quiet
 
@@ -43,7 +43,8 @@ QUIET_CMD_LD		?=	LD		$@
 ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
 VPATH				=	arch/$(ARCH)/kernel:arch/$(ARCH)/lib:arch/$(ARCH)/mm:arch/$(ARCH)/multiboot:lib
 OBJECTS				=	ia32_krn.o interrupt.o int_handler.o console.o debug.o io.o kbd.o pci.o page.o multiboot.o
-OBJECTS				+=	routine.o
+OBJECTS				+=	string.o
+OBJECTLIST			=	object.lst
 
 
 OluxOS.krn: $(OBJECTS)
@@ -54,17 +55,17 @@ OluxOS.krn: $(OBJECTS)
 %.o: %.S
 	$(ECHO) '   $($(QUIET)CMD_AS)'
 	$(CMD_AS)
-	$(ECHO) -n '$(<D)/$@ ' >> object.lst
+	$(ECHO) -n '$(<D)/$@ ' >> $(OBJECTLIST)
 
 
 %.o: %.c
 	$(ECHO) '   $($(QUIET)CMD_CC)'
 	$(CMD_CC)
-	$(ECHO) -n '$(<D)/$@ ' >> object.lst
+	$(ECHO) -n '$(<D)/$@ ' >> $(OBJECTLIST)
 
 
 clean:
-	$(RM) -f $(shell cat object.lst 2> /dev/null)
+	$(RM) -f $(shell cat $(OBJECTLIST) 2> /dev/null)
 	$(RM) *.krn *.map *.img *.lst
 	$(MAKE) -C image clean
 
