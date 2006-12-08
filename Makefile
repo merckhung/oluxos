@@ -16,6 +16,7 @@ READELF             =   $(CROSS_COMPILE)readelf
 SIZE                =   $(CROSS_COMPILE)size
 STRINGS             =   $(CROSS_COMPILE)strings
 STRIP               =   $(CROSS_COMPILE)strip
+ECHO				=	@echo
 
 
 CROSS_COMPILE       =
@@ -27,37 +28,52 @@ LDFLAGS             =	-cref -M -s -N -T arch/$(ARCH)/multiboot/multiboot.lds
 MAKEFLAGS			+=	--no-print-directory --no-builtin-rules --no-builtin-variables --quiet
 
 
-QUITE				?=	QUITE_
+QUIET				?=	QUIET_
 
-QUITE_CMD_CC		?=	CC		$@
-	  CMD_CC		?=	$(CC) $(CFLAGS) -c -o $@ $<
+QUIET_CMD_AS		?=	AS		$@
+	  CMD_AS		?=	$(AS)	-o $(<D)/$@ $<
 
-QUITE_CMD_LD		?=	LD		$@
-	  CMD_LD		?=	$(LD) $(LDFLAGS) -o $@ $+ > $@.map
+QUIET_CMD_CC		?=	CC		$@
+	  CMD_CC		?=	$(CC) $(CFLAGS) -c -o $(<D)/$@ $<
+
+QUIET_CMD_LD		?=	LD		$@
+	  CMD_LD		?=	$(LD) $(LDFLAGS) -o $@ $(shell cat object.lst) > $@.map
+
+QUIET_CMD_RM		?=	RM		$(+F)
+	  CMD_RM		?=	$(RM)	$+
 
 
 ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
-VPATH				=	arch/$(ARCH)/kernel arch/$(ARCH)/lib arch/$(ARCH)/mm arch/$(ARCH)/multiboot lib
-OBJECTS				=	ia32_krn.o interrupt.o int_handler.o console.o debug.o io.o kbd.o pci.o page.o multiboot.o routine.o
-
+VPATH				=	arch/$(ARCH)/kernel:arch/$(ARCH)/lib:arch/$(ARCH)/mm:arch/$(ARCH)/multiboot:lib
+OBJECTS				=	ia32_krn.o interrupt.o int_handler.o console.o debug.o io.o kbd.o pci.o page.o multiboot.o
+OBJECTS				+=	routine.o
 
 
 OluxOS.krn: $(OBJECTS)
-	@echo '   $($(QUITE)CMD_LD)'
+	$(ECHO) '   $($(QUIET)CMD_LD)'
 	$(CMD_LD)
 
 
+%.o: %.S
+	$(ECHO) '   $($(QUIET)CMD_AS)'
+	$(CMD_AS)
+	$(ECHO) -n '$(<D)/$@ ' >> object.lst
+
+
 %.o: %.c
-	@echo '   $($(QUITE)CMD_CC)'
+	$(ECHO) '   $($(QUIET)CMD_CC)'
 	$(CMD_CC)
+	$(ECHO) -n '$(<D)/$@ ' >> object.lst
 
 
 clean:
-	$(RM) *.krn *.map *.img *.o
+	$(RM) -f $(shell cat object.lst 2> /dev/null)
+	$(RM) *.krn *.map *.img *.lst
+	$(MAKE) -C image clean
 
 
 img:
-	make -C image all
+	$(MAKE) -C image all
 
 
 emu:
@@ -65,6 +81,6 @@ emu:
 	qemu -fda OluxOS.img -m 256
 
 
-over: clean all img emu
+over: clean OluxOS.krn img emu
 
 

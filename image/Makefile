@@ -22,6 +22,8 @@ CHOWN=/bin/chown
 
 GRUB=/sbin/grub
 
+MAKEFLAGS=--quiet
+
 
 all:
 	$(DD) if=/dev/zero of=$(SYSIMG) bs=$(IMGSIZE) count=1
