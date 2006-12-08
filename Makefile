@@ -39,9 +39,6 @@ QUIET_CMD_CC		?=	CC		$@
 QUIET_CMD_LD		?=	LD		$@
 	  CMD_LD		?=	$(LD) $(LDFLAGS) -o $@ $(shell cat object.lst) > $@.map
 
-QUIET_CMD_RM		?=	RM		$(+F)
-	  CMD_RM		?=	$(RM)	$+
-
 
 ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
 VPATH				=	arch/$(ARCH)/kernel:arch/$(ARCH)/lib:arch/$(ARCH)/mm:arch/$(ARCH)/multiboot:lib
