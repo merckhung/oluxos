@@ -23,7 +23,7 @@ CROSS_COMPILE       =
 
 
 ASFLAGS				=
-CFLAGS              =   -Iinclude -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nostdinc
+CFLAGS              =   -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nostdinc -isystem include
 LDFLAGS             =	-cref -M -s -N -T arch/$(ARCH)/multiboot/multiboot.lds
 MAKEFLAGS			+=	--no-print-directory --no-builtin-rules --no-builtin-variables --quiet
 
@@ -42,8 +42,8 @@ QUIET_CMD_LD		?=	LD		$@
 
 ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
 VPATH				=	arch/$(ARCH)/kernel:arch/$(ARCH)/lib:arch/$(ARCH)/mm:arch/$(ARCH)/multiboot:lib
-OBJECTS				=	ia32_krn.o interrupt.o int_handler.o console.o debug.o io.o kbd.o pci.o page.o multiboot.o
-OBJECTS				+=	string.o
+OBJECTS				=	string.o console.o ia32_krn.o interrupt.o int_handler.o debug.o io.o kbd.o pci.o page.o multiboot.o
+OBJECTS				+=	
 OBJECTLIST			=	object.lst
 
 

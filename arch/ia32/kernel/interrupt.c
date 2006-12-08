@@ -10,20 +10,10 @@
  */
 #include <ia32/types.h>
 #include <ia32/interrupt.h>
+#include <string.h>
 
 
 static struct ia32_IDTEntry_t IDTTable[ INTTBL_SIZE ];
-
-
-void ia32_IntInitIDT( void ) {
-
-    __u16 i;
-
-    for( i = 0 ; i < INTTBL_SIZE ; i++ ) {
-    
-        
-    }
-}
 
 
 void ia32_IntSetupIDT( void ) {
@@ -31,6 +21,10 @@ void ia32_IntSetupIDT( void ) {
 
     int i;
     struct ia32_IDTPtr_t IDTPtr;
+
+
+    // Initialize
+    memset( IDTTable, 0, INTTBL_SIZE );
 
 
     // Setup exceptions handler

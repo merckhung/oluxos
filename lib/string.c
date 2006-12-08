@@ -12,21 +12,23 @@
 #include <string.h>
 
 
-void *memcpy( __u8 *dest, const __u8 *src, __u32 n ) {
+void *memcpy( void *dest, const void *src, __u32 n ) {
 
     __u32 i;
+    __u8 *pd = (__u8 *)dest;
+    __u8 *ps = (__u8 *)src;
 
 
     for( i = 0 ; i < n ; i++ ) {
     
-        *(dest + i) = *(src + i);
+        *(pd + i) = *(ps + i);
     }
 
     return dest;
 }
 
 
-__u8 *strncpy( __u8 *dest, const __u8 *src, __u32 n ) {
+__s8 *strncpy( __s8 *dest, const __s8 *src, __u32 n ) {
 
     __u32 len, i;
 
@@ -48,13 +50,27 @@ __u8 *strncpy( __u8 *dest, const __u8 *src, __u32 n ) {
 }
 
 
-__u32 strlen( const __u8 *s ) {
+__u32 strlen( const __s8 *s ) {
 
     __u32 sum;
 
     for( sum = 0 ; *(s + sum) ; sum++ );
 
     return sum;
+}
+
+
+void *memset( void *s, __u8 c, __u32 n ) {
+
+    __u32 i;
+    __u8 *p = (__u8 *)s;
+
+    for( i = 0 ; i < n ; i++ ) {
+    
+        *(p + i) = c;
+    } 
+
+    return s;
 }
 
 
