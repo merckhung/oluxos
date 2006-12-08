@@ -28,7 +28,7 @@ STACK_SIZE=4096
  * Code Segment
  */
 .text
-.global     _multiboot
+.global     _multiboot, __code_seg, __data_seg
 
 
 _multiboot:
@@ -72,10 +72,10 @@ _start:
     popf
 
 
-    // Jump to C kernel entry
-    jmp     ia32_krn_entry
-
-
+    // Reload CS and jump to C kernel entry
+    .byte   0xea
+    .long   ia32_krn_entry
+    .word   __code_seg
 
 
 

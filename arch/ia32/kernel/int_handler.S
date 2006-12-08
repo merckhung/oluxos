@@ -19,16 +19,12 @@ ia32_IntHandler:
     popl    %eax
 
     // Write some thing
-    mov     $0xb8000, %esi
+    mov     $0xb809e, %esi
     incb    (%esi)
-    mov     $0xb8001, %esi
+    mov     $0xb809f, %esi
     incb    (%esi)
-
-CHECK:
-    jmp     CHECK
 
     // return
     iret
-
 
 

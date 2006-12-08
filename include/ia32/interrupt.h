@@ -14,26 +14,25 @@
 
 struct ia32_IDTEntry_t {
 
-    __u16   OffsetLSW : 16;
-    __u16   SegSelect : 16;
-    __u8    Reserved  : 8;
-    __u8    Flag      : 8;
-    __u16   OffsetMSW : 16;
+    __u16   OffsetLSW;
+    __u16   SegSelect;
+    __u8    Reserved;
+    __u8    Flag;
+    __u16   OffsetMSW;
 
 } __attribute__ ((packed));
 
 
 struct ia32_IDTPtr_t {
 
-    __u16   Limit    : 16;
-    __u32   BaseAddr : 32;
+    __u16   Limit;
+    __u32   BaseAddr;
 
 } __attribute__ ((packed));
 
 
-void ia32_IntInitHandler( void );
 void ia32_IntSetupIDT( void );
-void ia32_IntHandler( void );
+void ia32_IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag );
 
 void ia32_IntDisable( void );
 void ia32_IntEnable( void );
