@@ -22,6 +22,18 @@ extern void ia32_IntHandler( void );
 extern void __code_seg( void );
 
 
+//
+// ia32_IntSetupIDT
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Initialize CPU IDT tables
+//
 void ia32_IntSetupIDT( void ) {
 
 
@@ -61,6 +73,21 @@ void ia32_IntSetupIDT( void ) {
 }
 
 
+//
+// ia32_IntSetIDT
+//
+// Input:
+//  index   : Interrupt number
+//  offset  : Offset of interrupt handler from code segment
+//  seg     : Segment descriptor offset
+//  flag    : Flag of gate
+//
+// Return:
+//  None
+//
+// Description:
+//  Setup IDT entry for specified interrupt/exception number
+//
 void ia32_IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag ) {
 
     IDTTable[ index ].OffsetLSW = (__u16)(offset & 0xffff);
@@ -70,24 +97,72 @@ void ia32_IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag ) {
 }
 
 
+//
+// ia32_IntDelIDT
+//
+// Input:
+//  index   : Interrupt number
+//
+// Return:
+//  None
+//
+// Description:
+//  Delete IDT entry for specified interrupt/exception number
+//
 void ia32_IntDelIDT( __u8 index ) {
 
     memset( IDTTable + (index * 8), 0, INTENTRY_SIZE );
 }
 
 
+//
+// ia32_IntDisable
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Disable CPU interrupt
+//
 void ia32_IntDisable( void ) {
 
     __asm__ ( "cli\n" );
 }
 
 
+//
+// ia32_IntEnable
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Enable CPU interrupt
+//
 void ia32_IntEnable( void ) {
 
     __asm__ ( "sti" );
 }
 
 
+//
+// ia32_IntInitPIC
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Initialize 8259a programmable interrupt controller
+//
 void ia32_IntInitPIC( void ) {
 
     // Disable all HW interrupt before any driver hook
@@ -96,6 +171,20 @@ void ia32_IntInitPIC( void ) {
 }
 
 
+//
+// ia32_IntRegisterIRQ
+//
+// Intput:
+//  num     : IRQ number
+//  handler : offset address of interrupt handler
+//
+// Return:
+//  0  -- success
+//  -1 -- failed
+//
+// Description:
+//  Public routine for HW IRQ register
+//
 __u8 ia32_IntRegisterIRQ( __u8 num, __u32 handler ) {
 
     __u8 base = IRQ1_START;
@@ -120,6 +209,20 @@ __u8 ia32_IntRegisterIRQ( __u8 num, __u32 handler ) {
 }
 
 
+//
+// ia32_IntUnregisterIRQ
+//
+// Input:
+//  num     : IRQ number
+//
+// Return:
+//  0  -- success
+//  -1 -- failed
+//
+// Description:
+//  Public interface routine for HW IRQ unregister
+//
+//
 __u8 ia32_IntUnregisterIRQ( __u8 num ) {
 
     __u8 base = IRQ1_START;
@@ -143,6 +246,18 @@ __u8 ia32_IntUnregisterIRQ( __u8 num ) {
 }
 
 
+//
+// ia32_IntEnableIRQ
+//
+// Input:
+//  num     : IRQ number
+//
+// Output:
+//  None
+//
+// Description:
+//  Enable IRQ in 8259A controller
+//
 void ia32_IntEnableIRQ( __u8 num ) {
 
     __u8 reg = PIC1_REG1;
@@ -168,6 +283,18 @@ void ia32_IntEnableIRQ( __u8 num ) {
 }
 
 
+//
+// ia32_IntDisableIRQ
+//
+// Input:
+//  num     : IRQ number
+//
+// Output:
+//  None
+//
+// Description:
+//  Disable IRQ in 8259A controller
+//
 void ia32_IntDisableIRQ( __u8 num ) {
 
     __u8 reg = PIC1_REG1;

@@ -18,6 +18,18 @@
 #include <ia32/debug.h>
 
 
+//
+// ia32_krn_entry
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  This is IA32 kerne entry point
+//
 void ia32_krn_entry( void ) {
 
     ia32_MmPageInit();

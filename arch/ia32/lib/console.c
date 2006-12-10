@@ -19,6 +19,19 @@ static __u8 xPos = 0;
 static __u8 yPos = 0;
 
 
+//
+// ia32_TcPrint
+//
+// Input:
+//  format  : string to print
+//  ...     : arguments to use
+//
+// Return:
+//  None
+//
+// Description:
+//  Print string on console just like standard C printf() routine
+//
 void ia32_TcPrint( const __s8 *format, ... ) {
 
     __s8 digit;
@@ -66,6 +79,18 @@ void ia32_TcPrint( const __s8 *format, ... ) {
 }
 
 
+//
+// ia32_TcClear
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Clear console screen and reset cursor to (0, 0)
+//
 void ia32_TcClear( void ) {
 
     __u16 i;
@@ -79,6 +104,19 @@ void ia32_TcClear( void ) {
 }
 
 
+//
+// ia32_TcCursorSet
+//
+// Input:
+//  x       : Console column number (0 - 79)
+//  y       : Console line number   (0 - 24)
+//
+// Return:
+//  None
+//
+// Description:
+//  Set console cursor position
+//
 void ia32_TcCursorSet( __u8 x, __u8 y ) {
 
 
@@ -109,10 +147,22 @@ void ia32_TcCursorSet( __u8 x, __u8 y ) {
 }
 
 
-void ia32_TcPutChar( __s8 Character ) {
+//
+// ia32_TcPutChar
+//
+// Input:
+//  c       : Character to put on screen
+//
+// Return:
+//  None
+//
+// Description:
+//  Put one character on screen
+//
+void ia32_TcPutChar( __s8 c ) {
 
 
-    if( Character == '\n' ) {
+    if( c == '\n' ) {
     
         xPos = 0;
         yPos++;
@@ -126,7 +176,7 @@ void ia32_TcPutChar( __s8 Character ) {
         return;
     }
 
-    *(VideoRamPtr + (yPos * COLUMN * 2) + (xPos * 2)) = Character;
+    *(VideoRamPtr + (yPos * COLUMN * 2) + (xPos * 2)) = c;
 
     xPos++;
     if( xPos >= COLUMN ) {
@@ -144,26 +194,38 @@ void ia32_TcPutChar( __s8 Character ) {
 }
 
 
-void ia32_TcRollUp( __u8 Lines ) {
+//
+// ia32_TcRollUp
+//
+// Input:
+//  line    : How many lines to roll up
+//
+// Return:
+//  None
+//
+// Description:
+//  Roll up screen
+//
+void ia32_TcRollUp( __u8 lines ) {
 
     __u16 i, sp, ep;
 
 
-    if( Lines >= LINE ) {
+    if( lines >= LINE ) {
     
         ia32_TcClear();
         return;
     }
     
     
-    if( Lines == 0 ) {
+    if( lines == 0 ) {
     
         return;
     }
 
 
-    sp = Lines * COLUMN * 2;
-    ep = (LINE - Lines) * COLUMN * 2;
+    sp = lines * COLUMN * 2;
+    ep = (LINE - lines) * COLUMN * 2;
     for( i = 0 ; i < (COLUMN * 2 * LINE) ; i++ ) {
     
         if( i >= ep ) {

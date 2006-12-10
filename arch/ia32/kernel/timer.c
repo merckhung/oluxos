@@ -22,12 +22,36 @@ extern __u32 ticks;
 extern void _ia32_TmIntHandler( void );
 
 
+//
+// ia32_TmIntTimer
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Initialize 8253 timer chip
+//
 void ia32_TmInitTimer( void ) {
 
     ia32_IntRegisterIRQ( 0, (__u32)_ia32_TmIntHandler );
 }
 
 
+//
+// ia32_TmIntHandler
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  8253 timer interrupt handler
+//
 void ia32_TmIntHandler( void ) {
 
     __u8 volatile *videomem = (__u8 *)0xb84fe;

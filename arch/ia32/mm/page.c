@@ -16,6 +16,18 @@ static volatile __u32 *PDEPtr;
 static volatile __u32 *PTEPtr;
 
 
+//
+// ia32_MmPageInit
+//
+// Input:
+//  None
+//
+// Output:
+//  None
+//
+// Description:
+//  Initialize page directories and page tables
+//
 void ia32_MmPageInit( void ) {
 
     int i;

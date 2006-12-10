@@ -18,6 +18,18 @@
 extern void _ia32_KbIntHandler( void );
 
 
+//
+// ia32_KbInitKeyboard
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Initialize onboard 8042 and keyboard controller
+//
 void ia32_KbInitKeyboard( void ) {
 
     ia32_IntDisable();
@@ -31,6 +43,18 @@ void ia32_KbInitKeyboard( void ) {
 }
 
 
+//
+// ia32_KbIntHandler
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Keyboard interrupt handler
+//
 void ia32_KbIntHandler( void ) {
 
     __u8 volatile *videomem = (__u8 *)0xb831e;
@@ -48,6 +72,18 @@ void ia32_KbIntHandler( void ) {
 }
 
 
+//
+// ia32_Kb8042SendCmd
+//
+// Input:
+//  cmd     : Command of onboard 8042 controller
+//
+// Return:
+//  None
+//
+// Description:
+//  Send command to onboard 8042 controller
+//
 void ia32_Kb8042SendCmd( __u8 cmd ) {
 
     // Wait for input buffer empty
@@ -60,6 +96,18 @@ void ia32_Kb8042SendCmd( __u8 cmd ) {
 }
 
 
+//
+// ia32_KbSendCmd
+//
+// Input:
+//  cmd     : Command of keyboard controller
+//
+// Return:
+//  None
+//
+// Description:
+//  Send command to keyboard controller
+//
 void ia32_KbSendCmd( __u8 cmd ) {
 
     // Disable keyboard

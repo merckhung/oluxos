@@ -16,6 +16,18 @@
 static ia32_DbgRegs_t ia32_DbgRegs;
 
 
+//
+// ia32_DbgSaveRegs
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Save all registers in global variables
+//
 #define ia32_DbgSaveRegs()      \
 __asm__ __volatile__ (          \
     "movl   %%eax, %0\n"        \
@@ -78,6 +90,18 @@ __asm__ __volatile__ (          \
     )
 
 
+//
+// ia32_DbgDumpRegs
+//
+// Input:
+//  None
+//
+// Return:
+//  None
+//
+// Description:
+//  Print all register values from global variables
+//
 void ia32_DbgDumpRegs( void ) {
 
 
