@@ -13,22 +13,35 @@
 #include <ia32/interrupt.h>
 #include <ia32/timer.h>
 #include <ia32/io.h>
+#include <ia32/debug.h>
+
+
+extern __u32 ticks;
+
+
+extern void _ia32_TmIntHandler( void );
 
 
 void ia32_TmInitTimer( void ) {
 
-    ia32_IntRegisterIRQ( 0, (__u32)ia32_TmIntHandler );
+    ia32_IntRegisterIRQ( 0, (__u32)_ia32_TmIntHandler );
 }
 
 
 void ia32_TmIntHandler( void ) {
 
-    __u8 volatile *videomem = (__u8 *)0xb813e;
+    __u8 volatile *videomem = (__u8 *)0xb84fe;
 
-    (*videomem)++;
-    (*(videomem + 1))++;
+
     ia32_IntDisable();
-    ia32_IoOutByte( 0x20, PIC1_REG0 );
+
+    if( !(ticks % 0xffff) ) {
+
+        (*videomem)++;
+        (*(videomem + 1))++;
+        ia32_IoOutByte( 0x20, PIC1_REG0 );
+    }
+
     ia32_IntEnable();
 }
 

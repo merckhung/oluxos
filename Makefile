@@ -79,6 +79,6 @@ emu:
 	qemu -fda OluxOS.img -m 256
 
 
-over: clean OluxOS.krn img emu
+over: clean OluxOS.krn img
 
 

@@ -10,7 +10,12 @@
  */
 
 
-.global ia32_IntHandler, ia32_TmIntHandler
+.global ia32_IntHandler
+.global _ia32_TmIntHandler, ticks
+.global _ia32_KbIntHandler
+
+
+ticks:      .long       0
 
 
 ia32_IntHandler:
@@ -25,6 +30,27 @@ ia32_IntHandler:
     incb    (%esi)
 
     // return
+    iret
+
+
+_ia32_TmIntHandler:
+
+    cli
+    incl    ticks
+    call    ia32_TmIntHandler
+    addl    $4, %esp
+    sti
+
+    iret
+
+
+_ia32_KbIntHandler:
+
+    cli
+    call    ia32_KbIntHandler
+    //addl    $4, %esp
+    sti
+
     iret
 
 
