@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
  * @OLUXORG_LICENSE_HEADER_START@
@@ -36,11 +36,22 @@ void ia32_krn_entry( void ) {
     ia32_TcClear();
     ia32_TcPrint( "Copyright (C) 2006 Olux Organization all rights reserved.\n" );
     ia32_TcPrint( "Welcome to OluxOS v0.1\n\n" );
-    ia32_IntSetupIDT();
+
+    // Init CPU interrupt and i8259A
+    ia32_IntInitInterrupt();
+
+    // Scan PCI
     ia32_PCIDetectDevice();
+
+    // Dump current CPU registers
     ia32_DbgDumpRegs();
-    ia32_KbInitKeyboard();
+    
+    // Init keyboard
+    //ia32_KbInitKeyboard();
+
+    // Init timer
     ia32_TmInitTimer();
+
 
     for( ; ; );
 }

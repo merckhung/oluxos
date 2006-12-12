@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
  * @OLUXORG_LICENSE_HEADER_START@
@@ -12,18 +12,18 @@
 #include <ia32/interrupt.h>
 #include <ia32/io.h>
 #include <ia32/console.h>
+#include <ia32/i8259.h>
 #include <string.h>
 
-#define DEBUG   1
 
 static struct ia32_IDTEntry_t IDTTable[ INTTBL_SIZE ];
-
-extern void ia32_IntHandler( void );
 extern void __code_seg( void );
+
+extern void ia32_ExceptionHandler( void );
 
 
 //
-// ia32_IntSetupIDT
+// ia32_IntInitInterrupt
 //
 // Input:
 //  None
@@ -34,7 +34,7 @@ extern void __code_seg( void );
 // Description:
 //  Initialize CPU IDT tables
 //
-void ia32_IntSetupIDT( void ) {
+void ia32_IntInitInterrupt( void ) {
 
 
     int i;
@@ -48,7 +48,7 @@ void ia32_IntSetupIDT( void ) {
     // Setup exceptions handler
     for( i = TRAP_START ; i <= TRAP_END ; i++ ) {
     
-        ia32_IntSetIDT( i, (__u32)ia32_IntHandler, (__u16)__code_seg, 0x8f );
+        ia32_IntSetIDT( i, (__u32)ia32_ExceptionHandler, (__u16)__code_seg, TRAP_GATE_FLAG );
     }
 
 
@@ -64,8 +64,8 @@ void ia32_IntSetupIDT( void ) {
     );
 
 
-    // Disable all external HW interrupt sources
-    ia32_IntInitPIC();
+    // Initialize i8259A PIC
+    ia32_i8259Init();
 
 
     // Enable interrupt
@@ -152,31 +152,11 @@ void ia32_IntEnable( void ) {
 
 
 //
-// ia32_IntInitPIC
-//
-// Input:
-//  None
-//
-// Return:
-//  None
-//
-// Description:
-//  Initialize 8259a programmable interrupt controller
-//
-void ia32_IntInitPIC( void ) {
-
-    // Disable all HW interrupt before any driver hook
-    ia32_IoOutByte( 0xff, PIC1_REG1 );    
-    ia32_IoOutByte( 0xff, PIC2_REG1 );
-}
-
-
-//
-// ia32_IntRegisterIRQ
+// ia32_IntRegIRQ
 //
 // Intput:
-//  num     : IRQ number
-//  handler : offset address of interrupt handler
+//  irqnum      : IRQ number
+//  handler     : offset address of interrupt handler
 //
 // Return:
 //  0  -- success
@@ -185,27 +165,15 @@ void ia32_IntInitPIC( void ) {
 // Description:
 //  Public routine for HW IRQ register
 //
-__u8 ia32_IntRegisterIRQ( __u8 num, __u32 handler ) {
+void ia32_IntRegIRQ( __u8 irqnum, __u32 handler ) {
 
-    __u8 base = IRQ1_START;
-
-
-    if( num > 15 ) {
-
-        return -1;
-    }
-
-    if( num > 7 ) {
-    
-        base = IRQ2_START;
-    }
-
-
-    ia32_IntDisable();
-    ia32_IntSetIDT( num + base, handler, (__u16)__code_seg, 0x8e );
-    ia32_IntEnableIRQ( num );
-    ia32_IntEnable();
-    return 0;
+#ifdef INT_DEBUG
+    ia32_TcPrint( "ia32_IntRegIRQ: index 0x%x, handler 0x%x\n", irqnum + PIC_IRQ_BASE, handler );
+#endif
+    // Add interrupt gate
+    ia32_IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (__u16)__code_seg, INT_GATE_FLAG );
+    // Enable 8259A IRQ line
+    ia32_i8259EnableIRQ( irqnum );
 }
 
 
@@ -213,103 +181,23 @@ __u8 ia32_IntRegisterIRQ( __u8 num, __u32 handler ) {
 // ia32_IntUnregisterIRQ
 //
 // Input:
-//  num     : IRQ number
+//  irqnum      : IRQ number
 //
 // Return:
-//  0  -- success
-//  -1 -- failed
-//
-// Description:
-//  Public interface routine for HW IRQ unregister
-//
-//
-__u8 ia32_IntUnregisterIRQ( __u8 num ) {
-
-    __u8 base = IRQ1_START;
-
-
-    if( num > 15 ) {
-    
-        return -1;
-    }
-
-    if( num > 7 ) {
-
-        base = IRQ2_START;
-    }
-
-    ia32_IntDisable();
-    ia32_IntDelIDT( num + base );
-    ia32_IntDisableIRQ( num );
-    ia32_IntEnable();
-    return 0;
-}
-
-
-//
-// ia32_IntEnableIRQ
-//
-// Input:
-//  num     : IRQ number
-//
-// Output:
 //  None
 //
 // Description:
-//  Enable IRQ in 8259A controller
+//  Public routine for HW IRQ unregister
 //
-void ia32_IntEnableIRQ( __u8 num ) {
+void ia32_IntUnregIRQ( __u8 irqnum ) {
 
-    __u8 reg = PIC1_REG1;
-
-#ifdef DEBUG
-    ia32_TcPrint( "Enable irq 0x%x", num );
+#ifdef INT_DEBUG
+    ia32_TcPrint( "ia32_IntUnregIRQ: index 0x%x\n", irqnum + PIC_IRQ_BASE );
 #endif
-    if( num > 7 ) {
-    
-        reg = PIC2_REG1;
-        num -= 8;
-    }
-
-#ifdef DEBUG
-    ia32_TcPrint( ", reg 0x%x, value %x", reg,  ~(1 << num) );
-#endif
-
-    ia32_IoOutByte( (ia32_IoInByte( reg ) & ~(1 << num)), reg );
-
-#ifdef DEBUG
-    ia32_TcPrint( ", result 0x%x\n", ia32_IoInByte( reg ) );
-#endif
-}
-
-
-//
-// ia32_IntDisableIRQ
-//
-// Input:
-//  num     : IRQ number
-//
-// Output:
-//  None
-//
-// Description:
-//  Disable IRQ in 8259A controller
-//
-void ia32_IntDisableIRQ( __u8 num ) {
-
-    __u8 reg = PIC1_REG1;
-
-#ifdef DEBUG
-    ia32_TcPrint( "Disable irq 0x%x\n", num );
-#endif
-
-    if( num > 7 ) {
-    
-        reg = PIC2_REG1;
-        num -= 8;
-    }
-
-    ia32_IoOutByte( (ia32_IoInByte( reg ) | (1 << num)), reg );
+    // Disable 8259A IRQ line
+    ia32_i8259DisableIRQ( irqnum );
+    // Delete interrupt gate
+    ia32_IntDelIDT( irqnum + PIC_IRQ_BASE );
 }
 
 
