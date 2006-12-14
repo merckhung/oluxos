@@ -15,9 +15,6 @@
 #include <ia32/kbd.h>
 
 
-extern void _ia32_KbIntHandler( void );
-
-
 //
 // ia32_KbInitKeyboard
 //
@@ -38,7 +35,7 @@ void ia32_KbInitKeyboard( void ) {
     ia32_KbSendCmd( 0xed );
     ia32_KbSendCmd( 0x07 );
 
-    ia32_IntRegIRQ( 1, (__u32)_ia32_KbIntHandler );
+    ia32_IntRegIRQ( 1, (__u32)ia32_InterruptHandler );
 
     ia32_IntEnable();
 }
@@ -63,11 +60,11 @@ void ia32_KbIntHandler( void ) {
 
     ia32_IntDisable();
 
-    ia32_TcPrint( "Keyboard\n" );
-
     (*videomem)++;
     (*(videomem + 1))++;
-    //ia32_IoOutByte( 0x20, PIC1_REG0 );
+
+    ia32_IoInByte( 0x60 );
+    ia32_IoOutByte( 0x20, 0x20 );
 
     ia32_IntEnable();
 }

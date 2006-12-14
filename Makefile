@@ -75,7 +75,6 @@ img:
 
 
 emu:
-	sudo modprobe kqemu
 	qemu -fda OluxOS.img -m 256
 
 

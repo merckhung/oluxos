@@ -46,7 +46,8 @@
 ia32_InterruptHandler:
 
     IA32_SAVEALLREGS
-    call    ia32_TmIntHandler
+    //call    ia32_TmIntHandler
+    call    ia32_KbIntHandler
     jmp     ia32_InterruptReturn
 
 ia32_InterruptReturn:
@@ -68,16 +69,6 @@ ia32_ExceptionReturn:
 
     IA32_RESTOREALLREGS
     addl    $4, %esp
-    iret
-
-
-_ia32_KbIntHandler:
-
-    cli
-    call    ia32_KbIntHandler
-    addl    $4, %esp
-    sti
-
     iret
 
 

@@ -47,10 +47,10 @@ void ia32_krn_entry( void ) {
     ia32_DbgDumpRegs();
     
     // Init keyboard
-    //ia32_KbInitKeyboard();
+    ia32_KbInitKeyboard();
 
     // Init timer
-    ia32_TmInitTimer();
+    //ia32_TmInitTimer();
 
 
     for( ; ; );
