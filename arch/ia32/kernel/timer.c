@@ -17,6 +17,9 @@
 #include <ia32/debug.h>
 
 
+extern void ia32_PreliminaryInterruptHandler_0( void );
+
+
 //
 // ia32_TmIntTimer
 //
@@ -32,7 +35,7 @@
 void ia32_TmInitTimer( void ) {
 
     ia32_IntDisable();
-    ia32_IntRegIRQ( 0, (__u32)ia32_InterruptHandler );
+    ia32_IntRegIRQ( 0, IRQHandler( 0 ), ia32_TmIntHandler );
     ia32_IntEnable();
 }
 
@@ -41,7 +44,7 @@ void ia32_TmInitTimer( void ) {
 // ia32_TmIntHandler
 //
 // Input:
-//  None
+//  irqnum  : IRQ number
 //
 // Return:
 //  None
@@ -49,7 +52,7 @@ void ia32_TmInitTimer( void ) {
 // Description:
 //  8253 timer interrupt handler
 //
-void ia32_TmIntHandler( void ) {
+void ia32_TmIntHandler( __u8 irqnum ) {
 
     __u8 volatile *videomem = (__u8 *)0xb84fe;
 

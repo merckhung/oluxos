@@ -13,7 +13,7 @@
 
 
 void ia32_KbInitKeyboard( void );
-void ia32_KbIntHandler( void );
+void ia32_KbIntHandler( __u8 irqnum );
 
 void ia32_Kb8042SendCmd( __u8 cmd );
 void ia32_KbSendCmd( __u8 cmd );

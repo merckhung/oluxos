@@ -39,5 +39,6 @@
 void ia32_i8259Init( void );
 void ia32_i8259EnableIRQ( __u8 irqnum );
 void ia32_i8259DisableIRQ( __u8 irqnum );
+void ia32_i8259HandleIRQ( __u32 irqnum );
 
 

@@ -13,6 +13,10 @@
 #include <ia32/interrupt.h>
 #include <ia32/io.h>
 #include <ia32/kbd.h>
+#include <ia32/debug.h>
+
+
+extern void ia32_PreliminaryInterruptHandler_1( void );
 
 
 //
@@ -29,14 +33,8 @@
 //
 void ia32_KbInitKeyboard( void ) {
 
-
     ia32_IntDisable();
-
-    ia32_KbSendCmd( 0xed );
-    ia32_KbSendCmd( 0x07 );
-
-    ia32_IntRegIRQ( 1, (__u32)ia32_InterruptHandler );
-
+    ia32_IntRegIRQ( 1, IRQHandler( 1 ), ia32_KbIntHandler );
     ia32_IntEnable();
 }
 
@@ -45,7 +43,7 @@ void ia32_KbInitKeyboard( void ) {
 // ia32_KbIntHandler
 //
 // Input:
-//  None
+//  irqnum  : IRQ number
 //
 // Return:
 //  None
@@ -53,7 +51,7 @@ void ia32_KbInitKeyboard( void ) {
 // Description:
 //  Keyboard interrupt handler
 //
-void ia32_KbIntHandler( void ) {
+void ia32_KbIntHandler( __u8 irqnum ) {
 
     __u8 volatile *videomem = (__u8 *)0xb831e;
 

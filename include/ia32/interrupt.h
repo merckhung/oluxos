@@ -18,6 +18,9 @@
 #define     TRAP_GATE_FLAG  0x8f
 
 
+#define     IRQHandler(irqnum)      (__u32)ia32_PreliminaryInterruptHandler_##irqnum
+
+
 extern void ia32_InterruptHandler( void );
 
 
@@ -40,6 +43,12 @@ struct ia32_IDTPtr_t {
 } __attribute__ ((packed));
 
 
+struct ia32_IntHandlerLst_t {
+
+    void (*Handler)( __u8 irqnum );
+};
+
+
 void ia32_IntInitInterrupt( void );
 
 void ia32_IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag );
@@ -48,7 +57,7 @@ void ia32_IntDelIDT( __u8 index );
 void ia32_IntDisable( void );
 void ia32_IntEnable( void );
 
-void ia32_IntRegIRQ( __u8 irqnum, __u32 handler );
+void ia32_IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 ) );
 void ia32_IntUnregIRQ( __u8 irqnum );
 
 

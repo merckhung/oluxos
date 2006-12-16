@@ -16,6 +16,7 @@
 #include <string.h>
 
 
+static struct ia32_IntHandlerLst_t InterrupHandlertList[ 16 ];
 static struct ia32_IDTEntry_t IDTTable[ INTTBL_SIZE ];
 extern void __code_seg( void );
 
@@ -165,13 +166,18 @@ void ia32_IntEnable( void ) {
 // Description:
 //  Public routine for HW IRQ register
 //
-void ia32_IntRegIRQ( __u8 irqnum, __u32 handler ) {
+void ia32_IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 irqnum ) ) {
 
 #ifdef INT_DEBUG
     ia32_TcPrint( "ia32_IntRegIRQ: index 0x%x, handler 0x%x\n", irqnum + PIC_IRQ_BASE, handler );
 #endif
+
     // Add interrupt gate
     ia32_IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (__u16)__code_seg, INT_GATE_FLAG );
+
+    // Install IRQ handler
+    InterrupHandlertList[ (__u8)irqnum ].Handler = IRQHandler;
+
     // Enable 8259A IRQ line
     ia32_i8259EnableIRQ( irqnum );
 }
@@ -194,10 +200,31 @@ void ia32_IntUnregIRQ( __u8 irqnum ) {
 #ifdef INT_DEBUG
     ia32_TcPrint( "ia32_IntUnregIRQ: index 0x%x\n", irqnum + PIC_IRQ_BASE );
 #endif
+
     // Disable 8259A IRQ line
     ia32_i8259DisableIRQ( irqnum );
+
     // Delete interrupt gate
     ia32_IntDelIDT( irqnum + PIC_IRQ_BASE );
+}
+
+
+//
+// ia32_IntHandleIRQ
+//
+// Input:
+//  irqnum      : IRQ number
+//
+// Output:
+//  None
+//
+// Description:
+//  IRQ handler
+//
+void ia32_IntHandleIRQ( __u32 irqnum ) {
+
+    __u8 irq = (__u8)irqnum;
+    InterrupHandlertList[ irq ].Handler( irq );
 }
 
 
