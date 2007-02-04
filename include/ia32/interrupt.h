@@ -8,8 +8,8 @@
  */
 
 
-#define     INTTBL_SIZE     256
-#define     INTENTRY_SIZE   8
+#define     NR_INTERRUPT    256
+#define     SZ_INTENTRY     8
 
 #define     TRAP_START      0x00
 #define     TRAP_END        0x1f
@@ -21,6 +21,7 @@
 #define     IRQHandler(irqnum)      (__u32)ia32_PreliminaryInterruptHandler_##irqnum
 
 
+#ifndef __ASM__
 extern void ia32_InterruptHandler( void );
 
 
@@ -59,5 +60,6 @@ void ia32_IntEnable( void );
 
 void ia32_IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 ) );
 void ia32_IntUnregIRQ( __u8 irqnum );
+#endif
 
 

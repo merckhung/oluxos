@@ -17,6 +17,9 @@
 
 
 extern void ia32_PreliminaryInterruptHandler_1( void );
+static __u8 CapsLock = 0;
+static __u8 NumLock = 0;
+static __u8 ScrollLock = 0;
 
 
 //
@@ -53,15 +56,55 @@ void ia32_KbInitKeyboard( void ) {
 //
 void ia32_KbIntHandler( __u8 irqnum ) {
 
-    __u8 volatile *videomem = (__u8 *)0xb831e;
+    __u8 keycode;
+    //__u8 volatile *videomem = (__u8 *)0xb831e;
 
 
+    // Disable interrupt
     ia32_IntDisable();
 
-    (*videomem)++;
-    (*(videomem + 1))++;
 
-    ia32_IoInByte( 0x60 );
+    // Read key code
+    keycode = ia32_IoInByte( 0x60 );
+    if( keycode & 0x80 ) {
+    
+        goto ia32_KbIntHandler_Done;         
+    }
+
+
+    switch( keycode ) {
+    
+        // CapsLock
+        case 0x3a :
+            ia32_KbSendCmd( 0xed );
+            ia32_KbSendCmd( 0x04 );
+            CapsLock = ~(CapsLock & 0x01);
+            break;
+
+        // NumLock
+        case 0x45 :
+            ia32_KbSendCmd( 0xed );
+            ia32_KbSendCmd( 0x02 );
+            NumLock = ~(NumLock & 0x01 );
+
+        // ScrollLock
+        case 0x46 :
+            ia32_KbSendCmd( 0xed );
+            ia32_KbSendCmd( 0x01 );
+            ScrollLock = ~(ScrollLock & 0x01 );
+            break;
+
+        default:
+            goto ia32_KbIntHandler_Done;
+    }
+
+
+ia32_KbIntHandler_Done:
+
+    //(*videomem)++;
+    //(*(videomem + 1))++;
+    //ia32_TcPrint( "Key code: 0x%x\n", ia32_IoInByte( 0x60 ) );
+
     ia32_IoOutByte( 0x20, 0x20 );
 
     ia32_IntEnable();

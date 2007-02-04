@@ -13,6 +13,7 @@
 #include <ia32/io.h>
 #include <ia32/console.h>
 #include <ia32/i8259.h>
+#include <ia32/debug.h>
 #include <string.h>
 
 
@@ -31,19 +32,13 @@
 void ia32_i8259Init( void ) {
 
 
-#ifdef I8259_DEBUG
-    ia32_TcPrint( "i8259: Disable all IRQ for initial processes\n" );
-#endif
-
+    pdbg( "Disable all IRQ for initial processes\n" );
     // Mask all HW interrupt for initialization
     ia32_IoOutByte( 0xff, PIC_MASTER_IMR );    
     ia32_IoOutByte( 0xff, PIC_SLAVE_IMR );
 
 
-#ifdef I8259_DEBUG
-    ia32_TcPrint( "i8259: Initialize Master PIC\n" );
-#endif
-
+    pdbg( "Initialize Master PIC\n" );
     //
     // Initialize Master PIC
     //
@@ -59,10 +54,7 @@ void ia32_i8259Init( void ) {
     ia32_IoOutByte( 0x01, PIC_MASTER_ICW4 );
 
 
-#ifdef I8259_DEBUG
-    ia32_TcPrint( "i8259: Initialize Slave PIC\n" );
-#endif
-
+    pdbg( "Initialize Slave PIC\n" );
     //
     // Initialize Slave PIC
     //
@@ -97,26 +89,12 @@ void ia32_i8259EnableIRQ( __u8 irqnum ) {
 
     __u8 reg = PIC_MASTER_IMR;
 
-
-#ifdef I8259_DEBUG
-    ia32_TcPrint( "i8259: Enable irq 0x%x", irqnum );
-#endif
-
     if( irqnum & 0x8 ) {
     
         reg = PIC_SLAVE_IMR; 
         irqnum &= 0x7;
     }
-
-#ifdef I8259_DEBUG
-    ia32_TcPrint( ", reg 0x%x, mask %x", reg,  ~(1 << irqnum) );
-#endif
-
     ia32_IoOutByte( (ia32_IoInByte( reg ) & ~(1 << irqnum)), reg );
-
-#ifdef I8259_DEBUG
-    ia32_TcPrint( ", result 0x%x\n", ia32_IoInByte( reg ) );
-#endif
 }
 
 
@@ -136,25 +114,12 @@ void ia32_i8259DisableIRQ( __u8 irqnum ) {
 
     __u8 reg = PIC_MASTER_IMR;
 
-#ifdef I8259_DEBUG
-    ia32_TcPrint( "i8259: Disable irq 0x%x\n", irqnum );
-#endif
-
     if( irqnum & 0x8 ) {
     
         reg = PIC_SLAVE_IMR;   
         irqnum &= 0x7;
     }
-
-#ifdef I8259_DEBUG
-    ia32_TcPrint( ", reg 0x%x, mask %x", reg, 1 << irqnum );
-#endif
-
     ia32_IoOutByte( (ia32_IoInByte( reg ) | (1 << irqnum)), reg );
-
-#ifdef I8259_DEBUG
-    ia32_TcPrint( ", result 0x%x\n", ia32_IoInByte( reg ) );
-#endif
 }
 
 

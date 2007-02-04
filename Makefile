@@ -23,7 +23,7 @@ CROSS_COMPILE       =
 
 
 ASFLAGS				=
-CFLAGS              =   -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nostdinc -isystem include -DI8259_DEBUG -DINT_DEBUG
+CFLAGS              =   -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nostdinc -isystem include -DKERNEL_DEBUG
 LDFLAGS             =	-cref -M -s -N -T arch/$(ARCH)/multiboot/multiboot.lds
 MAKEFLAGS			+=	--no-print-directory --no-builtin-rules --no-builtin-variables --quiet
 
@@ -31,7 +31,7 @@ MAKEFLAGS			+=	--no-print-directory --no-builtin-rules --no-builtin-variables --
 QUIET				?=	QUIET_
 
 QUIET_CMD_AS		?=	AS		$@
-	  CMD_AS		?=	$(CC) -c -o $(<D)/$@ $<
+	  CMD_AS		?=	$(CC) $(CFLAGS) -D__ASM__ -c -o $(<D)/$@ $<
 
 QUIET_CMD_CC		?=	CC		$@
 	  CMD_CC		?=	$(CC) $(CFLAGS) -c -o $(<D)/$@ $<
@@ -43,7 +43,7 @@ QUIET_CMD_LD		?=	LD		$@
 ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
 VPATH				=	arch/$(ARCH)/kernel:arch/$(ARCH)/lib:arch/$(ARCH)/mm:arch/$(ARCH)/multiboot:lib
 OBJECTS				=	string.o console.o ia32_krn.o interrupt.o int_handler.o debug.o io.o kbd.o pci.o page.o
-OBJECTS				+=	multiboot.o timer.o i8259.o
+OBJECTS				+=	multiboot.o timer.o i8259.o task.o
 OBJECTLIST			=	object.lst
 
 

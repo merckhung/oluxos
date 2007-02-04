@@ -8,6 +8,13 @@
  */
 
 
+#ifdef KERNEL_DEBUG
+#define pdbg( msg, args... )    ia32_TcPrint( msg, ##args );
+#else
+#define pdbg( msg, args... )
+#endif
+
+
 typedef struct {
 
     __u32 eax;

@@ -34,7 +34,7 @@ void ia32_krn_entry( void ) {
 
     ia32_MmPageInit();
     ia32_TcClear();
-    ia32_TcPrint( "Copyright (C) 2006 Olux Organization all rights reserved.\n" );
+    ia32_TcPrint( "Copyright (C) 2006 - 2007 Olux Organization all rights reserved.\n" );
     ia32_TcPrint( "Welcome to OluxOS v0.1\n\n" );
 
     // Init CPU interrupt and i8259A
@@ -43,9 +43,6 @@ void ia32_krn_entry( void ) {
     // Scan PCI
     ia32_PCIDetectDevice();
 
-    // Dump current CPU registers
-    ia32_DbgDumpRegs();
-    
     // Init keyboard
     ia32_KbInitKeyboard();
 
