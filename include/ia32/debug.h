@@ -9,7 +9,7 @@
 
 
 #ifdef KERNEL_DEBUG
-#define pdbg( msg, args... )    ia32_TcPrint( msg, ##args );
+#define pdbg( msg, args... )    TcPrint( msg, ##args );
 #else
 #define pdbg( msg, args... )
 #endif
@@ -47,10 +47,10 @@ typedef struct {
     __u32 cr3;
     __u32 cr4;
 
-} ia32_DbgRegs_t;
+} DbgRegs_t;
 
 
-void ia32_DbgDumpRegs( void );
+void DbgDumpRegs( void );
 
 
 

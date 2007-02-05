@@ -14,6 +14,6 @@
 #define     PAGEADDR    0x200000
 
 
-void ia32_MmPageInit( void );
+void MmPageInit( void );
 
 

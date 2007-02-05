@@ -175,11 +175,11 @@ __u8 ChkSMBIOSSup( void ) {
 
     if( smbios ) {
     
-        ia32_TcPrint( "Found SMBIOS AnchorString\n" );    
+        TcPrint( "Found SMBIOS AnchorString\n" );    
     }
     else {
     
-        ia32_TcPrint( "Cannot Find SMBIOS AnchorString\n" );
+        TcPrint( "Cannot Find SMBIOS AnchorString\n" );
     }
 
     return 0;

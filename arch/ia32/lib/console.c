@@ -20,7 +20,7 @@ static __u8 yPos = 0;
 
 
 //
-// ia32_TcPrint
+// TcPrint
 //
 // Input:
 //  format  : string to print
@@ -32,7 +32,7 @@ static __u8 yPos = 0;
 // Description:
 //  Print string on console just like standard C printf() routine
 //
-void ia32_TcPrint( const __s8 *format, ... ) {
+void TcPrint( const __s8 *format, ... ) {
 
     __s8 digit;
     __s8 **arg = (__s8 **) (&format) + 1;
@@ -61,7 +61,7 @@ void ia32_TcPrint( const __s8 *format, ... ) {
                     }
                     for( digit-- ; digit >= 0 ; digit-- ) {
                     
-                        ia32_TcPutChar( itoa( (__s8)( (((__u32)(*arg)) >> (digit * 4)) & 0xf) ) );
+                        TcPutChar( itoa( (__s8)( (((__u32)(*arg)) >> (digit * 4)) & 0xf) ) );
                     }
                     break;
 
@@ -73,14 +73,14 @@ void ia32_TcPrint( const __s8 *format, ... ) {
         }
         else {
 
-            ia32_TcPutChar( *format );
+            TcPutChar( *format );
         }
     }
 }
 
 
 //
-// ia32_TcClear
+// TcClear
 //
 // Input:
 //  None
@@ -91,7 +91,7 @@ void ia32_TcPrint( const __s8 *format, ... ) {
 // Description:
 //  Clear console screen and reset cursor to (0, 0)
 //
-void ia32_TcClear( void ) {
+void TcClear( void ) {
 
     __u16 i;
 
@@ -100,12 +100,12 @@ void ia32_TcClear( void ) {
         *(VideoRamPtr + i) = ( i % 2 ) ? 0x07 : 0x00; 
     }
 
-    ia32_TcCursorSet( 0, 0 );
+    TcCursorSet( 0, 0 );
 }
 
 
 //
-// ia32_TcCursorSet
+// TcCursorSet
 //
 // Input:
 //  x       : Console column number (0 - 79)
@@ -117,7 +117,7 @@ void ia32_TcClear( void ) {
 // Description:
 //  Set console cursor position
 //
-void ia32_TcCursorSet( __u8 x, __u8 y ) {
+void TcCursorSet( __u8 x, __u8 y ) {
 
 
     __u16 offset;
@@ -138,17 +138,17 @@ void ia32_TcCursorSet( __u8 x, __u8 y ) {
 
     offset = (yPos * COLUMN) + xPos;
 
-    ia32_IoOutByte( 0x0e, CRTC_ADDR );
-    ia32_IoOutByte( (__u8)((offset >> 8) & 0xff) , CRTC_DATA );
+    IoOutByte( 0x0e, CRTC_ADDR );
+    IoOutByte( (__u8)((offset >> 8) & 0xff) , CRTC_DATA );
 
 
-    ia32_IoOutByte( 0x0f, CRTC_ADDR );
-    ia32_IoOutByte( (__u8)(offset & 0xff) , CRTC_DATA );
+    IoOutByte( 0x0f, CRTC_ADDR );
+    IoOutByte( (__u8)(offset & 0xff) , CRTC_DATA );
 }
 
 
 //
-// ia32_TcPutChar
+// TcPutChar
 //
 // Input:
 //  c       : Character to put on screen
@@ -159,7 +159,7 @@ void ia32_TcCursorSet( __u8 x, __u8 y ) {
 // Description:
 //  Put one character on screen
 //
-void ia32_TcPutChar( __s8 c ) {
+void TcPutChar( __s8 c ) {
 
 
     if( c == '\n' ) {
@@ -168,11 +168,11 @@ void ia32_TcPutChar( __s8 c ) {
         yPos++;
         if( yPos >= LINE ) {
     
-            ia32_TcRollUp( 1 );
+            TcRollUp( 1 );
             yPos = LINE - 1;
         }
 
-        ia32_TcCursorSet( xPos, yPos );
+        TcCursorSet( xPos, yPos );
         return;
     }
 
@@ -185,17 +185,17 @@ void ia32_TcPutChar( __s8 c ) {
         yPos++;
         if( yPos >= LINE ) {
     
-            ia32_TcRollUp( 1 );
+            TcRollUp( 1 );
             yPos = LINE - 1;
         }
     }
 
-    ia32_TcCursorSet( xPos, yPos );
+    TcCursorSet( xPos, yPos );
 }
 
 
 //
-// ia32_TcRollUp
+// TcRollUp
 //
 // Input:
 //  line    : How many lines to roll up
@@ -206,14 +206,14 @@ void ia32_TcPutChar( __s8 c ) {
 // Description:
 //  Roll up screen
 //
-void ia32_TcRollUp( __u8 lines ) {
+void TcRollUp( __u8 lines ) {
 
     __u16 i, sp, ep;
 
 
     if( lines >= LINE ) {
     
-        ia32_TcClear();
+        TcClear();
         return;
     }
     

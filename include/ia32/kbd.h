@@ -12,10 +12,10 @@
 #define     KB8042_PORT     0x64
 
 
-void ia32_KbInitKeyboard( void );
-void ia32_KbIntHandler( __u8 irqnum );
+void KbInitKeyboard( void );
+void KbIntHandler( __u8 irqnum );
 
-void ia32_Kb8042SendCmd( __u8 cmd );
-void ia32_KbSendCmd( __u8 cmd );
+void Kb8042SendCmd( __u8 cmd );
+void KbSendCmd( __u8 cmd );
 
 

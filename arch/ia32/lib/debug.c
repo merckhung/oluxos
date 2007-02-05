@@ -13,11 +13,11 @@
 #include <ia32/console.h>
 
 
-static ia32_DbgRegs_t ia32_DbgRegs;
+static DbgRegs_t DbgRegs;
 
 
 //
-// ia32_DbgSaveRegs
+// DbgSaveRegs
 //
 // Input:
 //  None
@@ -28,7 +28,7 @@ static ia32_DbgRegs_t ia32_DbgRegs;
 // Description:
 //  Save all registers in global variables
 //
-#define ia32_DbgSaveRegs()      \
+#define DbgSaveRegs()      \
 __asm__ __volatile__ (          \
     "movl   %%eax, %0\n"        \
     "movl   %%ebx, %1\n"        \
@@ -64,34 +64,34 @@ __asm__ __volatile__ (          \
     "sgdt   %19\n"              \
     "sidt   %20\n"              \
     "sldt   %21\n"              \
-    : "=m" (ia32_DbgRegs.eax),  \
-      "=m" (ia32_DbgRegs.ebx),  \
-      "=m" (ia32_DbgRegs.ecx),  \
-      "=m" (ia32_DbgRegs.edx),  \
-      "=m" (ia32_DbgRegs.esi),  \
-      "=m" (ia32_DbgRegs.edi),  \
-      "=m" (ia32_DbgRegs.ebp),  \
-      "=m" (ia32_DbgRegs.esp),  \
-      "=m" (ia32_DbgRegs.cr0),  \
-      "=m" (ia32_DbgRegs.cr2),  \
-      "=m" (ia32_DbgRegs.cr3),  \
-      "=m" (ia32_DbgRegs.cr4),  \
-      "=m" (ia32_DbgRegs.efl),  \
-      "=m" (ia32_DbgRegs.cs),   \
-      "=m" (ia32_DbgRegs.ds),   \
-      "=m" (ia32_DbgRegs.es),   \
-      "=m" (ia32_DbgRegs.fs),   \
-      "=m" (ia32_DbgRegs.gs),   \
-      "=m" (ia32_DbgRegs.ss),   \
-      "=m" (ia32_DbgRegs.gdt),  \
-      "=m" (ia32_DbgRegs.idt),  \
-      "=m" (ia32_DbgRegs.ldt)   \
+    : "=m" (DbgRegs.eax),  \
+      "=m" (DbgRegs.ebx),  \
+      "=m" (DbgRegs.ecx),  \
+      "=m" (DbgRegs.edx),  \
+      "=m" (DbgRegs.esi),  \
+      "=m" (DbgRegs.edi),  \
+      "=m" (DbgRegs.ebp),  \
+      "=m" (DbgRegs.esp),  \
+      "=m" (DbgRegs.cr0),  \
+      "=m" (DbgRegs.cr2),  \
+      "=m" (DbgRegs.cr3),  \
+      "=m" (DbgRegs.cr4),  \
+      "=m" (DbgRegs.efl),  \
+      "=m" (DbgRegs.cs),   \
+      "=m" (DbgRegs.ds),   \
+      "=m" (DbgRegs.es),   \
+      "=m" (DbgRegs.fs),   \
+      "=m" (DbgRegs.gs),   \
+      "=m" (DbgRegs.ss),   \
+      "=m" (DbgRegs.gdt),  \
+      "=m" (DbgRegs.idt),  \
+      "=m" (DbgRegs.ldt)   \
     :: "eax"                    \
     )
 
 
 //
-// ia32_DbgDumpRegs
+// DbgDumpRegs
 //
 // Input:
 //  None
@@ -102,11 +102,11 @@ __asm__ __volatile__ (          \
 // Description:
 //  Print all register values from global variables
 //
-void ia32_DbgDumpRegs( void ) {
+void DbgDumpRegs( void ) {
 
 
-    ia32_DbgSaveRegs();
-    ia32_TcPrint( "\n"
+    DbgSaveRegs();
+    TcPrint( "\n"
                   "General Purpose Registers:\n"
                   "EAX = %8X, EBX = %8X, ECX = %8X, EDX = %8X\n"
                   "ESI = %8X, EDI = %8X, EBP = %8X, ESP = %8X\n\n"
@@ -119,31 +119,31 @@ void ia32_DbgDumpRegs( void ) {
                   "GDT Base = %8X, GDT Limit = %4X\n"
                   "LDT Base = %8X, LDT Limit = %4X\n"
                   "IDT Base = %8X, IDT Limit = %4X\n"
-                    , ia32_DbgRegs.eax
-                    , ia32_DbgRegs.ebx
-                    , ia32_DbgRegs.ecx
-                    , ia32_DbgRegs.edx
-                    , ia32_DbgRegs.esi 
-                    , ia32_DbgRegs.edi 
-                    , ia32_DbgRegs.ebp 
-                    , ia32_DbgRegs.esp
-                    , ia32_DbgRegs.cr0
-                    , ia32_DbgRegs.cr2
-                    , ia32_DbgRegs.cr3
-                    , ia32_DbgRegs.cr4
-                    , ia32_DbgRegs.cs
-                    , ia32_DbgRegs.ds
-                    , ia32_DbgRegs.es
-                    , ia32_DbgRegs.fs
-                    , ia32_DbgRegs.gs
-                    , ia32_DbgRegs.ss
-                    , ia32_DbgRegs.efl
-                    , (__u32)((ia32_DbgRegs.gdt >> 16) & 0xffffffff)
-                    , (__u32)(ia32_DbgRegs.gdt & 0xffff)
-                    , (__u32)((ia32_DbgRegs.ldt >> 16) & 0xffffffff)
-                    , (__u16)(ia32_DbgRegs.ldt & 0xffff)
-                    , (__u32)((ia32_DbgRegs.idt >> 16) & 0xffffffff)
-                    , (__u16)(ia32_DbgRegs.idt & 0xffff) );
+                    , DbgRegs.eax
+                    , DbgRegs.ebx
+                    , DbgRegs.ecx
+                    , DbgRegs.edx
+                    , DbgRegs.esi 
+                    , DbgRegs.edi 
+                    , DbgRegs.ebp 
+                    , DbgRegs.esp
+                    , DbgRegs.cr0
+                    , DbgRegs.cr2
+                    , DbgRegs.cr3
+                    , DbgRegs.cr4
+                    , DbgRegs.cs
+                    , DbgRegs.ds
+                    , DbgRegs.es
+                    , DbgRegs.fs
+                    , DbgRegs.gs
+                    , DbgRegs.ss
+                    , DbgRegs.efl
+                    , (__u32)((DbgRegs.gdt >> 16) & 0xffffffff)
+                    , (__u32)(DbgRegs.gdt & 0xffff)
+                    , (__u32)((DbgRegs.ldt >> 16) & 0xffffffff)
+                    , (__u16)(DbgRegs.ldt & 0xffff)
+                    , (__u32)((DbgRegs.idt >> 16) & 0xffffffff)
+                    , (__u16)(DbgRegs.idt & 0xffff) );
 
 }
 

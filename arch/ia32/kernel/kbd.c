@@ -16,14 +16,14 @@
 #include <ia32/debug.h>
 
 
-extern void ia32_PreliminaryInterruptHandler_1( void );
+extern void PreliminaryInterruptHandler_1( void );
 static __u8 CapsLock = 0;
 static __u8 NumLock = 0;
 static __u8 ScrollLock = 0;
 
 
 //
-// ia32_KbInitKeyboard
+// KbInitKeyboard
 //
 // Input:
 //  None
@@ -34,16 +34,16 @@ static __u8 ScrollLock = 0;
 // Description:
 //  Initialize onboard 8042 and keyboard controller
 //
-void ia32_KbInitKeyboard( void ) {
+void KbInitKeyboard( void ) {
 
-    ia32_IntDisable();
-    ia32_IntRegIRQ( 1, IRQHandler( 1 ), ia32_KbIntHandler );
-    ia32_IntEnable();
+    IntDisable();
+    IntRegIRQ( 1, IRQHandler( 1 ), KbIntHandler );
+    IntEnable();
 }
 
 
 //
-// ia32_KbIntHandler
+// KbIntHandler
 //
 // Input:
 //  irqnum  : IRQ number
@@ -54,21 +54,21 @@ void ia32_KbInitKeyboard( void ) {
 // Description:
 //  Keyboard interrupt handler
 //
-void ia32_KbIntHandler( __u8 irqnum ) {
+void KbIntHandler( __u8 irqnum ) {
 
     __u8 keycode;
     //__u8 volatile *videomem = (__u8 *)0xb831e;
 
 
     // Disable interrupt
-    ia32_IntDisable();
+    IntDisable();
 
 
     // Read key code
-    keycode = ia32_IoInByte( 0x60 );
+    keycode = IoInByte( 0x60 );
     if( keycode & 0x80 ) {
     
-        goto ia32_KbIntHandler_Done;         
+        goto KbIntHandler_Done;         
     }
 
 
@@ -76,43 +76,43 @@ void ia32_KbIntHandler( __u8 irqnum ) {
     
         // CapsLock
         case 0x3a :
-            ia32_KbSendCmd( 0xed );
-            ia32_KbSendCmd( 0x04 );
+            KbSendCmd( 0xed );
+            KbSendCmd( 0x04 );
             CapsLock = ~(CapsLock & 0x01);
             break;
 
         // NumLock
         case 0x45 :
-            ia32_KbSendCmd( 0xed );
-            ia32_KbSendCmd( 0x02 );
+            KbSendCmd( 0xed );
+            KbSendCmd( 0x02 );
             NumLock = ~(NumLock & 0x01 );
 
         // ScrollLock
         case 0x46 :
-            ia32_KbSendCmd( 0xed );
-            ia32_KbSendCmd( 0x01 );
+            KbSendCmd( 0xed );
+            KbSendCmd( 0x01 );
             ScrollLock = ~(ScrollLock & 0x01 );
             break;
 
         default:
-            goto ia32_KbIntHandler_Done;
+            goto KbIntHandler_Done;
     }
 
 
-ia32_KbIntHandler_Done:
+KbIntHandler_Done:
 
     //(*videomem)++;
     //(*(videomem + 1))++;
-    //ia32_TcPrint( "Key code: 0x%x\n", ia32_IoInByte( 0x60 ) );
+    //TcPrint( "Key code: 0x%x\n", IoInByte( 0x60 ) );
 
-    ia32_IoOutByte( 0x20, 0x20 );
+    IoOutByte( 0x20, 0x20 );
 
-    ia32_IntEnable();
+    IntEnable();
 }
 
 
 //
-// ia32_Kb8042SendCmd
+// Kb8042SendCmd
 //
 // Input:
 //  cmd     : Command of onboard 8042 controller
@@ -123,20 +123,20 @@ ia32_KbIntHandler_Done:
 // Description:
 //  Send command to onboard 8042 controller
 //
-void ia32_Kb8042SendCmd( __u8 cmd ) {
+void Kb8042SendCmd( __u8 cmd ) {
 
     // Wait for input buffer empty
-    while( ia32_IoInByte( KB8042_PORT ) & 0x02 );
+    while( IoInByte( KB8042_PORT ) & 0x02 );
 
-    ia32_IoOutByte( cmd, KB8042_PORT );
+    IoOutByte( cmd, KB8042_PORT );
 
     // Wait for pc 8042 controller
-    while( ia32_IoInByte( KB8042_PORT ) & 0x02 );
+    while( IoInByte( KB8042_PORT ) & 0x02 );
 }
 
 
 //
-// ia32_KbSendCmd
+// KbSendCmd
 //
 // Input:
 //  cmd     : Command of keyboard controller
@@ -147,16 +147,16 @@ void ia32_Kb8042SendCmd( __u8 cmd ) {
 // Description:
 //  Send command to keyboard controller
 //
-void ia32_KbSendCmd( __u8 cmd ) {
+void KbSendCmd( __u8 cmd ) {
 
     // Disable keyboard
-    ia32_Kb8042SendCmd( 0xad );
+    Kb8042SendCmd( 0xad );
 
     // Send command to keyboard controller
-    ia32_IoOutByte( cmd, KBCNT_PORT );
+    IoOutByte( cmd, KBCNT_PORT );
 
     // Reenable keyboard
-    ia32_Kb8042SendCmd( 0xae );
+    Kb8042SendCmd( 0xae );
 }
 
 

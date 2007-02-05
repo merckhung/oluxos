@@ -12,7 +12,7 @@
 
 
 //
-// ia32_IoOutByte
+// IoOutByte
 //
 // Input:
 //  value   : Value to write
@@ -24,7 +24,7 @@
 // Description:
 //  Write value in byte to IO port
 //
-void ia32_IoOutByte( const __u8 value, const __u16 port ) {
+void IoOutByte( const __u8 value, const __u16 port ) {
 
     __asm__ __volatile__ (          \
         "outb   %%al, %%dx\n"       \
@@ -34,7 +34,7 @@ void ia32_IoOutByte( const __u8 value, const __u16 port ) {
 
 
 //
-// ia32_IoInByte
+// IoInByte
 //
 // Input:
 //  port    : IO port number to write
@@ -45,7 +45,7 @@ void ia32_IoOutByte( const __u8 value, const __u16 port ) {
 // Description:
 //  Read value in byte from IO port
 //
-__u8 ia32_IoInByte( const __u16 port ) {
+__u8 IoInByte( const __u16 port ) {
 
     __u8 value;
 
@@ -60,7 +60,7 @@ __u8 ia32_IoInByte( const __u16 port ) {
 
 
 //
-// ia32_IoOutWord
+// IoOutWord
 //
 // Input:
 //  value   : Value to write
@@ -72,7 +72,7 @@ __u8 ia32_IoInByte( const __u16 port ) {
 // Description:
 //  Write value in word to IO port
 //
-void ia32_IoOutWord( const __u16 value, const __u16 port ) {
+void IoOutWord( const __u16 value, const __u16 port ) {
 
     __asm__ __volatile__ (          \
         "outw   %%ax, %%dx\n"       \
@@ -82,7 +82,7 @@ void ia32_IoOutWord( const __u16 value, const __u16 port ) {
 
 
 //
-// ia32_IoInWord
+// IoInWord
 //
 // Input:
 //  port    : IO port number to write
@@ -93,7 +93,7 @@ void ia32_IoOutWord( const __u16 value, const __u16 port ) {
 // Description:
 //  Read value in word from IO port
 //
-__u16 ia32_IoInWord( const __u16 port ) {
+__u16 IoInWord( const __u16 port ) {
 
     __u16 value;
 
@@ -108,7 +108,7 @@ __u16 ia32_IoInWord( const __u16 port ) {
 
 
 //
-// ia32_IoOutDWord
+// IoOutDWord
 //
 // Input:
 //  value   : Value to write
@@ -120,7 +120,7 @@ __u16 ia32_IoInWord( const __u16 port ) {
 // Description:
 //  Write value in double word to IO port
 //
-void ia32_IoOutDWord( const __u32 value, const __u16 port ) {
+void IoOutDWord( const __u32 value, const __u16 port ) {
 
     __asm__ __volatile__ (          \
         "outl   %%eax, %%dx\n"      \
@@ -130,7 +130,7 @@ void ia32_IoOutDWord( const __u32 value, const __u16 port ) {
 
 
 //
-// ia32_IoInDWord
+// IoInDWord
 //
 // Input:
 //  port    : IO port number to write
@@ -141,7 +141,7 @@ void ia32_IoOutDWord( const __u32 value, const __u16 port ) {
 // Description:
 //  Read value in double word from IO port
 //
-__u32 ia32_IoInDWord( const __u16 port ) {
+__u32 IoInDWord( const __u16 port ) {
 
     __u32 value;
 

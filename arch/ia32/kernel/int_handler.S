@@ -14,7 +14,7 @@
 //
 // Pre-interrupt handling
 //
-.macro ia32_SaveAllRegs
+.macro SaveAllRegs
     cld
     pushl   %ds
     pushl   %es
@@ -31,7 +31,7 @@
 //
 // Restore all register after interrupt handler
 //
-.macro ia32_RestoreAllRegs
+.macro RestoreAllRegs
     popl    %esi
     popl    %edi
     popl    %ebp
@@ -49,12 +49,12 @@
 // Preliminary Interrupt Handler
 // Preload interrupt vector into stack and then jump to common handler
 //
-.macro ia32_InstallInterruptHandler
-    .global ia32_PreliminaryInterruptHandler_\@
+.macro InstallInterruptHandler
+    .global PreliminaryInterruptHandler_\@
     .align 4
-    ia32_PreliminaryInterruptHandler_\@:
+    PreliminaryInterruptHandler_\@:
     movl    $\@, -40(%esp)
-    jmp     ia32_InterruptHandler
+    jmp     InterruptHandler
 .endm
 
 
@@ -66,159 +66,159 @@
 // Install Interrupt Handler
 //
 .rept NR_INTERRUPT
-ia32_InstallInterruptHandler
+InstallInterruptHandler
 .endr
 
 
 //
-// ia32_InterruptHandler -- Common entry for interrupt
+// InterruptHandler -- Common entry for interrupt
 //
 .align 4
-ia32_InterruptHandler:
+InterruptHandler:
 
-    ia32_SaveAllRegs
+    SaveAllRegs
     subl    $4, %esp                // Get preload interrupt vector
-    call    ia32_IntHandleIRQ
+    call    IntHandleIRQ
     addl    $4, %esp                // Discard vector
-    jmp     ia32_InterruptReturn
+    jmp     InterruptReturn
 
-ia32_InterruptReturn:
-    ia32_RestoreAllRegs
+InterruptReturn:
+    RestoreAllRegs
 
     iret
 
 
 //
-// ia32_divide_error -- Handle exception 0 #DE
+// divide_error -- Handle exception 0 #DE
 //
-ia32_divide_error:
+divide_error:
 
     movl    $0xb83be, %esi
     movb    $'0', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_debug_error -- Handle exception 1 #DB
+// debug_error -- Handle exception 1 #DB
 //
-ia32_debug:
+debug:
 
     movl    $0xb83be, %esi
     movb    $'1', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 //
-// ia32_nmi -- Handle exception 2
+// nmi -- Handle exception 2
 //
-ia32_nmi:
+nmi:
 
     movl    $0xb83be, %esi
     movb    $'2', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_breakpoint -- Handle exception 3 #BP
+// breakpoint -- Handle exception 3 #BP
 //
-ia32_breakpoint:
+breakpoint:
 
     movl    $0xb83be, %esi
     movb    $'3', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_overflow -- Handle exception 4 #OF
+// overflow -- Handle exception 4 #OF
 //
-ia32_overflow:
+overflow:
 
     movl    $0xb83be, %esi
     movb    $'4', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_bound_range_exceeded -- Handle exception 5 #BR
+// bound_range_exceeded -- Handle exception 5 #BR
 //
-ia32_bound_range_exceeded:
+bound_range_exceeded:
 
     movl    $0xb83be, %esi
     movb    $'5', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 //
-// ia32_invalid_opcode -- Handle exception 6 #UD
+// invalid_opcode -- Handle exception 6 #UD
 //
-ia32_invalid_opcode:
+invalid_opcode:
 
     movl    $0xb83be, %esi
     movb    $'6', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_device_not_available -- Handle exception 7 #NM
+// device_not_available -- Handle exception 7 #NM
 //
-ia32_device_not_available:
+device_not_available:
 
     movl    $0xb83be, %esi
     movb    $'7', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_double_fault -- Handle exception 8 #DF
+// double_fault -- Handle exception 8 #DF
 //
-ia32_double_fault:
+double_fault:
 
     movl    $0xb83be, %esi
     movb    $'8', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_coprocessor_segment_overrun -- Handle exception 9
+// coprocessor_segment_overrun -- Handle exception 9
 //
-ia32_coprocessor_segment_overrun:
+coprocessor_segment_overrun:
 
     movl    $0xb83be, %esi
     movb    $'9', (%esi)
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 //
-// ia32_invalid_tss -- Handle exception 10 #TS
+// invalid_tss -- Handle exception 10 #TS
 //
-ia32_invalid_tss:
+invalid_tss:
 
     movl    $0xb83bc, %esi
     movb    $'1', (%esi)
@@ -227,13 +227,13 @@ ia32_invalid_tss:
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_segment_not_present -- Handle exception 11 #NP
+// segment_not_present -- Handle exception 11 #NP
 //
-ia32_segment_not_present:
+segment_not_present:
 
     movl    $0xb83bc, %esi
     movb    $'1', (%esi)
@@ -242,13 +242,13 @@ ia32_segment_not_present:
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_stack_fault -- Handle exception 12 #SS
+// stack_fault -- Handle exception 12 #SS
 //
-ia32_stack_fault:
+stack_fault:
 
     movl    $0xb83bc, %esi
     movb    $'1', (%esi)
@@ -257,13 +257,13 @@ ia32_stack_fault:
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 //
-// ia32_general_protection_exception -- Handle exception 13 #NP
+// general_protection_exception -- Handle exception 13 #NP
 //
-ia32_general_protection_exception:
+general_protection_exception:
 
     movl    $0xb83bc, %esi
     movb    $'1', (%esi)
@@ -272,25 +272,25 @@ ia32_general_protection_exception:
     //
     // FIXME: exception handle
     //
-    jmp     ia32_ExceptionReturn
+    jmp     ExceptionReturn
 
 
 
 
 
 
-ia32_ExceptionReturn:
+ExceptionReturn:
 
     iret
 
 
 
 //
-// ia32_ExceptionHandler -- Common entry for exception
+// ExceptionHandler -- Common entry for exception
 //
-.global ia32_ExceptionHandler
+.global ExceptionHandler
 .align 4
-ia32_ExceptionHandler:
+ExceptionHandler:
 
     cli
     movl    $0xb83bc, %esi

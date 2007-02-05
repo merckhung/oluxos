@@ -8,7 +8,7 @@
  */
 
 
-void ia32_TmInitTimer( void );
-void ia32_TmIntHandler( __u8 irqnum );
+void TmInitTimer( void );
+void TmIntHandler( __u8 irqnum );
 
 

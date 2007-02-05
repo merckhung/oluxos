@@ -5,7 +5,7 @@
  * @OLUXORG_LICENSE_HEADER_START@
  * @OLUXORG_LICENSE_HEADER_END@
  *
- * ia32_krn.c -- OluxOS IA32 kernel entry point
+ * krn.c -- OluxOS IA32 kernel entry point
  *
  */
 #include <ia32/types.h>
@@ -20,7 +20,7 @@
 
 
 //
-// ia32_krn_entry
+// krn_entry
 //
 // Input:
 //  None
@@ -31,27 +31,27 @@
 // Description:
 //  This is IA32 kerne entry point
 //
-void ia32_krn_entry( void ) {
+void krn_entry( void ) {
 
-    ia32_MmPageInit();
-    ia32_TcClear();
-    ia32_TcPrint( "Copyright (C) 2006 - 2007 Olux Organization all rights reserved.\n" );
-    ia32_TcPrint( "Welcome to OluxOS v0.1\n\n" );
+    MmPageInit();
+    TcClear();
+    TcPrint( "Copyright (C) 2006 - 2007 Olux Organization all rights reserved.\n" );
+    TcPrint( "Welcome to OluxOS v0.1\n\n" );
 
     // Init CPU interrupt and i8259A
-    ia32_IntInitInterrupt();
+    IntInitInterrupt();
 
     // Scan PCI
-    ia32_PCIDetectDevice();
+    PCIDetectDevice();
 
     // Scan resource
     ChkSMBIOSSup();
 
     // Init keyboard
-    ia32_KbInitKeyboard();
+    KbInitKeyboard();
 
     // Init timer
-    ia32_TmInitTimer();
+    TmInitTimer();
 
 
     for( ; ; );

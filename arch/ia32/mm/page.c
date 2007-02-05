@@ -17,7 +17,7 @@ static volatile __u32 *PTEPtr;
 
 
 //
-// ia32_MmPageInit
+// MmPageInit
 //
 // Input:
 //  None
@@ -28,7 +28,7 @@ static volatile __u32 *PTEPtr;
 // Description:
 //  Initialize page directories and page tables
 //
-void ia32_MmPageInit( void ) {
+void MmPageInit( void ) {
 
     int i;
     __u32 filladdr = 0;

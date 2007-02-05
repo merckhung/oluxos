@@ -18,7 +18,7 @@
 
 
 //
-// ia32_i8259Init
+// i8259Init
 //
 // Input:
 //  None
@@ -29,13 +29,13 @@
 // Description:
 //  Initialize 8259A Programmable Interrupt Controller
 //
-void ia32_i8259Init( void ) {
+void i8259Init( void ) {
 
 
     pdbg( "Disable all IRQ for initial processes\n" );
     // Mask all HW interrupt for initialization
-    ia32_IoOutByte( 0xff, PIC_MASTER_IMR );    
-    ia32_IoOutByte( 0xff, PIC_SLAVE_IMR );
+    IoOutByte( 0xff, PIC_MASTER_IMR );    
+    IoOutByte( 0xff, PIC_SLAVE_IMR );
 
 
     pdbg( "Initialize Master PIC\n" );
@@ -48,10 +48,10 @@ void ia32_i8259Init( void ) {
     // 3. Slave PIC connected at IRQ2
     // 4. Set to microprocessor and normal EOI mode
     //
-    ia32_IoOutByte( 0x11, PIC_MASTER_ICW1 );
-    ia32_IoOutByte( PIC_IRQ_BASE, PIC_MASTER_ICW2 );
-    ia32_IoOutByte( 1U << PIC_CASCADE_IR, PIC_MASTER_ICW3 );
-    ia32_IoOutByte( 0x01, PIC_MASTER_ICW4 );
+    IoOutByte( 0x11, PIC_MASTER_ICW1 );
+    IoOutByte( PIC_IRQ_BASE, PIC_MASTER_ICW2 );
+    IoOutByte( 1U << PIC_CASCADE_IR, PIC_MASTER_ICW3 );
+    IoOutByte( 0x01, PIC_MASTER_ICW4 );
 
 
     pdbg( "Initialize Slave PIC\n" );
@@ -60,20 +60,20 @@ void ia32_i8259Init( void ) {
     //
     // Note: remap IRQ8 to IRQ40
     //
-    ia32_IoOutByte( 0x11, PIC_SLAVE_ICW1 );
-    ia32_IoOutByte( PIC_IRQ_BASE + 8, PIC_SLAVE_ICW2 );
-    ia32_IoOutByte( 1U << PIC_CASCADE_IR, PIC_SLAVE_ICW3 );
-    ia32_IoOutByte( 0x01, PIC_SLAVE_ICW4 );
+    IoOutByte( 0x11, PIC_SLAVE_ICW1 );
+    IoOutByte( PIC_IRQ_BASE + 8, PIC_SLAVE_ICW2 );
+    IoOutByte( 1U << PIC_CASCADE_IR, PIC_SLAVE_ICW3 );
+    IoOutByte( 0x01, PIC_SLAVE_ICW4 );
 
 
     // Mask all HW interrupt again
-    ia32_IoOutByte( 0xff, PIC_MASTER_IMR );    
-    ia32_IoOutByte( 0xff, PIC_SLAVE_IMR );
+    IoOutByte( 0xff, PIC_MASTER_IMR );    
+    IoOutByte( 0xff, PIC_SLAVE_IMR );
 }
 
 
 //
-// ia32_i8259EnableIRQ
+// i8259EnableIRQ
 //
 // Intput:
 //  irqnum      : IRQ number
@@ -85,7 +85,7 @@ void ia32_i8259Init( void ) {
 // Description:
 //  Enable i8259A IRQ line
 //
-void ia32_i8259EnableIRQ( __u8 irqnum ) {
+void i8259EnableIRQ( __u8 irqnum ) {
 
     __u8 reg = PIC_MASTER_IMR;
 
@@ -94,12 +94,12 @@ void ia32_i8259EnableIRQ( __u8 irqnum ) {
         reg = PIC_SLAVE_IMR; 
         irqnum &= 0x7;
     }
-    ia32_IoOutByte( (ia32_IoInByte( reg ) & ~(1 << irqnum)), reg );
+    IoOutByte( (IoInByte( reg ) & ~(1 << irqnum)), reg );
 }
 
 
 //
-// ia32_i8259DisableIRQ
+// i8259DisableIRQ
 //
 // Input:
 //  irqnum      : IRQ number
@@ -110,7 +110,7 @@ void ia32_i8259EnableIRQ( __u8 irqnum ) {
 // Description:
 //  Disable i8259A IRQ line
 //
-void ia32_i8259DisableIRQ( __u8 irqnum ) {
+void i8259DisableIRQ( __u8 irqnum ) {
 
     __u8 reg = PIC_MASTER_IMR;
 
@@ -119,7 +119,7 @@ void ia32_i8259DisableIRQ( __u8 irqnum ) {
         reg = PIC_SLAVE_IMR;   
         irqnum &= 0x7;
     }
-    ia32_IoOutByte( (ia32_IoInByte( reg ) | (1 << irqnum)), reg );
+    IoOutByte( (IoInByte( reg ) | (1 << irqnum)), reg );
 }
 
 

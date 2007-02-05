@@ -17,11 +17,11 @@
 #include <ia32/debug.h>
 
 
-extern void ia32_PreliminaryInterruptHandler_0( void );
+extern void PreliminaryInterruptHandler_0( void );
 
 
 //
-// ia32_TmIntTimer
+// TmIntTimer
 //
 // Input:
 //  None
@@ -32,16 +32,16 @@ extern void ia32_PreliminaryInterruptHandler_0( void );
 // Description:
 //  Initialize 8253 timer chip
 //
-void ia32_TmInitTimer( void ) {
+void TmInitTimer( void ) {
 
-    ia32_IntDisable();
-    ia32_IntRegIRQ( 0, IRQHandler( 0 ), ia32_TmIntHandler );
-    ia32_IntEnable();
+    IntDisable();
+    IntRegIRQ( 0, IRQHandler( 0 ), TmIntHandler );
+    IntEnable();
 }
 
 
 //
-// ia32_TmIntHandler
+// TmIntHandler
 //
 // Input:
 //  irqnum  : IRQ number
@@ -52,7 +52,7 @@ void ia32_TmInitTimer( void ) {
 // Description:
 //  8253 timer interrupt handler
 //
-void ia32_TmIntHandler( __u8 irqnum ) {
+void TmIntHandler( __u8 irqnum ) {
 
     __u8 volatile *videomem = (__u8 *)0xb84fe;
 
@@ -63,7 +63,7 @@ void ia32_TmIntHandler( __u8 irqnum ) {
         (*(videomem + 1))++;
     //}
 
-    ia32_IoOutByte( 0x20, 0x20 );
+    IoOutByte( 0x20, 0x20 );
 }
 
 

@@ -74,7 +74,7 @@ _start:
 
     // Reload CS and jump to C kernel entry
     .byte   0xea
-    .long   ia32_krn_entry
+    .long   krn_entry
     .word   __code_seg
 
 

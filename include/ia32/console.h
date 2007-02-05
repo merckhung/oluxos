@@ -17,10 +17,10 @@
 #define     CRTC_DATA   0x3d5
 
 
-void ia32_TcPrint( const __s8 *format, ... );
-void ia32_TcClear( void );
-void ia32_TcCursorSet( __u8 x, __u8 y );
-void ia32_TcPutChar( __s8 c );
-void ia32_TcRollUp( __u8 lines );
+void TcPrint( const __s8 *format, ... );
+void TcClear( void );
+void TcCursorSet( __u8 x, __u8 y );
+void TcPutChar( __s8 c );
+void TcRollUp( __u8 lines );
 
 

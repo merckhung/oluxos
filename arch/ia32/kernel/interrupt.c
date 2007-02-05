@@ -17,15 +17,15 @@
 #include <string.h>
 
 
-static struct ia32_IntHandlerLst_t InterrupHandlertList[ NR_INTERRUPT ];
-static struct ia32_IDTEntry_t IDTTable[ SZ_INTENTRY ];
+static struct IntHandlerLst_t InterrupHandlertList[ NR_INTERRUPT ];
+static struct IDTEntry_t IDTTable[ SZ_INTENTRY ];
 extern void __code_seg( void );
 
-extern void ia32_ExceptionHandler( void );
+extern void ExceptionHandler( void );
 
 
 //
-// ia32_IntInitInterrupt
+// IntInitInterrupt
 //
 // Input:
 //  None
@@ -36,11 +36,11 @@ extern void ia32_ExceptionHandler( void );
 // Description:
 //  Initialize CPU IDT tables
 //
-void ia32_IntInitInterrupt( void ) {
+void IntInitInterrupt( void ) {
 
 
     int i;
-    struct ia32_IDTPtr_t IDTPtr;
+    struct IDTPtr_t IDTPtr;
 
 
     // Initialize
@@ -50,7 +50,7 @@ void ia32_IntInitInterrupt( void ) {
     // Setup exceptions handler
     for( i = TRAP_START ; i <= TRAP_END ; i++ ) {
     
-        ia32_IntSetIDT( i, (__u32)ia32_ExceptionHandler, (__u16)__code_seg, TRAP_GATE_FLAG );
+        IntSetIDT( i, (__u32)ExceptionHandler, (__u16)__code_seg, TRAP_GATE_FLAG );
     }
 
 
@@ -67,16 +67,16 @@ void ia32_IntInitInterrupt( void ) {
 
 
     // Initialize i8259A PIC
-    ia32_i8259Init();
+    i8259Init();
 
 
     // Enable interrupt
-    ia32_IntEnable();
+    IntEnable();
 }
 
 
 //
-// ia32_IntSetIDT
+// IntSetIDT
 //
 // Input:
 //  index   : Interrupt number
@@ -90,7 +90,7 @@ void ia32_IntInitInterrupt( void ) {
 // Description:
 //  Setup IDT entry for specified interrupt/exception number
 //
-void ia32_IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag ) {
+void IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag ) {
 
     IDTTable[ index ].OffsetLSW = (__u16)(offset & 0xffff);
     IDTTable[ index ].OffsetMSW = (__u16)((offset >> 16) & 0xffff);
@@ -100,7 +100,7 @@ void ia32_IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag ) {
 
 
 //
-// ia32_IntDelIDT
+// IntDelIDT
 //
 // Input:
 //  index   : Interrupt number
@@ -111,14 +111,14 @@ void ia32_IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag ) {
 // Description:
 //  Delete IDT entry for specified interrupt/exception number
 //
-void ia32_IntDelIDT( __u8 index ) {
+void IntDelIDT( __u8 index ) {
 
     memset( IDTTable + (index * 8), 0, SZ_INTENTRY );
 }
 
 
 //
-// ia32_IntDisable
+// IntDisable
 //
 // Input:
 //  None
@@ -129,14 +129,14 @@ void ia32_IntDelIDT( __u8 index ) {
 // Description:
 //  Disable CPU interrupt
 //
-void ia32_IntDisable( void ) {
+void IntDisable( void ) {
 
     __asm__ ( "cli\n" );
 }
 
 
 //
-// ia32_IntEnable
+// IntEnable
 //
 // Input:
 //  None
@@ -147,14 +147,14 @@ void ia32_IntDisable( void ) {
 // Description:
 //  Enable CPU interrupt
 //
-void ia32_IntEnable( void ) {
+void IntEnable( void ) {
 
     __asm__ ( "sti" );
 }
 
 
 //
-// ia32_IntRegInterrupt
+// IntRegInterrupt
 //
 // Intput:
 //  intnum      : Interrupt vector number
@@ -167,14 +167,14 @@ void ia32_IntEnable( void ) {
 // Description:
 //  Public routine for CPU interrupt register
 //
-void ia32_IntRegInterrupt( __u8 intnum, __u32 handler, void (*IntHandler)( __u8 intnum ) ) {
+void IntRegInterrupt( __u8 intnum, __u32 handler, void (*IntHandler)( __u8 intnum ) ) {
 
 #ifdef INT_DEBUG
-    ia32_TcPrint( "ia32_IntRegInterrupt: index 0x%x, handler 0x%x\n", intnum, handler );
+    TcPrint( "IntRegInterrupt: index 0x%x, handler 0x%x\n", intnum, handler );
 #endif
 
     // Add interrupt gate
-    ia32_IntSetIDT( intnum, handler, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( intnum, handler, (__u16)__code_seg, TRAP_GATE_FLAG );
 
     // Install interrupt handler
     InterrupHandlertList[ intnum ].Handler = IntHandler;
@@ -182,7 +182,7 @@ void ia32_IntRegInterrupt( __u8 intnum, __u32 handler, void (*IntHandler)( __u8 
 
 
 //
-// ia32_IntUnregInterrupt
+// IntUnregInterrupt
 //
 // Input:
 //  intnum      : Interrupt vector number
@@ -193,22 +193,22 @@ void ia32_IntRegInterrupt( __u8 intnum, __u32 handler, void (*IntHandler)( __u8 
 // Description:
 //  Public routine for CPU interrupt register
 //
-void ia32_IntUnregInterrupt( __u8 intnum ) {
+void IntUnregInterrupt( __u8 intnum ) {
 
 #ifdef INT_DEBUG
-    ia32_TcPrint( "ia32_IntUnregInterrupt: index 0x%x\n", intnum );
+    TcPrint( "IntUnregInterrupt: index 0x%x\n", intnum );
 #endif
 
     // Uninstall interrupt handler
     InterrupHandlertList[ intnum ].Handler = 0;
 
     // Delete interrupt gate
-    ia32_IntDelIDT( intnum );
+    IntDelIDT( intnum );
 }
 
 
 //
-// ia32_IntRegIRQ
+// IntRegIRQ
 //
 // Intput:
 //  irqnum      : IRQ number
@@ -221,25 +221,25 @@ void ia32_IntUnregInterrupt( __u8 intnum ) {
 // Description:
 //  Public routine for HW IRQ register
 //
-void ia32_IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 irqnum ) ) {
+void IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 irqnum ) ) {
 
 #ifdef INT_DEBUG
-    ia32_TcPrint( "ia32_IntRegIRQ: index 0x%x, handler 0x%x\n", irqnum + PIC_IRQ_BASE, handler );
+    TcPrint( "IntRegIRQ: index 0x%x, handler 0x%x\n", irqnum + PIC_IRQ_BASE, handler );
 #endif
 
     // Add interrupt gate
-    ia32_IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (__u16)__code_seg, INT_GATE_FLAG );
+    IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (__u16)__code_seg, INT_GATE_FLAG );
 
     // Install interrupt handler
     InterrupHandlertList[ irqnum + PIC_IRQ_BASE ].Handler = IRQHandler;
 
     // Enable 8259A IRQ line
-    ia32_i8259EnableIRQ( irqnum );
+    i8259EnableIRQ( irqnum );
 }
 
 
 //
-// ia32_IntUnregIRQ
+// IntUnregIRQ
 //
 // Input:
 //  irqnum      : IRQ number
@@ -250,25 +250,25 @@ void ia32_IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 irqnum
 // Description:
 //  Public routine for HW IRQ unregister
 //
-void ia32_IntUnregIRQ( __u8 irqnum ) {
+void IntUnregIRQ( __u8 irqnum ) {
 
 #ifdef INT_DEBUG
-    ia32_TcPrint( "ia32_IntUnregIRQ: index 0x%x\n", irqnum + PIC_IRQ_BASE );
+    TcPrint( "IntUnregIRQ: index 0x%x\n", irqnum + PIC_IRQ_BASE );
 #endif
 
     // Disable 8259A IRQ line
-    ia32_i8259DisableIRQ( irqnum );
+    i8259DisableIRQ( irqnum );
 
     // Uninstall interrupt handler
     InterrupHandlertList[ irqnum + PIC_IRQ_BASE ].Handler = 0;
 
     // Delete interrupt gate
-    ia32_IntDelIDT( irqnum + PIC_IRQ_BASE );
+    IntDelIDT( irqnum + PIC_IRQ_BASE );
 }
 
 
 //
-// ia32_IntHandleIRQ
+// IntHandleIRQ
 //
 // Input:
 //  irqnum      : IRQ number
@@ -279,7 +279,7 @@ void ia32_IntUnregIRQ( __u8 irqnum ) {
 // Description:
 //  IRQ handler
 //
-void ia32_IntHandleIRQ( __u32 irqnum ) {
+void IntHandleIRQ( __u32 irqnum ) {
 
     __u8 irq = (__u8)irqnum;
     InterrupHandlertList[ irq + PIC_IRQ_BASE ].Handler( irq );
