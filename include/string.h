@@ -13,5 +13,6 @@ __s8 *strncpy( __s8 *dest, const __s8 *src, __u32 n );
 __u32 strlen( const __s8 *s );
 void *memset( void *s, __u8 c, __u32 n );
 __s8 itoa( const __u8 value );
+__s8 strncmp( __s8 *dest, const __s8 *src, __u32 n );
 
 

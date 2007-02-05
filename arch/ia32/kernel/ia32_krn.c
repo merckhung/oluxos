@@ -16,6 +16,7 @@
 #include <ia32/timer.h>
 #include <ia32/kbd.h>
 #include <ia32/debug.h>
+#include <ia32/resource.h>
 
 
 //
@@ -42,6 +43,9 @@ void ia32_krn_entry( void ) {
 
     // Scan PCI
     ia32_PCIDetectDevice();
+
+    // Scan resource
+    ChkSMBIOSSup();
 
     // Init keyboard
     ia32_KbInitKeyboard();
