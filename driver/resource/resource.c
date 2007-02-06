@@ -10,6 +10,7 @@
  */
 #include <types.h>
 #include <clib.h>
+#include <ia32/debug.h>
 #include <driver/resource.h>
 
 
@@ -262,11 +263,11 @@ __u8 ChkSMBIOSSup( void ) {
 
     if( smbios ) {
     
-        //DbgPrint( "Found SMBIOS AnchorString\n" );    
+        DbgPrint( "Found SMBIOS AnchorString\n" );    
     }
     else {
     
-        //DbgPrint( "Cannot Find SMBIOS AnchorString\n" );
+        DbgPrint( "Cannot Find SMBIOS AnchorString\n" );
     }
 
     return 0;

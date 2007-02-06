@@ -15,7 +15,7 @@
  */
 
 
-.file       "boot.S"
+.file       "multiboot.S"
 
 
 MULTIBOOT_MAGIC=0x1badb002

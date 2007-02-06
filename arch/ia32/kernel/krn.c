@@ -33,19 +33,22 @@
 //
 void krn_entry( void ) {
 
-    MmPageInit();
+    // Clear screen and print welcome message
     TcClear();
     TcPrint( "Copyright (C) 2006 - 2007 Olux Organization all rights reserved.\n" );
     TcPrint( "Welcome to OluxOS v0.1\n\n" );
+
+    // Check SMBIOS
+    ChkSMBIOSSup();
+
+    // Setup Page
+    MmPageInit();
 
     // Init CPU interrupt and i8259A
     IntInitInterrupt();
 
     // Scan Pci
-    PciDetectDevice();
-
-    // Scan resource
-    ChkSMBIOSSup();
+    //PciDetectDevice();
 
     // Init keyboard
     KbInitKeyboard();

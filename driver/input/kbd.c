@@ -103,7 +103,7 @@ KbIntHandler_Done:
 
     //(*videomem)++;
     //(*(videomem + 1))++;
-    //TcPrint( "Key code: 0x%x\n", IoInByte( 0x60 ) );
+    DbgPrint( "Key code: 0x%x\n", IoInByte( 0x60 ) );
 
     IoOutByte( 0x20, 0x20 );
 

@@ -99,7 +99,7 @@ __s8 strncmp( __s8 *dest, const __s8 *src, __u32 n ) {
     
         if( i < len ) {
         
-            //sum += *(dest + i) - *(src + i);
+            sum += *(dest + i) - *(src + i);
             if( sum ) {
             
                 break;

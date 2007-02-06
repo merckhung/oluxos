@@ -10,6 +10,7 @@
  */
 #include <types.h>
 #include <ia32/io.h>
+#include <ia32/debug.h>
 #include <driver/pci.h>
 #include <driver/console.h>
 
@@ -185,7 +186,7 @@ void PciDetectDevice( void ) {
                 value = PciReadConfigDWord( PciCalBaseAddr( bus, dev, func ), 0 );
                 if( value != 0xffffffff ) {
                 
-                    TcPrint( "Pci Bus : %4X, Dev : %4X, Func : %4X, Vid = %4X, Did = %4X\n"
+                    DbgPrint( "Pci Bus : %4X, Dev : %4X, Func : %4X, Vid = %4X, Did = %4X\n"
                                     , bus, dev, func, (value & 0xffff), ((value >> 16) & 0xffff) );
                 }
             }

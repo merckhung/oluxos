@@ -12,7 +12,7 @@
 #include <ia32/debug.h>
 #include <driver/console.h>
 
-
+#ifdef KERNEL_DEBUG
 static DbgRegs_t DbgRegs;
 
 
@@ -146,5 +146,6 @@ void DbgDumpRegs( void ) {
                     , (__u16)(DbgRegs.idt & 0xffff) );
 
 }
+#endif
 
 

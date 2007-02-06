@@ -14,7 +14,6 @@
 #include <ia32/io.h>
 #include <ia32/i8259.h>
 #include <ia32/debug.h>
-#include <driver/console.h>
 
 static struct IntHandlerLst_t InterrupHandlertList[ NR_INTERRUPT ];
 static struct IDTEntry_t IDTTable[ SZ_INTENTRY ];

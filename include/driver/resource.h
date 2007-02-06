@@ -9,7 +9,7 @@
 
 
 #define     SMBIOS_BASE     0xfff00000
-#define     SMBIOS_ANCH     "_sm_"
+#define     SMBIOS_ANCH     "_ms_"
 
 
 struct smbios_entry {
