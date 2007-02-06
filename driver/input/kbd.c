@@ -147,6 +147,8 @@ static struct KbdAsciiPair_t kap[] = {
     { NO_SHIFT      , KEY_PGDN          , NO_ASCII      },
     { NO_SHIFT      , KEY_INSERT        , NO_ASCII      },
     { NO_SHIFT      , KEY_DELETE        , NO_ASCII      },
+    { NO_SHIFT      , KEY_F11           , NO_ASCII      },
+    { NO_SHIFT      , KEY_F12           , NO_ASCII      },
     { 0             , 0                 , 0             },
 };
 
@@ -188,7 +190,6 @@ void KbdIntHandler( __u8 irqnum ) {
 
     __u16 i;
     __u8 keycode;
-    //__u8 volatile *videomem = (__u8 *)0xb831e;
 
 
     // Disable interrupt
@@ -229,22 +230,18 @@ void KbdIntHandler( __u8 irqnum ) {
     
         if( kap[ i ].ScanCode == keycode ) {
         
-            if( kap[ i ].ShiftKey != NO_ASCII ) {
+            if( kap[ i ].AsciiCode != NO_ASCII ) {
 
-                DbgPrint( "%x", kap[ i ].AsciiCode );
+                DbgPrint( "%c", kap[ i ].AsciiCode );
             }
             break;
         }
     }
 
-    //(*videomem)++;
-    //(*(videomem + 1))++;
-    //DbgPrint( "Key code: 0x%x\n", keycode );
 
 KbdIntHandler_Done:
 
     IoOutByte( 0x20, 0x20 );
-
     IntEnable();
 }
 

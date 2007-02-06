@@ -18,9 +18,10 @@
 
 
 void TcPrint( const __s8 *format, ... );
+__s32 TcCalDigit( const __s8 *p, __s32 *digit );
 void TcClear( void );
 void TcCursorSet( __u8 x, __u8 y );
-void TcPutChar( __s8 c );
+void TcPutchar( __s8 c );
 void TcRollUp( __u8 lines );
 
 

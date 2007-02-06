@@ -34,37 +34,87 @@ static __u8 yPos = 0;
 //
 void TcPrint( const __s8 *format, ... ) {
 
-    __s8 digit;
+    __s32 digit;
     __s8 **arg = (__s8 **) (&format) + 1;
 
     for( ; *format ; format++ ) {
-    
+
         if( *format == '%' ) {
 
+            __s8 upper = 0, had = 0, specify = 1;
+            __s8 tmp;
+
+            // Skip '%'
             format++;
-            digit = 0;
-            if( (*format >= '0') && (*format <= '8') ) {
-            
-                digit = *format - '0';
-                format++;
+
+            // Calculate and convert digit
+            format += TcCalDigit( format, &digit );
+
+            // Auto sizing
+            if( !digit ) {
+
+                digit = sizeof( __u32 );
+                specify = 0;
             }
 
             switch( *format ) {
 
-                case 'X' :
-                case 'x' :
 
-                    // Auto sizing
-                    if( !digit ) {
-                    
-                        digit = sizeof( **arg ) * 8;
-                    }
+                // Hex Print
+                case 'X' :
+                    upper = 1;
+                case 'x' :
                     for( digit-- ; digit >= 0 ; digit-- ) {
-                    
-                        TcPutChar( itoa( (__s8)( (((__u32)(*arg)) >> (digit * 4)) & 0xf) ) );
+
+                        tmp = itoa( (__s8)( (((__u32)(*arg)) >> (digit * 4)) & 0xf), upper );
+                        if( specify ) {
+                        
+                            TcPutchar( tmp );
+                        }
+                        else {
+                        
+                            if( (tmp != '0') || had ) {
+
+                                had = 1;
+                                TcPutchar( tmp );
+                            }
+                        }
                     }
                     break;
 
+
+                // ASCII Print
+                case 'c' :
+
+                    TcPutchar( (__u32)*arg );
+                    break;
+
+                
+                // String Print
+                case 's' :
+                    for( ; **arg ; (*arg)++ ) {
+                
+                        TcPutchar( **arg );
+                    }
+                    break;
+
+
+                // Decimal Print
+                case 'd' :
+                    digit = 8;
+                    for( digit-- ; digit >= 0 ; digit-- ) {
+
+                        tmp = itoa( (__s8)( (((__u32)(itobcd((__s32)*arg))) >> (digit * 4)) & 0xf), upper );
+                        if( (tmp != '0') || had ) {
+
+                            had = 1; 
+                            TcPutchar( tmp );
+                        }
+                    }
+                    break;
+
+
+                // Cannot parse syntax
                 default :
                     continue;
             }
@@ -73,9 +123,50 @@ void TcPrint( const __s8 *format, ... ) {
         }
         else {
 
-            TcPutChar( *format );
+            TcPutchar( *format );
         }
     }
+}
+
+
+//
+// TcCalDigit
+//
+// Input:
+//  p       : String buffer
+//  digit   : number of digit output
+//
+// Return:
+//  None
+//
+// Description:
+//  Calculate number of digit
+//
+#define     MAX_FORMAT_DIGIT    2
+__s32 TcCalDigit( const __s8 *p, __s32 *digit ) {
+
+    __s32 i, j;
+    __s8 buf[ MAX_FORMAT_DIGIT ];
+
+    for( i = 0 ; i < MAX_FORMAT_DIGIT ; i++, p++ ) {
+    
+        if( (*p >= '0') && (*p <= '9') ) {
+
+            buf[ i ] = *p - '0';
+        }
+        else {
+        
+            break;
+        }
+    }
+
+    *digit = 0;
+    for( j = 0 ; j < i ; j++ ) {
+    
+        *digit += pow( 10, i - j - 1 ) * buf[ j ];
+    }
+
+    return i;
 }
 
 
@@ -148,7 +239,7 @@ void TcCursorSet( __u8 x, __u8 y ) {
 
 
 //
-// TcPutChar
+// TcPutchar
 //
 // Input:
 //  c       : Character to put on screen
@@ -157,10 +248,9 @@ void TcCursorSet( __u8 x, __u8 y ) {
 //  None
 //
 // Description:
-//  Put one character on screen
+//  Put one char on screen
 //
-void TcPutChar( __s8 c ) {
-
+void TcPutchar( __s8 c ) {
 
     if( c == '\n' ) {
     
