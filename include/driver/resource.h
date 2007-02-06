@@ -8,8 +8,8 @@
  */
 
 
-#define     SMBIOS_BASE     0xfff00000
-#define     SMBIOS_ANCH     "_ms_"
+#define     SMBIOS_BASE     0x000f0000
+#define     SMBIOS_ANCH     "_SM_"
 
 
 struct smbios_entry {

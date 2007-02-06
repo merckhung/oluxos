@@ -321,8 +321,8 @@ __u8 ChkSMBIOSSup( void ) {
     volatile __u8 *memptr = (__u8 *)SMBIOS_BASE;
     __u8 smbios = 0;
 
-    // Search 1MB
-    for( i = 0 ; i < 0x100000 ; i++ ) {
+    // Search 64kb
+    for( i = 0 ; i < 0x10000 ; i++ ) {
     
         if( !strncmp( (__u8 *)(memptr + i), SMBIOS_ANCH, 4 ) ) {
         

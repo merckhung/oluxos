@@ -48,7 +48,7 @@ void krn_entry( void ) {
     IntInitInterrupt();
 
     // Scan Pci
-    PciDetectDevice();
+    //PciDetectDevice();
 
     // Init keyboard
     KbdInitKeyboard();
