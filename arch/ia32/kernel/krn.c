@@ -51,7 +51,7 @@ void krn_entry( void ) {
     //PciDetectDevice();
 
     // Init keyboard
-    KbInitKeyboard();
+    KbdInitKeyboard();
 
     // Init timer
     TmInitTimer();
