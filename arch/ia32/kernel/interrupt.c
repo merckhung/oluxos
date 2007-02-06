@@ -11,7 +11,7 @@
 #include <ia32/types.h>
 #include <ia32/interrupt.h>
 #include <ia32/io.h>
-#include <ia32/console.h>
+#include <driver/console.h>
 #include <ia32/i8259.h>
 #include <ia32/debug.h>
 #include <string.h>

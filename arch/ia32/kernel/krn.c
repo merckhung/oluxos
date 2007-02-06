@@ -9,14 +9,14 @@
  *
  */
 #include <ia32/types.h>
-#include <ia32/console.h>
+#include <driver/console.h>
 #include <ia32/page.h>
-#include <ia32/pci.h>
+#include <driver/pci.h>
 #include <ia32/interrupt.h>
 #include <ia32/timer.h>
-#include <ia32/kbd.h>
+#include <driver/kbd.h>
 #include <ia32/debug.h>
-#include <ia32/resource.h>
+#include <driver/resource.h>
 
 
 //

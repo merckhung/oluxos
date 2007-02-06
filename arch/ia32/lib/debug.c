@@ -10,7 +10,7 @@
  */
 #include <ia32/types.h>
 #include <ia32/debug.h>
-#include <ia32/console.h>
+#include <driver/console.h>
 
 
 static DbgRegs_t DbgRegs;
