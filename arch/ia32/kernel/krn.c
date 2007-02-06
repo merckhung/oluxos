@@ -9,13 +9,13 @@
  *
  */
 #include <types.h>
-#include <driver/console.h>
 #include <ia32/page.h>
-#include <driver/pci.h>
 #include <ia32/interrupt.h>
 #include <ia32/timer.h>
-#include <driver/kbd.h>
 #include <ia32/debug.h>
+#include <driver/console.h>
+#include <driver/kbd.h>
+#include <driver/pci.h>
 #include <driver/resource.h>
 
 
@@ -36,7 +36,7 @@ void krn_entry( void ) {
     // Clear screen and print welcome message
     TcClear();
     TcPrint( "Copyright (C) 2006 - 2007 Olux Organization all rights reserved.\n" );
-    TcPrint( "Welcome to OluxOS v0.1\n\n" );
+    TcPrint( "Olux Operating System v0.1\n\n" );
 
     // Check SMBIOS
     ChkSMBIOSSup();
@@ -48,14 +48,13 @@ void krn_entry( void ) {
     IntInitInterrupt();
 
     // Scan Pci
-    //PciDetectDevice();
+    PciDetectDevice();
 
     // Init keyboard
     KbdInitKeyboard();
 
     // Init timer
     TmInitTimer();
-
 
     for( ; ; );
 }
