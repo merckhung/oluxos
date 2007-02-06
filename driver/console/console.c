@@ -8,10 +8,10 @@
  * console.c -- OluxOS IA32 text mode console routines
  *
  */
-#include <ia32/types.h>
+#include <types.h>
+#include <clib.h>
 #include <ia32/io.h>
 #include <driver/console.h>
-#include <string.h>
 
 
 static volatile __u8 *VideoRamPtr = (__u8 *)VIDEO_TEXT_ADDR;

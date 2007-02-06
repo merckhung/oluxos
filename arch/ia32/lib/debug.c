@@ -8,7 +8,7 @@
  * debug.c -- OluxOS IA32 debug routines
  *
  */
-#include <ia32/types.h>
+#include <types.h>
 #include <ia32/debug.h>
 #include <driver/console.h>
 

@@ -8,7 +8,7 @@
  * krn.c -- OluxOS IA32 kernel entry point
  *
  */
-#include <ia32/types.h>
+#include <types.h>
 #include <driver/console.h>
 #include <ia32/page.h>
 #include <driver/pci.h>

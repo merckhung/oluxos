@@ -8,13 +8,11 @@
  * i8259.c -- Intel architecture legacy interrupt controller
  *
  */
-#include <ia32/types.h>
-#include <ia32/interrupt.h>
+#include <types.h>
+#include <clib.h>
 #include <ia32/io.h>
-#include <driver/console.h>
 #include <ia32/i8259.h>
 #include <ia32/debug.h>
-#include <string.h>
 
 
 //
@@ -32,13 +30,13 @@
 void i8259Init( void ) {
 
 
-    pdbg( "Disable all IRQ for initial processes\n" );
+    DbgPrint( "Disable all IRQ for initial processes\n" );
     // Mask all HW interrupt for initialization
     IoOutByte( 0xff, PIC_MASTER_IMR );    
     IoOutByte( 0xff, PIC_SLAVE_IMR );
 
 
-    pdbg( "Initialize Master PIC\n" );
+    DbgPrint( "Initialize Master PIC\n" );
     //
     // Initialize Master PIC
     //
@@ -54,7 +52,7 @@ void i8259Init( void ) {
     IoOutByte( 0x01, PIC_MASTER_ICW4 );
 
 
-    pdbg( "Initialize Slave PIC\n" );
+    DbgPrint( "Initialize Slave PIC\n" );
     //
     // Initialize Slave PIC
     //

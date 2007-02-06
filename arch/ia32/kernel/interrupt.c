@@ -8,14 +8,13 @@
  * interrupt.c -- OluxOS IA32 interrupt routines
  *
  */
-#include <ia32/types.h>
+#include <types.h>
+#include <clib.h>
 #include <ia32/interrupt.h>
 #include <ia32/io.h>
-#include <driver/console.h>
 #include <ia32/i8259.h>
 #include <ia32/debug.h>
-#include <string.h>
-
+#include <driver/console.h>
 
 static struct IntHandlerLst_t InterrupHandlertList[ NR_INTERRUPT ];
 static struct IDTEntry_t IDTTable[ SZ_INTENTRY ];
@@ -169,9 +168,7 @@ void IntEnable( void ) {
 //
 void IntRegInterrupt( __u8 intnum, __u32 handler, void (*IntHandler)( __u8 intnum ) ) {
 
-#ifdef INT_DEBUG
-    TcPrint( "IntRegInterrupt: index 0x%x, handler 0x%x\n", intnum, handler );
-#endif
+    DbgPrint( "IntRegInterrupt: index 0x%x, handler 0x%x\n", intnum, handler );
 
     // Add interrupt gate
     IntSetIDT( intnum, handler, (__u16)__code_seg, TRAP_GATE_FLAG );
@@ -195,9 +192,7 @@ void IntRegInterrupt( __u8 intnum, __u32 handler, void (*IntHandler)( __u8 intnu
 //
 void IntUnregInterrupt( __u8 intnum ) {
 
-#ifdef INT_DEBUG
-    TcPrint( "IntUnregInterrupt: index 0x%x\n", intnum );
-#endif
+    DbgPrint( "IntUnregInterrupt: index 0x%x\n", intnum );
 
     // Uninstall interrupt handler
     InterrupHandlertList[ intnum ].Handler = 0;
@@ -223,9 +218,7 @@ void IntUnregInterrupt( __u8 intnum ) {
 //
 void IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 irqnum ) ) {
 
-#ifdef INT_DEBUG
-    TcPrint( "IntRegIRQ: index 0x%x, handler 0x%x\n", irqnum + PIC_IRQ_BASE, handler );
-#endif
+    DbgPrint( "IntRegIRQ: index 0x%x, handler 0x%x\n", irqnum + PIC_IRQ_BASE, handler );
 
     // Add interrupt gate
     IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (__u16)__code_seg, INT_GATE_FLAG );
@@ -252,9 +245,7 @@ void IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 irqnum ) ) 
 //
 void IntUnregIRQ( __u8 irqnum ) {
 
-#ifdef INT_DEBUG
-    TcPrint( "IntUnregIRQ: index 0x%x\n", irqnum + PIC_IRQ_BASE );
-#endif
+    DbgPrint( "IntUnregIRQ: index 0x%x\n", irqnum + PIC_IRQ_BASE );
 
     // Disable 8259A IRQ line
     i8259DisableIRQ( irqnum );

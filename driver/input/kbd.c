@@ -8,12 +8,12 @@
  * kbd.c -- OluxOS IA32 keyboard routines
  *
  */
-#include <ia32/types.h>
-#include <driver/console.h>
+#include <types.h>
 #include <ia32/interrupt.h>
 #include <ia32/io.h>
-#include <driver/kbd.h>
 #include <ia32/debug.h>
+#include <driver/kbd.h>
+#include <driver/console.h>
 
 
 extern void PreliminaryInterruptHandler_1( void );

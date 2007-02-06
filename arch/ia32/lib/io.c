@@ -8,7 +8,7 @@
  * io.c -- OluxOS IA32 Input/Output routines
  *
  */
-#include <ia32/types.h>
+#include <types.h>
 
 
 //

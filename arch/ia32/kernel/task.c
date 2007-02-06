@@ -8,7 +8,7 @@
  * task.c -- OluxOS IA32 task routines
  *
  */
-#include <ia32/types.h>
+#include <types.h>
 #include <driver/console.h>
 #include <ia32/debug.h>
 #include <ia32/task.h>

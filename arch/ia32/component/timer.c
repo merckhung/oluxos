@@ -8,8 +8,7 @@
  * timer.c -- OluxOS IA32 timer routines
  *
  */
-#include <ia32/types.h>
-#include <driver/console.h>
+#include <types.h>
 #include <ia32/interrupt.h>
 #include <ia32/timer.h>
 #include <ia32/io.h>

@@ -8,8 +8,8 @@
  * string.c -- OluxOS IA32 memory routines
  *
  */
-#include <ia32/types.h>
-#include <string.h>
+#include <types.h>
+#include <clib.h>
 
 
 void *memcpy( void *dest, const void *src, __u32 n ) {

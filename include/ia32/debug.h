@@ -6,15 +6,19 @@
  * @OLUXORG_LICENSE_HEADER_END@
  *
  */
-
-
 #ifdef KERNEL_DEBUG
-#define pdbg( msg, args... )    TcPrint( msg, ##args );
-#else
-#define pdbg( msg, args... )
+#include <driver/console.h>
 #endif
 
 
+#ifdef KERNEL_DEBUG
+#define DbgPrint( msg, args... )    TcPrint( msg, ##args );
+#else
+#define DbgPrint( msg, args... )
+#endif
+
+
+#ifdef KERNEL_DEBUG
 typedef struct {
 
     __u32 eax;
@@ -51,6 +55,6 @@ typedef struct {
 
 
 void DbgDumpRegs( void );
-
+#endif
 
 

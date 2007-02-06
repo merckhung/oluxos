@@ -8,7 +8,7 @@
  * pci.c -- OluxOS IA32 Pci routines
  *
  */
-#include <ia32/types.h>
+#include <types.h>
 #include <ia32/io.h>
 #include <driver/pci.h>
 #include <driver/console.h>

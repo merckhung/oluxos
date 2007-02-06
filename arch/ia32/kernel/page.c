@@ -8,7 +8,7 @@
  * page.c -- OluxOS IA32 paging routines
  *
  */
-#include <ia32/types.h>
+#include <types.h>
 #include <ia32/page.h>
 
 

@@ -8,10 +8,9 @@
  * resource.c -- OluxOS IA32 resource routines
  *
  */
-#include <ia32/types.h>
+#include <types.h>
+#include <clib.h>
 #include <driver/resource.h>
-#include <driver/console.h>
-#include <string.h>
 
 
 __u32 pentium_msr_list[] = {
@@ -263,11 +262,11 @@ __u8 ChkSMBIOSSup( void ) {
 
     if( smbios ) {
     
-        TcPrint( "Found SMBIOS AnchorString\n" );    
+        //DbgPrint( "Found SMBIOS AnchorString\n" );    
     }
     else {
     
-        TcPrint( "Cannot Find SMBIOS AnchorString\n" );
+        //DbgPrint( "Cannot Find SMBIOS AnchorString\n" );
     }
 
     return 0;
