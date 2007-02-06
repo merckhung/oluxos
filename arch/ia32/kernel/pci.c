@@ -5,7 +5,7 @@
  * @OLUXORG_LICENSE_HEADER_START@
  * @OLUXORG_LICENSE_HEADER_END@
  *
- * pci.c -- OluxOS IA32 PCI routines
+ * pci.c -- OluxOS IA32 Pci routines
  *
  */
 #include <ia32/types.h>
@@ -15,19 +15,19 @@
 
 
 //
-// PCIReadConfigByte
+// PciReadConfigByte
 //
 // Input:
-//  address : PCI device address
+//  address : Pci device address
 //  offset  : Offset address of register
 //
 // Return:
 //  Register value in byte
 //
 // Description:
-//  Read PCI configuration space register in byte
+//  Read Pci configuration space register in byte
 //
-__u8 PCIReadConfigByte( __u32 address, __u8 offset ) {
+__u8 PciReadConfigByte( __u32 address, __u8 offset ) {
 
     IoOutDWord( address | offset , PCI_PORT_ADDR );
     return IoInByte( PCI_PORT_DATA );
@@ -35,10 +35,10 @@ __u8 PCIReadConfigByte( __u32 address, __u8 offset ) {
 
 
 //
-// PCIWriteConfigByte
+// PciWriteConfigByte
 //
 // Input:
-//  address : PCI device address
+//  address : Pci device address
 //  offset  : Offset address of register
 //  value   : Value to write
 //
@@ -46,9 +46,9 @@ __u8 PCIReadConfigByte( __u32 address, __u8 offset ) {
 //  Register value in byte
 //
 // Description:
-//  Write byte to PCI configuration space register
+//  Write byte to Pci configuration space register
 //
-void PCIWriteConfigByte( __u32 address, __u8 offset, __u8 value ) {
+void PciWriteConfigByte( __u32 address, __u8 offset, __u8 value ) {
 
     IoOutDWord( address | offset, PCI_PORT_ADDR );
     IoOutByte( value, PCI_PORT_ADDR );
@@ -56,19 +56,19 @@ void PCIWriteConfigByte( __u32 address, __u8 offset, __u8 value ) {
 
 
 //
-// PCIReadConfigWord
+// PciReadConfigWord
 //
 // Input:
-//  address : PCI device address
+//  address : Pci device address
 //  offset  : Offset address of register
 //
 // Return:
 //  Register value in word
 //
 // Description:
-//  Read PCI configuration space register in word
+//  Read Pci configuration space register in word
 //
-__u16 PCIReadConfigWord( __u32 address, __u8 offset ) {
+__u16 PciReadConfigWord( __u32 address, __u8 offset ) {
 
     IoOutDWord( address | offset , PCI_PORT_ADDR );
     return IoInWord( PCI_PORT_DATA );
@@ -76,10 +76,10 @@ __u16 PCIReadConfigWord( __u32 address, __u8 offset ) {
 
 
 //
-// PCIWriteConfigWord
+// PciWriteConfigWord
 //
 // Input:
-//  address : PCI device address
+//  address : Pci device address
 //  offset  : Offset address of register
 //  value   : Value to write
 //
@@ -87,9 +87,9 @@ __u16 PCIReadConfigWord( __u32 address, __u8 offset ) {
 //  Register value in word
 //
 // Description:
-//  Write word to PCI configuration space register
+//  Write word to Pci configuration space register
 //
-void PCIWriteConfigWord( __u32 address, __u8 offset, __u16 value ) {
+void PciWriteConfigWord( __u32 address, __u8 offset, __u16 value ) {
 
     IoOutDWord( address | offset, PCI_PORT_ADDR );
     IoOutWord( value, PCI_PORT_ADDR );
@@ -97,19 +97,19 @@ void PCIWriteConfigWord( __u32 address, __u8 offset, __u16 value ) {
 
 
 //
-// PCIReadConfigDWord
+// PciReadConfigDWord
 //
 // Input:
-//  address : PCI device address
+//  address : Pci device address
 //  offset  : Offset address of register
 //
 // Return:
 //  Register value in double word
 //
 // Description:
-//  Read PCI configuration space register in double word
+//  Read Pci configuration space register in double word
 //
-__u32 PCIReadConfigDWord( __u32 address, __u8 offset ) {
+__u32 PciReadConfigDWord( __u32 address, __u8 offset ) {
 
     IoOutDWord( address | offset , PCI_PORT_ADDR );
     return IoInDWord( PCI_PORT_DATA );
@@ -117,10 +117,10 @@ __u32 PCIReadConfigDWord( __u32 address, __u8 offset ) {
 
 
 //
-// PCIWriteConfigDWord
+// PciWriteConfigDWord
 //
 // Input:
-//  address : PCI device address
+//  address : Pci device address
 //  offset  : Offset address of register
 //  value   : Value to write
 //
@@ -128,9 +128,9 @@ __u32 PCIReadConfigDWord( __u32 address, __u8 offset ) {
 //  Register value in double word
 //
 // Description:
-//  Write double word to PCI configuration space register
+//  Write double word to Pci configuration space register
 //
-void PCIWriteConfigDWord( __u32 address, __u8 offset, __u32 value ) {
+void PciWriteConfigDWord( __u32 address, __u8 offset, __u32 value ) {
 
     IoOutDWord( address | offset, PCI_PORT_ADDR );
     IoOutDWord( value, PCI_PORT_ADDR );
@@ -138,27 +138,27 @@ void PCIWriteConfigDWord( __u32 address, __u8 offset, __u32 value ) {
 
 
 //
-// PCICalBaseAddr
+// PciCalBaseAddr
 //
 // Input:
-//  bus     : PCI bus number
-//  dev     : PCI device number
-//  func    : PCI function number
+//  bus     : Pci bus number
+//  dev     : Pci device number
+//  func    : Pci function number
 //
 // Return:
-//  PCI base address
+//  Pci base address
 //
 // Description:
-//  Calculate PCI base address by bus, device, and function numbers
+//  Calculate Pci base address by bus, device, and function numbers
 //
-__u32 PCICalBaseAddr( __u8 bus, __u8 dev, __u8 func ) {
+__u32 PciCalBaseAddr( __u8 bus, __u8 dev, __u8 func ) {
 
     return PCI_ENABLE_BIT | (bus << 16) | ((dev & 0x1f) << 11) | ((func & 0x07) << 8);
 }
 
 
 //
-// PCIDetectDevice
+// PciDetectDevice
 //
 // Input:
 //  None
@@ -167,9 +167,9 @@ __u32 PCICalBaseAddr( __u8 bus, __u8 dev, __u8 func ) {
 //  None
 //
 // Description:
-//  Scaning all PCI devices on the bus
+//  Scaning all Pci devices on the bus
 //
-void PCIDetectDevice( void ) {
+void PciDetectDevice( void ) {
 
     __u32 value;
     __u16 bus;
@@ -182,10 +182,10 @@ void PCIDetectDevice( void ) {
         
             for( func = 0 ; func <= PCI_FUN_MAX ; func++ ) {
             
-                value = PCIReadConfigDWord( PCICalBaseAddr( bus, dev, func ), 0 );
+                value = PciReadConfigDWord( PciCalBaseAddr( bus, dev, func ), 0 );
                 if( value != 0xffffffff ) {
                 
-                    TcPrint( "PCI Bus : %4X, Dev : %4X, Func : %4X, Vid = %4X, Did = %4X\n"
+                    TcPrint( "Pci Bus : %4X, Dev : %4X, Func : %4X, Vid = %4X, Did = %4X\n"
                                     , bus, dev, func, (value & 0xffff), ((value >> 16) & 0xffff) );
                 }
             }

@@ -93,7 +93,6 @@ __s8 itoa( const __u8 value ) {
 __s8 strncmp( __s8 *dest, const __s8 *src, __u32 n ) {
 
     __u32 len, i, sum = 0;
-    __u8 *p;
 
     len = strlen( src );
     for( i = 0 ; i < n ; i++ ) {

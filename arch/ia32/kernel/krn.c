@@ -41,8 +41,8 @@ void krn_entry( void ) {
     // Init CPU interrupt and i8259A
     IntInitInterrupt();
 
-    // Scan PCI
-    PCIDetectDevice();
+    // Scan Pci
+    PciDetectDevice();
 
     // Scan resource
     ChkSMBIOSSup();
