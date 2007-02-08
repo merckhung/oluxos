@@ -39,5 +39,6 @@
 void i8259Init( void );
 void i8259EnableIRQ( __u8 irqnum );
 void i8259DisableIRQ( __u8 irqnum );
+void i8259IssueEOI( void );
 
 

@@ -12,7 +12,6 @@
 #include <ia32/interrupt.h>
 #include <ia32/timer.h>
 #include <ia32/io.h>
-#include <ia32/i8259.h>
 #include <ia32/debug.h>
 
 
@@ -62,7 +61,7 @@ void TmIntHandler( __u8 irqnum ) {
         (*(videomem + 1))++;
     //}
 
-    IoOutByte( 0x20, 0x20 );
+    IntIssueEOI();
 }
 
 

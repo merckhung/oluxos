@@ -276,3 +276,21 @@ void IntHandleIRQ( __u32 irqnum ) {
 }
 
 
+//
+// IntIssueEOI
+//
+// Input:
+//  None
+//
+// Output:
+//  None
+//
+// Description:
+//  Issue End of Interrupt action
+//
+void IntIssueEOI( void ) {
+
+    i8259IssueEOI();
+}
+
+

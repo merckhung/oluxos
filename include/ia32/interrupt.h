@@ -60,6 +60,8 @@ void IntEnable( void );
 
 void IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 ) );
 void IntUnregIRQ( __u8 irqnum );
+
+void IntIssueEOI( void );
 #endif
 
 

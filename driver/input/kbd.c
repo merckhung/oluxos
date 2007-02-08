@@ -241,7 +241,7 @@ void KbdIntHandler( __u8 irqnum ) {
 
 KbdIntHandler_Done:
 
-    IoOutByte( 0x20, 0x20 );
+    IntIssueEOI();
     IntEnable();
 }
 

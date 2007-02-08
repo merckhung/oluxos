@@ -121,3 +121,21 @@ void i8259DisableIRQ( __u8 irqnum ) {
 }
 
 
+//
+// i8259DisableIRQ
+//
+// Input:
+//  None
+//
+// Output:
+//  None
+//
+// Description:
+//  Issue End of Interrupt action
+//
+void i8259IssueEOI( void ) {
+
+    IoOutByte( 0x20, PIC_MASTER_CMD );
+}
+
+
