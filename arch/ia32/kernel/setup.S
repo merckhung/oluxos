@@ -20,7 +20,7 @@ STACK_SIZE=4096
  * Code Segment
  */
 .text
-.global     _setup, __code_seg, __data_seg
+.global     _setup, __code_seg, __data_seg, __task_seg
 
 
 _setup:
@@ -74,8 +74,10 @@ _setup:
  */
 __gdt:
 
+
     // 2 NULL segment descriptors
     .fill 2, 8, 0
+
 
     //
     // Code segment descriptor
@@ -96,6 +98,7 @@ __code_seg = . - __gdt
     .word   0x9a00
     .word   0x00cf
 
+
     //
     // Data segment descriptor
     // Base address = 0x0000h
@@ -114,17 +117,34 @@ __data_seg = . - __gdt
     .word   0x0000
     .word   0x9200
     .word   0x00cf
+
+
+    //
+    // Task State Segment Descriptor
+    // Base address = uninitialized (0x0000h)
+    // Limit(15:00) = 0xffffh
+    // Limit(19:16) = 0xfh
+    // P            = 1b
+    // DPL          = 00b
+    // Type         = 1001b
+    // AVL          = 0b
+    // G            = 1b
+    //
+__task_seg = . - __gdt
+    .word   0xffff
+    .word   0x0000
+    .word   0x8900
+    .word   0x000f
     __len_of_gdt = . - __gdt
 
-__gdtptr:
 
+__gdtptr:
     //
     // GDT limit    = __len_of_gdt - 1
     // GDT Base     = 0x00000000h
     //
     .word       __len_of_gdt - 1
     .word       0, 0
-
 
 
 /******************************************************************************

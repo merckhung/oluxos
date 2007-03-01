@@ -10,6 +10,7 @@
  */
 #include <types.h>
 #include <ia32/page.h>
+#include <ia32/task.h>
 #include <ia32/interrupt.h>
 #include <ia32/timer.h>
 #include <ia32/debug.h>
@@ -48,7 +49,7 @@ void krn_entry( void ) {
     IntInitInterrupt();
 
     // Scan Pci
-    //PciDetectDevice();
+    PciDetectDevice();
 
     // Init keyboard
     KbdInitKeyboard();
@@ -56,7 +57,11 @@ void krn_entry( void ) {
     // Init timer
     TmInitTimer();
 
-    for( ; ; );
+    // Initialized task
+    TskInit();
+    
+    // Start task scheduler
+    TskScheduler();
 }
 
 

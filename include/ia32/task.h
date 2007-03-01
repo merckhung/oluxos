@@ -10,6 +10,28 @@
 
 typedef struct {
 
+    __u32   cr3;
+    __u32   eip;
+    __u32   eflags;
+    __u32   eax;
+    __u32   ecx;
+    __u32   edx;
+    __u32   ebx;
+    __u32   esp;
+    __u32   ebp;
+    __u32   esi;
+    __u32   edi;
+    __u16   es;
+    __u16   cs;
+    __u16   ss;
+    __u16   ds;
+    __u16   fs;
+    __u16   gs;
+} Task_t __attribute__ ((packed));
+
+
+typedef struct {
+
     __u16   prev_task_link;
     __u16   reserved0;
     __u32   esp0;
@@ -48,7 +70,7 @@ typedef struct {
     __u16   reserved10;
     __u16   debug;
     __u16   iobmp;
-} tss_t;
+} TSS_t __attribute__ ((packed));
 
 
 typedef struct {
@@ -59,6 +81,12 @@ typedef struct {
     __u8    flag;
     __u8    limit1;
     __u8    baseaddr2;
-} tssd_t;
+} TSSD_t __attribute__ ((packed));
+
+
+void TaskInitTSSD( void );
+void TskInitTSS( void );
+void TskInit( void );
+void TskScheduler( void );
 
 

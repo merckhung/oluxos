@@ -5,7 +5,7 @@
  * @OLUXORG_LICENSE_HEADER_START@
  * @OLUXORG_LICENSE_HEADER_END@
  *
- * d.c -- OluxOS IA32 keyboard routines
+ * kbd.c -- OluxOS IA32 keyboard routines
  *
  */
 #include <types.h>
