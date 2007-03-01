@@ -15,15 +15,14 @@
 #include <clib.h>
 
 
-#define NR_TASK 3
+static TSS_t KrnTSS;
 
 
-static TSS_t TskTSSEntry[ NR_TASK ];
-static TSSD_t TskTSSDEntry[ NR_TASK ];
 static Task_t tsks[ 2 ];
 static char stack_buf[ 2 ][ 1024 ];
 
 extern void __task_seg( void );
+extern void KrnTSSD( void );
 
 
 void TskTest1( void ) {
@@ -56,37 +55,27 @@ void TskTest2( void ) {
 }
 
 
-void TaskInitTSSD( void ) {
+void TskInit( void ) {
 
-    __s32 i;
+    TSSD_t *p = (TSSD_t *)KrnTSSD;
 
-    memset( &TskTSSDEntry, 0, sizeof( TSSD_t ) * NR_TASK );
-    for( i = 0 ; i < NR_TASK ; i++ ) {
-    
-        TskTSSDEntry[ i ].limit0 = 0xffff;
-        TskTSSDEntry[ i ].limit1 = 0x0f;
-        TskTSSDEntry[ i ].baseaddr0 = (0x0000ffff | (__u32)TskTest1);
-        TskTSSDEntry[ i ].baseaddr1 = (0x00ff0000 | (__u32)TskTest1) >> 16;
-        TskTSSDEntry[ i ].baseaddr2 = (0xff000000 | (__u32)TskTest1) >> 24;
-        TskTSSDEntry[ i ].flag = 0x09;
-    }
+
+    p->limit0       = (0x0000ffff & sizeof( TSS_t ));
+    p->limit1       = (0x000f0000 & sizeof( TSS_t )) >> 16;
+    p->baseaddr0    = (0x0000ffff & (__u32)&KrnTSS);
+    p->baseaddr1    = (0x00ff0000 & (__u32)&KrnTSS) >> 16;
+    p->baseaddr2    = (0xff000000 & (__u32)&KrnTSS) >> 24;
+    p->flag         = 0x89;
+
 
     __asm__ __volatile__ (
+
+        "mov    %0, %%ax\n"
         "ltr    %%ax\n"
-        :
-        : "g" (TskTSSDEntry)
+        :: "g" (__task_seg)
+        : "ax"
     );
 
-}
-
-
-void TskInitTSS( void ) {
-
-    memset( &TskTSSEntry, 0, sizeof( TSS_t ) * NR_TASK );
-}
-
-
-void TskInit( void ) {
 
     tsks[ 0 ].eip       = (__u32)TskTest1;
     tsks[ 0 ].cs        = (__u16)TskTest1;
@@ -136,6 +125,5 @@ void TskScheduler( void ) {
     TakSwitch();
     for(;;);
 }
-
 
 

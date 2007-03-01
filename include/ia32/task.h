@@ -84,8 +84,6 @@ typedef struct {
 } TSSD_t __attribute__ ((packed));
 
 
-void TaskInitTSSD( void );
-void TskInitTSS( void );
 void TskInit( void );
 void TskScheduler( void );
 

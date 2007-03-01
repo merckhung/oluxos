@@ -58,9 +58,10 @@ void IntInitInterrupt( void ) {
 
 
     // Load IDTR 
-    __asm__ __volatile__ (  \
-        "lidt   (%0)\n"     \
-        :: "g" (&IDTPtr)    \
+    __asm__ __volatile__ (
+
+        "lidt   (%0)\n"
+        :: "g" (&IDTPtr)
     );
 
 

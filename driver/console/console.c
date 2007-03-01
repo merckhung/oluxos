@@ -78,6 +78,10 @@ void TcPrint( const __s8 *format, ... ) {
                                 had = 1;
                                 TcPutchar( tmp );
                             }
+                            else if( !had && !digit) {
+
+                                TcPutchar( tmp );
+                            }
                         }
                     }
                     break;
@@ -108,6 +112,10 @@ void TcPrint( const __s8 *format, ... ) {
                         if( (tmp != '0') || had ) {
 
                             had = 1; 
+                            TcPutchar( tmp );
+                        }
+                        else if( !had && !digit) {
+                        
                             TcPutchar( tmp );
                         }
                     }

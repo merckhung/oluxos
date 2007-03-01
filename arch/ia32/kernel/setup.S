@@ -20,7 +20,7 @@ STACK_SIZE=4096
  * Code Segment
  */
 .text
-.global     _setup, __code_seg, __data_seg, __task_seg
+.global     _setup, __code_seg, __data_seg, __task_seg, KrnTSSD
 
 
 _setup:
@@ -131,6 +131,7 @@ __data_seg = . - __gdt
     // G            = 1b
     //
 __task_seg = . - __gdt
+KrnTSSD:
     .word   0xffff
     .word   0x0000
     .word   0x8900
