@@ -17,7 +17,6 @@
 
 static TSS_t KrnTSS;
 
-
 static Task_t tsks[ 2 ];
 static char stack_buf[ 2 ][ 1024 ];
 
@@ -60,6 +59,9 @@ void TskInit( void ) {
     TSSD_t *p = (TSSD_t *)KrnTSSD;
 
 
+    //
+    // Override TSSD default value
+    //
     p->limit0       = (0x0000ffff & sizeof( TSS_t ));
     p->limit1       = (0x000f0000 & sizeof( TSS_t )) >> 16;
     p->baseaddr0    = (0x0000ffff & (__u32)&KrnTSS);
@@ -68,6 +70,9 @@ void TskInit( void ) {
     p->flag         = 0x89;
 
 
+    //
+    // Load Kernel TSS Descriptor
+    //
     __asm__ __volatile__ (
 
         "mov    %0, %%ax\n"
@@ -77,6 +82,9 @@ void TskInit( void ) {
     );
 
 
+    //
+    // Fill up Task descriptors
+    //
     tsks[ 0 ].eip       = (__u32)TskTest1;
     tsks[ 0 ].cs        = (__u16)TskTest1;
     tsks[ 0 ].ss        = 0x18;
@@ -91,8 +99,12 @@ void TskInit( void ) {
 }
 
 
-void TakSwitch( void ) {
+void TskSwitch( void ) {
 
+
+    //
+    // Switch to Task1
+    //
     __asm__ __volatile__ (
 
         "movl   %0, %%eax\n"
@@ -105,7 +117,7 @@ void TakSwitch( void ) {
         "pushl  %7\n"
         "popf\n"
         "movl   %8, %%esp\n"
-        "jmp    %9\n"
+        "jmp    *(%9)\n"
         : "=m" (tsks[ 0 ].eax),
           "=m" (tsks[ 0 ].ecx),
           "=m" (tsks[ 0 ].edx),
@@ -122,7 +134,7 @@ void TakSwitch( void ) {
 
 void TskScheduler( void ) {
 
-    TakSwitch();
+    TskSwitch();
     for(;;);
 }
 
