@@ -21,6 +21,21 @@ extern void __code_seg( void );
 
 extern void ExceptionHandler( void );
 
+extern void divide_error( void );
+extern void debug( void );
+extern void nmi( void );
+extern void breakpoint( void );
+extern void overflow( void );
+extern void bound_range_exceeded( void );
+extern void invalid_opcode( void );
+extern void device_not_available( void );
+extern void double_fault( void );
+extern void coprocessor_segment_overrun( void );
+extern void invalid_tss( void );
+extern void segment_not_present( void );
+extern void stack_fault( void );
+extern void general_protection_exception( void );
+
 
 //
 // IntInitInterrupt
@@ -45,9 +60,25 @@ void IntInitInterrupt( void ) {
     memset( IDTTable, 0, SZ_INTENTRY );
 
 
+    IntSetIDT( 0, (__u32)divide_error, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 1, (__u32)debug, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 2, (__u32)nmi, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 3, (__u32)breakpoint, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 4, (__u32)overflow, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 5, (__u32)bound_range_exceeded, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 6, (__u32)invalid_opcode, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 7, (__u32)device_not_available, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 8, (__u32)double_fault, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 9, (__u32)coprocessor_segment_overrun, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 10, (__u32)invalid_tss, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 11, (__u32)segment_not_present, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 12, (__u32)stack_fault, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 13, (__u32)general_protection_exception, (__u16)__code_seg, TRAP_GATE_FLAG );
+
+
     // Setup exceptions handler
-    for( i = TRAP_START ; i <= TRAP_END ; i++ ) {
-    
+    for( i = 14 ; i <= TRAP_END ; i++ ) {
+
         IntSetIDT( i, (__u32)ExceptionHandler, (__u16)__code_seg, TRAP_GATE_FLAG );
     }
 

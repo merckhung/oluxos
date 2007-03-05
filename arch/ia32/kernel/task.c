@@ -100,6 +100,8 @@ void TskInit( void ) {
     tsks[ 1 ].ss        = 0x18;
     tsks[ 1 ].esp       = (__u32)stack_buf[ 1 ] + 1024;
     tsks[ 1 ].eflags    = 0x200;
+
+    DbgPrint( "\nTASK0 EIP = %8x, TASK1 EIP = %8x\n", tsks[ 0 ].eip, tsks[ 1 ].eip );
 }
 
 
@@ -124,16 +126,16 @@ void TskSwitch( void ) {
             "popf\n"
             "movl   %8, %%esp\n"
             "jmp    *(%9)\n"
-            : "=m" (tsks[ 0 ].eax),
-              "=m" (tsks[ 0 ].ecx),
-              "=m" (tsks[ 0 ].edx),
-              "=m" (tsks[ 0 ].ebx),
-              "=m" (tsks[ 0 ].ebp),
-              "=m" (tsks[ 0 ].esi),
-              "=m" (tsks[ 0 ].edi),
-              "=m" (tsks[ 0 ].eflags),
-              "=m" (tsks[ 0 ].esp),
-              "=m" (tsks[ 0 ].eip)
+            :: "g" (tsks[ 0 ].eax),
+              "g" (tsks[ 0 ].ecx),
+              "g" (tsks[ 0 ].edx),
+              "g" (tsks[ 0 ].ebx),
+              "g" (tsks[ 0 ].ebp),
+              "g" (tsks[ 0 ].esi),
+              "g" (tsks[ 0 ].edi),
+              "g" (tsks[ 0 ].eflags),
+              "g" (tsks[ 0 ].esp),
+              "g" (tsks[ 0 ].eip)
         );
 }
 
@@ -147,15 +149,14 @@ void TskScheduler( void ) {
 
 void TskReschedule( struct SavedRegs_t regs ) {
 
+        DbgPrint( "\nTASK0 EIP = %8x, TASK1 EIP = %8x\n", tsks[ 0 ].eip, tsks[ 1 ].eip );
 
-#if 0
-        DbgPrint( "Current Process:\n" );
+        DbgPrint( "\nCurrent Process:\n" );
         DbgPrint( "EAX = %8x, EBX = %8x, ECX = %8x, EDX = %8x\n"
                 , regs.eax, regs.ebx, regs.ecx, regs.edx );
         DbgPrint( "ESI = %8x, EDI = %8x, EBP = %8x, EIP = %8x\n"
                 , regs.esi, regs.edi, regs.ebp, regs.eip );
         DbgPrint( "CS = %8x, EFLAG = %8x\n", regs.cs, regs.eflags );
-#endif
        
 
         tsks[ test % 2 ].eax = regs.eax;
@@ -179,14 +180,12 @@ void TskReschedule( struct SavedRegs_t regs ) {
         regs.eflags = tsks[ (test + 1) % 2 ].eflags;
         
 
-#if 0
-        DbgPrint( "Resume Process:\n" );
+        DbgPrint( "\nResume Process:\n" );
         DbgPrint( "EAX = %8x, EBX = %8x, ECX = %8x, EDX = %8x\n"
                 , regs.eax, regs.ebx, regs.ecx, regs.edx );
         DbgPrint( "ESI = %8x, EDI = %8x, EBP = %8x, EIP = %8x\n"
                 , regs.esi, regs.edi, regs.ebp, regs.eip );
         DbgPrint( "CS = %8x, EFLAG = %8x\n", regs.cs, regs.eflags );
-#endif
 
 
         test++;

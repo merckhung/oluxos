@@ -11,6 +11,11 @@
 #include <ia32/interrupt.h>
 
 
+.global divide_error, debug, nmi, breakpoint, overflow, bound_range_exceeded
+.global invalid_opcode, device_not_available, double_fault, coprocessor_segment_overrun
+.global invalid_tss, segment_not_present, stack_fault, general_protection_exception
+
+
 //
 // Pre-interrupt handling
 //
