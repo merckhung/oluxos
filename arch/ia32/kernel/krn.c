@@ -51,15 +51,15 @@ void krn_entry( void ) {
     // Scan Pci
     PciDetectDevice();
 
+    // Initialized task
+    TskInit();
+ 
     // Init keyboard
     KbdInitKeyboard();
 
     // Init timer
     TmInitTimer();
 
-    // Initialized task
-    TskInit();
-    
     // Start task scheduler
     TskScheduler();
 }

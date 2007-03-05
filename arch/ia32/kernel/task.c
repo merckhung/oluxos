@@ -100,8 +100,6 @@ void TskInit( void ) {
     tsks[ 1 ].ss        = 0x18;
     tsks[ 1 ].esp       = (__u32)stack_buf[ 1 ] + 1024;
     tsks[ 1 ].eflags    = 0x200;
-
-    DbgPrint( "\nTASK0 EIP = %8x, TASK1 EIP = %8x\n", tsks[ 0 ].eip, tsks[ 1 ].eip );
 }
 
 
@@ -149,14 +147,15 @@ void TskScheduler( void ) {
 
 void TskReschedule( struct SavedRegs_t regs ) {
 
-        DbgPrint( "\nTASK0 EIP = %8x, TASK1 EIP = %8x\n", tsks[ 0 ].eip, tsks[ 1 ].eip );
 
+#if 0
         DbgPrint( "\nCurrent Process:\n" );
         DbgPrint( "EAX = %8x, EBX = %8x, ECX = %8x, EDX = %8x\n"
                 , regs.eax, regs.ebx, regs.ecx, regs.edx );
         DbgPrint( "ESI = %8x, EDI = %8x, EBP = %8x, EIP = %8x\n"
                 , regs.esi, regs.edi, regs.ebp, regs.eip );
         DbgPrint( "CS = %8x, EFLAG = %8x\n", regs.cs, regs.eflags );
+#endif
        
 
         tsks[ test % 2 ].eax = regs.eax;
@@ -180,12 +179,14 @@ void TskReschedule( struct SavedRegs_t regs ) {
         regs.eflags = tsks[ (test + 1) % 2 ].eflags;
         
 
+#if 0
         DbgPrint( "\nResume Process:\n" );
         DbgPrint( "EAX = %8x, EBX = %8x, ECX = %8x, EDX = %8x\n"
                 , regs.eax, regs.ebx, regs.ecx, regs.edx );
         DbgPrint( "ESI = %8x, EDI = %8x, EBP = %8x, EIP = %8x\n"
                 , regs.esi, regs.edi, regs.ebp, regs.eip );
         DbgPrint( "CS = %8x, EFLAG = %8x\n", regs.cs, regs.eflags );
+#endif
 
 
         test++;
