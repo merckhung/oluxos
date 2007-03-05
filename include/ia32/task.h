@@ -86,5 +86,6 @@ typedef struct {
 
 void TskInit( void );
 void TskScheduler( void );
+void TskSwitch( void );
 
 

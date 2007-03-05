@@ -5,7 +5,7 @@
  * @OLUXORG_LICENSE_HEADER_START@
  * @OLUXORG_LICENSE_HEADER_END@
  *
- * int_handler.S -- OluxOS IA32 interrupt handler
+ * handler.S -- OluxOS IA32 interrupt handler
  *
  */
 #include <ia32/interrupt.h>
@@ -16,15 +16,15 @@
 //
 .macro SaveAllRegs
     cld
-    pushl   %ds
     pushl   %es
+    pushl   %ds
     pushl   %eax
-    pushl   %ebx
     pushl   %ecx
     pushl   %edx
+    pushl   %ebx
     pushl   %ebp
-    pushl   %edi
     pushl   %esi
+    pushl   %edi
 .endm
 
 
@@ -32,15 +32,15 @@
 // Restore all register after interrupt handler
 //
 .macro RestoreAllRegs
-    popl    %esi
     popl    %edi
+    popl    %esi
     popl    %ebp
+    popl    %ebx
     popl    %edx
     popl    %ecx
-    popl    %ebx
     popl    %eax
-    popl    %es
     popl    %ds
+    popl    %es
 .endm
 
 
@@ -79,8 +79,24 @@ InterruptHandler:
     SaveAllRegs
     subl    $4, %esp                // Get preload interrupt vector
     call    IntHandleIRQ
+
+    mov     (%esp), %eax
     addl    $4, %esp                // Discard vector
+    testl   $-1, %eax               // Check IRQ == Timer
+    jnz     NotTimer
+
+
+    //
+    // Save current state of running process,
+    // then reschedule, and then restart process
+    //
+    call    TskReschedule
     jmp     InterruptReturn
+
+
+NotTimer:
+    jmp     InterruptReturn
+
 
 InterruptReturn:
     RestoreAllRegs

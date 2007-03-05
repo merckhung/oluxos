@@ -50,6 +50,27 @@ struct IntHandlerLst_t {
 };
 
 
+struct SavedRegs_t {
+
+    // Saved by Handler
+    __u32   edi;
+    __u32   esi;
+    __u32   ebp;
+    __u32   ebx;
+    __u32   edx;
+    __u32   ecx;
+    __u32   eax;
+    __u16   ds;
+    __u16   es;
+
+    // Saved by Processor
+    __u32   error_code;
+    __u32   eip;
+    __u16   cs;
+    __u32   eflags;
+};
+
+
 void IntInitInterrupt( void );
 
 void IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag );

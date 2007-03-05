@@ -12,6 +12,7 @@
 #include <ia32/interrupt.h>
 #include <ia32/timer.h>
 #include <ia32/io.h>
+#include <ia32/task.h>
 #include <ia32/debug.h>
 
 

@@ -270,7 +270,7 @@ void IntUnregIRQ( __u8 irqnum ) {
 // Description:
 //  IRQ handler
 //
-void IntHandleIRQ( __u32 irqnum ) {
+void IntHandleIRQ( __u32 irqnum, struct SavedRegs_t regs ) {
 
     __u8 irq = (__u8)irqnum;
     InterrupHandlertList[ irq + PIC_IRQ_BASE ].Handler( irq );
