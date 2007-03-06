@@ -324,7 +324,7 @@ __u8 ChkSMBIOSSup( void ) {
     // Search 64kb
     for( i = 0 ; i < 0x10000 ; i++ ) {
     
-        if( !strncmp( (__u8 *)(memptr + i), SMBIOS_ANCH, 4 ) ) {
+        if( !strncmp( (__s8 *)(memptr + i), SMBIOS_ANCH, 4 ) ) {
         
             smbios = 1;
             break;

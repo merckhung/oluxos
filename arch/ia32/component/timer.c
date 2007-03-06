@@ -57,7 +57,6 @@ void TmIntHandler( __u8 irqnum ) {
 
 
     //if( !(ticks % 0xffff) ) {
-
         (*videomem)++;
         (*(videomem + 1))++;
     //}

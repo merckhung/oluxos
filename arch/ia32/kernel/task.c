@@ -111,7 +111,7 @@ void TskSwitch( void ) {
     //
     // Switch to Task1
     //
-        __asm__ __volatile__ (
+    __asm__ __volatile__ (
 
             "movl   %0, %%eax\n"
             "movl   %1, %%ecx\n"
@@ -121,7 +121,7 @@ void TskSwitch( void ) {
             "movl   %5, %%esi\n"
             "movl   %6, %%edi\n"
             "pushl  %7\n"
-            "popf\n"
+            "popfl\n"
             "movl   %8, %%esp\n"
             "jmp    *(%9)\n"
             :: "g" (tsks[ 0 ].eax),
@@ -134,7 +134,7 @@ void TskSwitch( void ) {
               "g" (tsks[ 0 ].eflags),
               "g" (tsks[ 0 ].esp),
               "g" (tsks[ 0 ].eip)
-        );
+    );
 }
 
 
@@ -154,10 +154,13 @@ void TskReschedule( struct SavedRegs_t regs ) {
                 , regs.eax, regs.ebx, regs.ecx, regs.edx );
         DbgPrint( "ESI = %8x, EDI = %8x, EBP = %8x, EIP = %8x\n"
                 , regs.esi, regs.edi, regs.ebp, regs.eip );
-        DbgPrint( "CS = %8x, EFLAG = %8x\n", regs.cs, regs.eflags );
+        DbgPrint( "DS = %8x, ES = %8x, CS = %8x\n"
+                , regs.ds, regs.es, regs.cs );
+        DbgPrint( "EFLAGS = %8x\n", regs.eflags );
 #endif
-       
 
+
+#if 0
         tsks[ test % 2 ].eax = regs.eax;
         tsks[ test % 2 ].ebx = regs.ebx;
         tsks[ test % 2 ].ecx = regs.ecx;
@@ -177,6 +180,7 @@ void TskReschedule( struct SavedRegs_t regs ) {
         regs.ebp = tsks[ (test + 1) % 2 ].ebp;
         regs.eip = tsks[ (test + 1) % 2 ].eip;
         regs.eflags = tsks[ (test + 1) % 2 ].eflags;
+#endif
         
 
 #if 0
@@ -185,7 +189,9 @@ void TskReschedule( struct SavedRegs_t regs ) {
                 , regs.eax, regs.ebx, regs.ecx, regs.edx );
         DbgPrint( "ESI = %8x, EDI = %8x, EBP = %8x, EIP = %8x\n"
                 , regs.esi, regs.edi, regs.ebp, regs.eip );
-        DbgPrint( "CS = %8x, EFLAG = %8x\n", regs.cs, regs.eflags );
+        DbgPrint( "DS = %8x, ES = %8x, CS = %8x\n"
+                , regs.ds, regs.es, regs.cs );
+        DbgPrint( "EFLAGS = %8x\n", regs.eflags );
 #endif
 
 

@@ -22,7 +22,10 @@
 .macro SaveAllRegs
     cld
     pushl   %es
+    pushl   %ss
     pushl   %ds
+    pushl   %fs
+    pushl   %gs
     pushl   %eax
     pushl   %ecx
     pushl   %edx
@@ -44,7 +47,10 @@
     popl    %edx
     popl    %ecx
     popl    %eax
+    popl    %gs
+    popl    %fs
     popl    %ds
+    popl    %ss
     popl    %es
 .endm
 
@@ -58,7 +64,8 @@
     .global PreliminaryInterruptHandler_\@
     .align 4
     PreliminaryInterruptHandler_\@:
-    movl    $\@, -40(%esp)
+    movl    $\@, -52(%esp)
+    lea     -52(%esp), %ebx
     jmp     InterruptHandler
 .endm
 
@@ -83,23 +90,21 @@ InterruptHandler:
 
     SaveAllRegs
     subl    $4, %esp                // Get preload interrupt vector
-    call    IntHandleIRQ
 
-    mov     (%esp), %eax
-    addl    $4, %esp                // Discard vector
-    testl   $-1, %eax               // Check IRQ == Timer
+    testl   $-1, (%esp)             // Check IRQ == Timer
     jnz     NotTimer
-
 
     //
     // Save current state of running process,
     // then reschedule, and then restart process
     //
-    call    TskReschedule
-    jmp     InterruptReturn
-
+    addl    $4, %esp
+    //call    TskReschedule
+    subl    $4, %esp
 
 NotTimer:
+    call    IntHandleIRQ
+    addl    $4, %esp                // Discard vector
     jmp     InterruptReturn
 
 
@@ -107,6 +112,7 @@ InterruptReturn:
     RestoreAllRegs
 
     iret
+
 
 
 //
@@ -133,6 +139,7 @@ debug:
     // FIXME: exception handle
     //
     jmp     ExceptionReturn
+
 
 //
 // nmi -- Handle exception 2
@@ -185,6 +192,7 @@ bound_range_exceeded:
     //
     jmp     ExceptionReturn
 
+
 //
 // invalid_opcode -- Handle exception 6 #UD
 //
@@ -235,6 +243,7 @@ coprocessor_segment_overrun:
     // FIXME: exception handle
     //
     jmp     ExceptionReturn
+
 
 //
 // invalid_tss -- Handle exception 10 #TS
@@ -294,10 +303,6 @@ general_protection_exception:
     // FIXME: exception handle
     //
     jmp     ExceptionReturn
-
-
-
-
 
 
 ExceptionReturn:

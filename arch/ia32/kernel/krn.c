@@ -52,7 +52,7 @@ void krn_entry( void ) {
     PciDetectDevice();
 
     // Initialized task
-    TskInit();
+    //TskInit();
  
     // Init keyboard
     KbdInitKeyboard();
@@ -61,7 +61,9 @@ void krn_entry( void ) {
     TmInitTimer();
 
     // Start task scheduler
-    TskScheduler();
+    //TskScheduler();
+
+    for(;;);
 }
 
 

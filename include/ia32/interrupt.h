@@ -60,15 +60,18 @@ struct SavedRegs_t {
     __u32   edx;
     __u32   ecx;
     __u32   eax;
-    __u16   ds;
-    __u16   es;
+    __u32   gs;
+    __u32   fs;
+    __u32   ds;
+    __u32   ss;
+    __u32   es;
 
     // Saved by Processor
-    __u32   error_code;
     __u32   eip;
-    __u16   cs;
+    __u32   cs;
     __u32   eflags;
-};
+
+} __attribute__ ((packed));
 
 
 void IntInitInterrupt( void );
