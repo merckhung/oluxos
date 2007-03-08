@@ -17,6 +17,8 @@
 #define     INT_GATE_FLAG   0x8e
 #define     TRAP_GATE_FLAG  0x8f
 
+#define     SZ_IRQ_STACK    4096
+
 
 #define     IRQHandler(irqnum)      (__u32)PreliminaryInterruptHandler_##irqnum
 
@@ -72,6 +74,13 @@ struct SavedRegs_t {
     __u32   eflags;
 
 } __attribute__ ((packed));
+
+
+struct IRQStack_t {
+
+    __u32   esp;
+    __s8    stack[ SZ_IRQ_STACK ];
+};
 
 
 void IntInitInterrupt( void );

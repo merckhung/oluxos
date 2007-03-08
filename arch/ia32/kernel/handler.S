@@ -90,23 +90,9 @@ InterruptHandler:
 
     SaveAllRegs
     subl    $4, %esp                // Get preload interrupt vector
-
-    testl   $-1, (%esp)             // Check IRQ == Timer
-    jnz     NotTimer
-
-    //
-    // Save current state of running process,
-    // then reschedule, and then restart process
-    //
-    addl    $4, %esp
-    //call    TskReschedule
-    subl    $4, %esp
-
-NotTimer:
     call    IntHandleIRQ
     addl    $4, %esp                // Discard vector
     jmp     InterruptReturn
-
 
 InterruptReturn:
     RestoreAllRegs

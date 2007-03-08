@@ -55,11 +55,8 @@ void TmIntHandler( __u8 irqnum ) {
 
     __u8 volatile *videomem = (__u8 *)0xb84fe;
 
-
-    //if( !(ticks % 0xffff) ) {
-        (*videomem)++;
-        (*(videomem + 1))++;
-    //}
+    (*videomem)++;
+    (*(videomem + 1))++;
 
     IntIssueEOI();
 }

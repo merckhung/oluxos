@@ -304,6 +304,25 @@ void IntUnregIRQ( __u8 irqnum ) {
 void IntHandleIRQ( __u32 irqnum, struct SavedRegs_t regs ) {
 
     __u8 irq = (__u8)irqnum;
+
+#if 0
+    __asm__ __volatile__ (
+    
+        "movl   %0, %%eax\n"
+        "movl   %%esp, %%ebx\n"
+        "movl   %1, %%esp\n"
+        "pushl  %%eax\n"
+        "movl   %2, %%eax\n"
+        "call   *(%%eax)\n"
+        "addl   $4, %%esp\n"
+        "jmp    .\n"
+        :: "g" (irqnum),
+           "g" (IRQStack.esp),
+           "g" (InterrupHandlertList[ irq + PIC_IRQ_BASE ].Handler)
+        : "eax"
+    );
+#endif
+
     InterrupHandlertList[ irq + PIC_IRQ_BASE ].Handler( irq );
 }
 
