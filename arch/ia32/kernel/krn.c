@@ -90,6 +90,10 @@ void krn_entry( void ) {
 
     // Start task scheduler
     //TskScheduler();
+    
+
+    // Start Setup Menu
+    MenuInit();
 
 
     for(;;);

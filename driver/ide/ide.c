@@ -30,8 +30,6 @@ void ReadData( __s8 *buf ) {
         buf[ k ] = tmp & 0xff;
         buf[ k + 1 ] = (tmp >> 8) & 0xff;
         DbgPrint( "%4x ", buf[ k ] );
-
-        //DbgPrint( "%4x ", IoInWord( IDE_DATA ) );
     }
 
     DbgPrint( "\n" );
