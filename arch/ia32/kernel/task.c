@@ -24,8 +24,7 @@ static char stack_buf[ 2 ][ 1024 ];
 extern void __task_seg( void );
 extern void KrnTSSD( void );
 
-static __u8 swh_time = 0;
-static __u32 test = 0;
+static __u32 current = -1;
 
 
 void TskTest1( void ) {
@@ -55,6 +54,24 @@ void TskTest2( void ) {
             j++;
         }
     }
+}
+
+
+void TskUsr1( void ) {
+
+    __u32 i, j;
+
+    for( i = 0 ; ; i++ );
+        for( j = 0 ; ; j++ );
+}
+
+
+void TskUsr2( void ) {
+
+    __u32 i, j;
+
+    for( i = 0 ; ; i++ );
+        for( j = 0 ; ; j++ );
 }
 
 
@@ -89,13 +106,13 @@ void TskInit( void ) {
     //
     // Fill up Task descriptors
     //
-    tsks[ 0 ].eip       = (__u32)TskTest1;
+    tsks[ 0 ].eip       = (__u32)TskUsr1;
     tsks[ 0 ].cs        = 0x10;
     tsks[ 0 ].ss        = 0x18;
     tsks[ 0 ].esp       = (__u32)stack_buf[ 0 ] + 1024;
     tsks[ 0 ].eflags    = 0x200;
 
-    tsks[ 1 ].eip       = (__u32)TskTest2;
+    tsks[ 1 ].eip       = (__u32)TskUsr2;
     tsks[ 1 ].cs        = 0x10;
     tsks[ 1 ].ss        = 0x18;
     tsks[ 1 ].esp       = (__u32)stack_buf[ 1 ] + 1024;
@@ -103,15 +120,66 @@ void TskInit( void ) {
 }
 
 
-void TskSwitch( void ) {
-
-    swh_time++;
+void TskSwitch( __u32 origtsk, __u32 newtsk ) {
 
 
-    //
-    // Switch to Task1
-    //
-    __asm__ __volatile__ (
+    if( origtsk >= 0 ) {
+    
+    
+#if 0
+        DbgPrint( "\nCurrent Process:\n" );
+        DbgPrint( "EAX = %8x, EBX = %8x, ECX = %8x, EDX = %8x\n"
+                , regs.eax, regs.ebx, regs.ecx, regs.edx );
+        DbgPrint( "ESI = %8x, EDI = %8x, EBP = %8x, EIP = %8x\n"
+                , regs.esi, regs.edi, regs.ebp, regs.eip );
+        DbgPrint( "DS = %8x, ES = %8x, CS = %8x\n"
+                , regs.ds, regs.es, regs.cs );
+        DbgPrint( "EFLAGS = %8x\n", regs.eflags );
+#endif
+
+
+#if 0
+        tsks[ origtsk ].eax = regs.eax;
+        tsks[ origtsk ].ebx = regs.ebx;
+        tsks[ origtsk ].ecx = regs.ecx;
+        tsks[ origtsk ].edx = regs.edx;
+        tsks[ origtsk ].esi = regs.esi;
+        tsks[ origtsk ].edi = regs.edi;
+        tsks[ origtsk ].ebp = regs.ebp;
+        tsks[ origtsk ].eip = regs.eip;
+        tsks[ origtsk ].eflags = regs.eflags;
+
+        regs.eax = tsks[ newtsk ].eax;
+        regs.ebx = tsks[ newtsk ].ebx;
+        regs.ecx = tsks[ newtsk ].ecx;
+        regs.edx = tsks[ newtsk ].edx;
+        regs.esi = tsks[ newtsk ].esi;
+        regs.edi = tsks[ newtsk ].edi;
+        regs.ebp = tsks[ newtsk ].ebp;
+        regs.eip = tsks[ newtsk ].eip;
+        regs.eflags = tsks[ newtsk ].eflags;
+#endif
+        
+
+#if 0
+        DbgPrint( "\nResume Process:\n" );
+        DbgPrint( "EAX = %8x, EBX = %8x, ECX = %8x, EDX = %8x\n"
+                , regs.eax, regs.ebx, regs.ecx, regs.edx );
+        DbgPrint( "ESI = %8x, EDI = %8x, EBP = %8x, EIP = %8x\n"
+                , regs.esi, regs.edi, regs.ebp, regs.eip );
+        DbgPrint( "DS = %8x, ES = %8x, CS = %8x\n"
+                , regs.ds, regs.es, regs.cs );
+        DbgPrint( "EFLAGS = %8x\n", regs.eflags );
+#endif
+
+   
+    }
+    else {
+
+        //
+        // Just switch to Task1
+        //
+        __asm__ __volatile__ (
 
             "movl   %0, %%eax\n"
             "movl   %1, %%ecx\n"
@@ -134,13 +202,33 @@ void TskSwitch( void ) {
               "g" (tsks[ 0 ].eflags),
               "g" (tsks[ 0 ].esp),
               "g" (tsks[ 0 ].eip)
-    );
+        );
+    }
+
 }
 
 
 void TskScheduler( void ) {
 
-    TskSwitch();
+
+    __u32 now;
+
+    now = current;
+    do {
+        
+        if( current >= 2 )  {
+        
+            current = 0;
+        }
+        else {
+        
+            current++;
+        }
+
+        TskSwitch( now, current );
+
+    } while( 1 );
+
     for(;;);
 }
 
@@ -161,25 +249,25 @@ void TskReschedule( struct SavedRegs_t regs ) {
 
 
 #if 0
-        tsks[ test % 2 ].eax = regs.eax;
-        tsks[ test % 2 ].ebx = regs.ebx;
-        tsks[ test % 2 ].ecx = regs.ecx;
-        tsks[ test % 2 ].edx = regs.edx;
-        tsks[ test % 2 ].esi = regs.esi;
-        tsks[ test % 2 ].edi = regs.edi;
-        tsks[ test % 2 ].ebp = regs.ebp;
-        tsks[ test % 2 ].eip = regs.eip;
-        tsks[ test % 2 ].eflags = regs.eflags;
+        tsks[ origtsk ].eax = regs.eax;
+        tsks[ origtsk ].ebx = regs.ebx;
+        tsks[ origtsk ].ecx = regs.ecx;
+        tsks[ origtsk ].edx = regs.edx;
+        tsks[ origtsk ].esi = regs.esi;
+        tsks[ origtsk ].edi = regs.edi;
+        tsks[ origtsk ].ebp = regs.ebp;
+        tsks[ origtsk ].eip = regs.eip;
+        tsks[ origtsk ].eflags = regs.eflags;
 
-        regs.eax = tsks[ (test + 1) % 2 ].eax;
-        regs.ebx = tsks[ (test + 1) % 2 ].ebx;
-        regs.ecx = tsks[ (test + 1) % 2 ].ecx;
-        regs.edx = tsks[ (test + 1) % 2 ].edx;
-        regs.esi = tsks[ (test + 1) % 2 ].esi;
-        regs.edi = tsks[ (test + 1) % 2 ].edi;
-        regs.ebp = tsks[ (test + 1) % 2 ].ebp;
-        regs.eip = tsks[ (test + 1) % 2 ].eip;
-        regs.eflags = tsks[ (test + 1) % 2 ].eflags;
+        regs.eax = tsks[ newtsk ].eax;
+        regs.ebx = tsks[ newtsk ].ebx;
+        regs.ecx = tsks[ newtsk ].ecx;
+        regs.edx = tsks[ newtsk ].edx;
+        regs.esi = tsks[ newtsk ].esi;
+        regs.edi = tsks[ newtsk ].edi;
+        regs.ebp = tsks[ newtsk ].ebp;
+        regs.eip = tsks[ newtsk ].eip;
+        regs.eflags = tsks[ newtsk ].eflags;
 #endif
         
 
@@ -195,7 +283,6 @@ void TskReschedule( struct SavedRegs_t regs ) {
 #endif
 
 
-        test++;
 }
 
 

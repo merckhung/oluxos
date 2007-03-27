@@ -21,18 +21,10 @@ void ReadData( __s8 *buf ) {
 
     for( i = 0, j = 0, k = 0 ; i < 256 ; i++, j++, k+=2 ) {
 
-        if( !(j % 15) && !j ) {
-
-            DbgPrint( "\n" );
-        }
-
         tmp = IoInWord( IDE_DATA );
         buf[ k ] = tmp & 0xff;
         buf[ k + 1 ] = (tmp >> 8) & 0xff;
-        DbgPrint( "%4x ", buf[ k ] );
     }
-
-    DbgPrint( "\n" );
 }
 
 

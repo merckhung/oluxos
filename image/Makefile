@@ -44,6 +44,6 @@ all:
 
 
 clean:
-	$(RM) -f *.img
+	$(RM) -f OluxOS.img
 
 

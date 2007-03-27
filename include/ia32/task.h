@@ -85,7 +85,7 @@ typedef struct {
 
 
 void TskInit( void );
+void TskSwitch( __u32 origtsk, __u32 newtsk );
 void TskScheduler( void );
-void TskSwitch( void );
 
 

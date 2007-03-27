@@ -9,6 +9,7 @@
  *
  */
 #include <types.h>
+#include <clib.h>
 #include <ia32/page.h>
 #include <ia32/task.h>
 #include <ia32/interrupt.h>
@@ -17,9 +18,9 @@
 #include <driver/console.h>
 #include <driver/kbd.h>
 #include <driver/pci.h>
-#include <driver/ide.h>
 #include <driver/resource.h>
-#include <clib.h>
+#include <driver/ide.h>
+#include <fs/fat.h>
 
 
 static struct IRQStack_t IRQStack;
@@ -73,11 +74,11 @@ void krn_entry( void ) {
 
 
     // Initialized task
-    //TskInit();
+    TskInit();
 
 
     // Initialize IDE Hard Disk
-    IDEInit();
+    //IDEInit();
 
  
     // Init keyboard
@@ -93,7 +94,8 @@ void krn_entry( void ) {
     
 
     // Start Setup Menu
-    MenuInit();
+    //MenuInit();
+    FsFatInit();
 
 
     for(;;);
