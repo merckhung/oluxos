@@ -25,7 +25,7 @@ typedef struct {
     __u32   BPB_HiddSec;
     __u32   BPB_TotSec32;
 
-} FsFatBPB_t;
+} __attribute__ ((packed)) FsFatBPB_t;
 
 
 typedef struct {
@@ -37,7 +37,7 @@ typedef struct {
     __s8    BS_VolLab[ 11 ];
     __s8    BS_FilSysType[ 8 ];
 
-} FsFatBPBFat16_t;
+} __attribute__ ((packed)) FsFatBPBFat16_t;
 
 
 typedef struct {
@@ -56,7 +56,7 @@ typedef struct {
     __s8    BS_VolLab[ 11 ];
     __s8    BS_FilSysType[ 8 ];
 
-} FsFatBPBFat32_t;
+} __attribute__ ((packed)) FsFatBPBFat32_t;
 
 
 void FsFatInit( void );
