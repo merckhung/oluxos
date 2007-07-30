@@ -17,7 +17,7 @@
 
 static struct IntHandlerLst_t InterrupHandlertList[ NR_INTERRUPT ];
 static struct IDTEntry_t IDTTable[ SZ_INTENTRY ];
-extern void __code_seg( void );
+extern void __KERNEL_CS( void );
 
 extern void ExceptionHandler( void );
 
@@ -60,26 +60,26 @@ void IntInitInterrupt( void ) {
     memset( IDTTable, 0, SZ_INTENTRY );
 
 
-    IntSetIDT( 0, (__u32)divide_error, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 1, (__u32)debug, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 2, (__u32)nmi, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 3, (__u32)breakpoint, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 4, (__u32)overflow, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 5, (__u32)bound_range_exceeded, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 6, (__u32)invalid_opcode, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 7, (__u32)device_not_available, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 8, (__u32)double_fault, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 9, (__u32)coprocessor_segment_overrun, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 10, (__u32)invalid_tss, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 11, (__u32)segment_not_present, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 12, (__u32)stack_fault, (__u16)__code_seg, TRAP_GATE_FLAG );
-    IntSetIDT( 13, (__u32)general_protection_exception, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( 0, (__u32)divide_error, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 1, (__u32)debug, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 2, (__u32)nmi, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 3, (__u32)breakpoint, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 4, (__u32)overflow, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 5, (__u32)bound_range_exceeded, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 6, (__u32)invalid_opcode, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 7, (__u32)device_not_available, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 8, (__u32)double_fault, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 9, (__u32)coprocessor_segment_overrun, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 10, (__u32)invalid_tss, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 11, (__u32)segment_not_present, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 12, (__u32)stack_fault, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 13, (__u32)general_protection_exception, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
 
 
     // Setup exceptions handler
     for( i = 14 ; i <= TRAP_END ; i++ ) {
 
-        IntSetIDT( i, (__u32)ExceptionHandler, (__u16)__code_seg, TRAP_GATE_FLAG );
+        IntSetIDT( i, (__u32)ExceptionHandler, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
     }
 
 
@@ -202,7 +202,7 @@ void IntRegInterrupt( __u8 intnum, __u32 handler, void (*IntHandler)( __u8 intnu
     DbgPrint( "IntRegInterrupt: index 0x%x, handler 0x%x\n", intnum, handler );
 
     // Add interrupt gate
-    IntSetIDT( intnum, handler, (__u16)__code_seg, TRAP_GATE_FLAG );
+    IntSetIDT( intnum, handler, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
 
     // Install interrupt handler
     InterrupHandlertList[ intnum ].Handler = IntHandler;
@@ -252,7 +252,7 @@ void IntRegIRQ( __u8 irqnum, __u32 handler, void (*IRQHandler)( __u8 irqnum ) ) 
     DbgPrint( "IntRegIRQ: index 0x%x, handler 0x%x\n", irqnum + PIC_IRQ_BASE, handler );
 
     // Add interrupt gate
-    IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (__u16)__code_seg, INT_GATE_FLAG );
+    IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (__u16)__KERNEL_CS, INT_GATE_FLAG );
 
     // Install interrupt handler
     InterrupHandlertList[ irqnum + PIC_IRQ_BASE ].Handler = IRQHandler;

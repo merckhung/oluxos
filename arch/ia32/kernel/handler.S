@@ -304,12 +304,10 @@ ExceptionReturn:
 .align 4
 ExceptionHandler:
 
-    cli
     movl    $0xb83bc, %esi
     incb    (%esi)
     movl    $0xb83bd, %esi
     incb    (%esi)
-    sti
     iret
 
 

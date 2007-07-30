@@ -76,7 +76,7 @@ img:
 
 
 emu:
-	qemu -fda OluxOS.img -hda image/disk.img -boot a -m 256
+	qemu -fda OluxOS.img -hda image/hdd.img -boot a -m 256
 
 
 over: clean OluxOS.krn img emu

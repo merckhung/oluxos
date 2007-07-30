@@ -75,6 +75,7 @@ void krn_entry( void ) {
 
     // Initialized task
     TskInit();
+    TskStart();
 
 
     // Initialize IDE Hard Disk
@@ -82,11 +83,11 @@ void krn_entry( void ) {
 
  
     // Init keyboard
-    KbdInitKeyboard();
+    //KbdInitKeyboard();
 
 
     // Init timer
-    TmInitTimer();
+    //TmInitTimer();
 
 
     // Start task scheduler
@@ -95,7 +96,9 @@ void krn_entry( void ) {
 
     // Start Setup Menu
     //MenuInit();
-    FsFatInit();
+    
+    // FAT file system
+    //FsFatInit();
 
 
     for(;;);

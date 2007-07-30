@@ -10,10 +10,12 @@
  */
 #include <types.h>
 #include <ia32/page.h>
+#include <ia32/debug.h>
 
 
 static volatile __u32 *PDEPtr;
 static volatile __u32 *PTEPtr;
+volatile __u32  *usermem;
 
 
 //
@@ -40,6 +42,16 @@ void MmPageInit( void ) {
     for( i = 0 ; i < PDENUM ; i++ ) {
     
         *(PDEPtr + i) = ((__u32)PTEPtr + i * 0x1000) | 0x00000003;
+
+        if( (i + 1) == PDENUM ) {
+        
+            //
+            // Masked for User space
+            //
+            *(PDEPtr + i) |= 0x00000004;
+        }
+
+        //DbgPrint( "PDE value = 0x%8X\n", *(PDEPtr + i) );
     }
 
 
@@ -47,6 +59,24 @@ void MmPageInit( void ) {
     for( i = 0 ; i < PTENUM ; i++ ) {
 
         *(PTEPtr + i) = (__u32)(filladdr + i * 0x1000) | 0x00000003;
+
+        if( i >= (PTENUM - 1024) ) {
+
+
+            //
+            // Masked for User space
+            //
+            *(PTEPtr + i) |= 0x00000004;
+            //DbgPrint( "PTE value = 0x%8X\n", *(PTEPtr + i) );
+            
+            if( !usermem ) {
+            
+                //DbgPrint( "usermem 1 = 0x%8X, value 1 = 0x%8X\n", PTEPtr + i, *(PTEPtr + i) );
+                usermem = PTEPtr + i;
+            }
+         }
+
+        //DbgPrint( "PTE value = 0x%8X\n", *(PTEPtr + i) );
     }
 
 

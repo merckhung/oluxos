@@ -17,8 +17,7 @@
 
 void FsFatInit( void ) {
 
-    __s8 buf[ 512 ], tmp[ 12 ];
-    __s32 i;
+    __s8 buf[ 512 ], buf1[ 512 ], tmp[ 12 ];
     FsFatBPB_t *p;
 
 
@@ -27,7 +26,9 @@ void FsFatInit( void ) {
     p = (FsFatBPB_t *)buf;
 
 
-#if 1
+#if 0
+    __s32 i;
+
     for( i = 0 ; i < 512 ; i++ ) {
 
         if( !( i % 26 ) ) {
@@ -79,6 +80,37 @@ void FsFatInit( void ) {
             strncpy( tmp, p16->BS_FilSysType, sizeof( p16->BS_FilSysType ) );
             tmp[ sizeof( p16->BS_FilSysType ) ] = 0;
             DbgPrint( "BS_FilSysType  = %s\n", tmp );
+
+
+            __u32 RootDirSectors =
+            ((p->BPB_RootEntCnt * 32) + (p->BPB_BytePerSec - 1)) / p->BPB_BytePerSec;
+
+
+            DbgPrint( "RootDirSectors = %X\n", RootDirSectors );
+
+            //ReadSector( RootDirSectors );
+            ReadSector( 1 );
+            ReadData( buf1 );
+
+
+#if 1
+            __s32 i;
+
+            for( i = 0 ; i < 512 ; i++ ) {
+
+                if( !( i % 26 ) ) {
+        
+                    DbgPrint( "\n" );
+                }
+
+                DbgPrint( "%2X ", *(buf1 + i) );
+            }
+#endif
+
+           
+
+            
+            
         }
     }
     else if( p->BPB_TotSec32 ) {

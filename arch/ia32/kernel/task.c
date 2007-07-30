@@ -16,16 +16,25 @@
 #include <clib.h>
 
 
-static TSS_t KrnTSS;
+static TSS_t KrnTSS, UsrTSS;
 
 static Task_t tsks[ 2 ];
 static char stack_buf[ 2 ][ 1024 ];
 
-extern void __task_seg( void );
+extern void __ktask_seg( void );
+extern void __utask_seg( void );
 extern void KrnTSSD( void );
+extern void UsrTSSD( void );
 
 static __u32 current = -1;
 
+extern void __KERNEL_CS( void );
+extern void __KERNEL_DS( void );
+extern void __USER_CS( void );
+extern void __USER_DS( void );
+extern void __ldt_seg( void );
+
+extern volatile __u32  *usermem;
 
 void TskTest1( void ) {
 
@@ -59,25 +68,30 @@ void TskTest2( void ) {
 
 void TskUsr1( void ) {
 
-    __u32 i, j;
+    __asm__ __volatile__ (
 
-    for( i = 0 ; ; i++ );
-        for( j = 0 ; ; j++ );
+        "test1:\n"
+        "incl   %eax\n"
+        "jmp    test1\n"
+    );
 }
 
 
 void TskUsr2( void ) {
 
-    __u32 i, j;
+    __asm__ __volatile__ (
 
-    for( i = 0 ; ; i++ );
-        for( j = 0 ; ; j++ );
+        "test2:\n"
+        "incl   %ebx\n"
+        "jmp    test2\n"
+    );
 }
 
 
 void TskInit( void ) {
 
     TSSD_t *p = (TSSD_t *)KrnTSSD;
+    TSSD_t *u = (TSSD_t *)UsrTSSD;
 
 
     //
@@ -91,14 +105,38 @@ void TskInit( void ) {
     p->flag         = 0x89;
 
 
+    u->limit0       = (0x0000ffff & sizeof( TSS_t ));
+    u->limit1       = (0x000f0000 & sizeof( TSS_t )) >> 16;
+    u->baseaddr0    = (0x0000ffff & (__u32)&UsrTSS);
+    u->baseaddr1    = (0x00ff0000 & (__u32)&UsrTSS) >> 16;
+    u->baseaddr2    = (0xff000000 & (__u32)&UsrTSS) >> 24;
+    u->flag         = 0xe9;
+
+
+    DbgPrint( "usermem = 0x%8X, value = 0x%8X\n", usermem, *usermem );
+    memcpy( *usermem, TskUsr1, 512 );
+
+
     //
     // Load Kernel TSS Descriptor
     //
     __asm__ __volatile__ (
 
-        "mov    %0, %%ax\n"
+        "movw   %0, %%ax\n"
         "ltr    %%ax\n"
-        :: "g" (__task_seg)
+        :: "g" (__ktask_seg)
+        : "ax"
+    );
+
+
+    //
+    // Load LDTR
+    //
+    __asm__ __volatile__ (
+    
+        "movw   %0, %%ax\n"
+        "lldt   %%ax\n"
+        :: "g" (__ldt_seg)
         : "ax"
     );
 
@@ -107,16 +145,117 @@ void TskInit( void ) {
     // Fill up Task descriptors
     //
     tsks[ 0 ].eip       = (__u32)TskUsr1;
-    tsks[ 0 ].cs        = 0x10;
-    tsks[ 0 ].ss        = 0x18;
+    tsks[ 0 ].cs        = (__u32)__USER_CS | 0x03;
+    tsks[ 0 ].ss        = (__u32)__USER_DS | 0x03;
+    tsks[ 0 ].ds        = (__u32)__USER_DS | 0x03;
+    tsks[ 0 ].es        = (__u32)__USER_DS | 0x03;
+    tsks[ 0 ].fs        = (__u32)__USER_DS | 0x03;
+    tsks[ 0 ].gs        = (__u32)__USER_DS | 0x03;
     tsks[ 0 ].esp       = (__u32)stack_buf[ 0 ] + 1024;
-    tsks[ 0 ].eflags    = 0x200;
+    tsks[ 0 ].eflags    = 0x3000;
+
+
+    UsrTSS.eip          = tsks[ 0 ].eip;
+    UsrTSS.cs           = tsks[ 0 ].cs;
+    UsrTSS.ss           = tsks[ 0 ].ss;
+    UsrTSS.ds           = tsks[ 0 ].ds;
+    UsrTSS.es           = tsks[ 0 ].es;
+    UsrTSS.fs           = tsks[ 0 ].fs;
+    UsrTSS.gs           = tsks[ 0 ].gs;
+    UsrTSS.esp          = tsks[ 0 ].esp;
+    UsrTSS.eflags       = tsks[ 0 ].eflags;
+
+
+    KrnTSS.cs           = (__u16)__KERNEL_CS;
+    KrnTSS.ss           = (__u16)__KERNEL_DS;
+    KrnTSS.ds           = (__u16)__KERNEL_DS;
+    KrnTSS.es           = (__u16)__KERNEL_DS;
+    KrnTSS.fs           = (__u16)__KERNEL_DS;
+    KrnTSS.gs           = (__u16)__KERNEL_DS;
+
 
     tsks[ 1 ].eip       = (__u32)TskUsr2;
-    tsks[ 1 ].cs        = 0x10;
-    tsks[ 1 ].ss        = 0x18;
+    tsks[ 1 ].cs        = (__u32)__USER_CS | 0x03;
+    tsks[ 1 ].ss        = (__u32)__USER_DS | 0x03;
+    tsks[ 1 ].ds        = (__u32)__USER_DS | 0x03;
+    tsks[ 1 ].es        = (__u32)__USER_DS | 0x03;
+    tsks[ 1 ].fs        = (__u32)__USER_DS | 0x03;
+    tsks[ 1 ].gs        = (__u32)__USER_DS | 0x03;
     tsks[ 1 ].esp       = (__u32)stack_buf[ 1 ] + 1024;
-    tsks[ 1 ].eflags    = 0x200;
+    tsks[ 1 ].eflags    = 0x3000;
+}
+
+
+void TskStart( void ) {
+
+    __u16   uts = ((__u16)__utask_seg) | 0x03;
+
+
+    //
+    // Load User TSS Descriptor
+    //
+    __asm__ __volatile__ (
+
+        "movw   %0, %%ax\n"
+        "ltr    %%ax\n"
+        :: "g" (uts)
+        : "ax"
+    );
+
+
+    //
+    // Jump to start first user space task
+    //
+    __asm__ __volatile__ (
+
+        "xorl   %%eax, %%eax\n"
+        "movw   %0, %%ax\n"
+        "pushl  %%eax\n"            // SS
+        "movl   %1, %%eax\n"
+        "pushl  %%eax\n"            // ESP
+        "movl   %2, %%eax\n"
+        "pushl  %%eax\n"            // EFLAGS
+        "xorl   %%eax, %%eax\n"
+        "movw   %3, %%ax\n"
+        "pushl  %%eax\n"            // CS
+        "movl   %4, %%eax\n"
+        "pushl  %%eax\n"            // EIP
+        "movl   %5, %%ecx\n"        // ECX
+        "movl   %6, %%edx\n"        // EDX
+        "movl   %7, %%ebx\n"        // EBX
+        "movl   %8, %%ebp\n"        // EBP
+        "movl   %9, %%esi\n"        // ESI
+        "movl   %10, %%edi\n"       // EDI
+        "movw   %11, %%ax\n"
+        "movw   %%ax, %%fs\n"       // FS
+        "movw   %12, %%ax\n"
+        "movw   %%ax, %%gs\n"       // GS
+        "movw   %13, %%ax\n"
+        "movw   %%ax, %%es\n"       // ES
+        "movl   %14, %%eax\n"
+        "pushl  %%eax\n"            // Prepare EAX
+        "movw   %15, %%ax\n"
+        "movw   %%ax, %%ds\n"       // DS
+        "popl   %%eax\n"            // EAX
+        "jmp    .\n"
+        "iret\n"                    // Switch to new task
+        :: "g" (tsks[ 0 ].ss),
+           "g" (tsks[ 0 ].esp),
+           "g" (tsks[ 0 ].eflags),
+           "g" (tsks[ 0 ].cs),
+           "g" (tsks[ 0 ].eip),
+           "g" (tsks[ 0 ].ecx),
+           "g" (tsks[ 0 ].edx),
+           "g" (tsks[ 0 ].ebx),
+           "g" (tsks[ 0 ].ebp),
+           "g" (tsks[ 0 ].esi),
+           "g" (tsks[ 0 ].edi),
+           "g" (tsks[ 0 ].fs),
+           "g" (tsks[ 0 ].gs),
+           "g" (tsks[ 0 ].es),
+           "g" (tsks[ 0 ].eax),
+           "g" (tsks[ 0 ].ds)
+    );
 }
 
 
@@ -173,36 +312,6 @@ void TskSwitch( __u32 origtsk, __u32 newtsk ) {
 #endif
 
    
-    }
-    else {
-
-        //
-        // Just switch to Task1
-        //
-        __asm__ __volatile__ (
-
-            "movl   %0, %%eax\n"
-            "movl   %1, %%ecx\n"
-            "movl   %2, %%edx\n"
-            "movl   %3, %%ebx\n"
-            "movl   %4, %%ebp\n"
-            "movl   %5, %%esi\n"
-            "movl   %6, %%edi\n"
-            "pushl  %7\n"
-            "popfl\n"
-            "movl   %8, %%esp\n"
-            "jmp    *(%9)\n"
-            :: "g" (tsks[ 0 ].eax),
-              "g" (tsks[ 0 ].ecx),
-              "g" (tsks[ 0 ].edx),
-              "g" (tsks[ 0 ].ebx),
-              "g" (tsks[ 0 ].ebp),
-              "g" (tsks[ 0 ].esi),
-              "g" (tsks[ 0 ].edi),
-              "g" (tsks[ 0 ].eflags),
-              "g" (tsks[ 0 ].esp),
-              "g" (tsks[ 0 ].eip)
-        );
     }
 
 }

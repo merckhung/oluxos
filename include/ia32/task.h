@@ -27,7 +27,7 @@ typedef struct {
     __u16   ds;
     __u16   fs;
     __u16   gs;
-} Task_t __attribute__ ((packed));
+} Task_t;
 
 
 typedef struct {
@@ -70,7 +70,7 @@ typedef struct {
     __u16   reserved10;
     __u16   debug;
     __u16   iobmp;
-} TSS_t __attribute__ ((packed));
+} __attribute__ ((packed)) TSS_t;
 
 
 typedef struct {
@@ -81,10 +81,11 @@ typedef struct {
     __u8    flag;
     __u8    limit1;
     __u8    baseaddr2;
-} TSSD_t __attribute__ ((packed));
+} __attribute__ ((packed)) TSSD_t;
 
 
 void TskInit( void );
+void TskStart( void );
 void TskSwitch( __u32 origtsk, __u32 newtsk );
 void TskScheduler( void );
 
