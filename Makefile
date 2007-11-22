@@ -24,7 +24,7 @@ QUIET_CMD_CC		?=	CC		$@
 	  CMD_CC		?=	$(CC) $(CFLAGS) -c -o $(<D)/$@ $<
 
 QUIET_CMD_LD		?=	LD		$@
-	  CMD_LD		?=	$(LD) $(LDFLAGS) -o $@
+	  CMD_LD		?=	$(LD) $(LDFLAGS) -o $@ $(shell cat $(OBJECTLIST)) > $@.map
 
 
 ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
@@ -33,8 +33,8 @@ VPATH				+=	:lib:driver/console:driver/framebuffer:driver/input:driver/pci:drive
 BOOTOBJS			=	boot.o info.o pm.o
 OBJECTS				=	setup.o krn.o clib.o console.o interrupt.o handler.o debug.o io.o kbd.o pci.o page.o
 OBJECTS				+=	timer.o i8259.o task.o resource.o ide.o menu.o fat.o
-OBJECTLIST			=	object.lst
-BOOTOBJLIST			=	bootobj.lst
+OBJECTLIST			=	.krnobj.lst
+BOOTOBJLIST			=	.bootobj.lst
 
 IMGSIZE				=	1474560
 SYSIMG				=	OluxOS.img
@@ -45,13 +45,13 @@ BOOTSECT			=	bootsect
 
 $(KERNELNAME): $(BOOTSECT) $(OBJECTS)
 	$(ECHO) '   $($(QUIET)CMD_LD)'
-	$(CMD_LD) -T arch/$(ARCH)/kernel.lds $(shell cat $OBJECTLIST) > $@.map
+	$(CMD_LD) -T arch/$(ARCH)/kernel.lds
 
 
 $(BOOTSECT): $(BOOTOBJS)
-	$(MV) $(OBJECTLIST) $(BOOTOBJLIST)
 	$(ECHO) '   $($(QUIET)CMD_LD)'
-	$(CMD_LD) -T arch/$(ARCH)/boot/boot.lds $(shell cat $BOOTOBJLIST) > $@.map
+	$(CMD_LD) -T arch/$(ARCH)/boot/boot.lds
+	$(MV) -f $(OBJECTLIST) $(BOOTOBJLIST)
 
 
 %.o: %.S
@@ -69,6 +69,7 @@ $(BOOTSECT): $(BOOTOBJS)
 clean:
 	$(RM) -f $(shell cat $(OBJECTLIST) 2> /dev/null)
 	$(RM) -f $(shell cat $(BOOTOBJLIST) 2> /dev/null)
+	$(RM) -f $(OBJECTLIST) $(BOOTOBJLIST)
 	$(RM) $(BOOTSECT) $(KERNELNAME) *.map *.img *.lst
 	$(MAKE) -C image clean
 
