@@ -170,22 +170,32 @@ _32bit_mode_start:
     //
     // Copy Main Kernel Code to 1MB
     //
-    // ESI = Linear address of _32bit_mode_start
-    // EDI = Linear address of 1MB
+    // ESI = Linear address of Main Kernel Binary (Align 16 bytes)
+    // EDI = Linear address of KRN_LOAD_ADDR (1MB)
     // ECX = Rest of length of kernel code in byte
     //
-    movl    $__krnimg_start, %esi
+    movl    $__krnimg_start, %eax
+    testb   $0x0f, %al
+    jz      aldy_align
+
+    andb    $0xf0, %al
+    addl    $0x10, %eax
+aldy_align:
+    
+    movl    %eax, %esi
     movl    $KRN_LOAD_ADDR, %edi
     rep     movsl
 
 
     //
-    // Jump to __krnimg_start
+    // Jump to _setup_start
     //
     jmp     KRN_LOAD_ADDR
 
 
-.word   0xaa55
+    .word   0xaa55
+
+
 __krnimg_start:
 
 

@@ -150,6 +150,20 @@ int main( int argc, char **argv ) {
 
 
     //
+    // Align 16 bytes
+    //
+    if( boot_sz % 16 ) {
+
+        boot_sz = (((boot_sz + 16) / 16) * 16);
+        if( lseek( ifd, boot_sz, SEEK_SET ) < 0 ) {
+        
+            fprintf( stderr, "Cannot align 16 bytes\n" );
+            goto close_ifd;
+        }
+    }
+
+
+    //
     // Write Main Kernel
     //
     for( krn_sz = 0 ; ; krn_sz += i ) {
