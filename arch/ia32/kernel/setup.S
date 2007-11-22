@@ -5,37 +5,32 @@
  * @OLUXORG_LICENSE_HEADER_START@
  * @OLUXORG_LICENSE_HEADER_END@
  *
- * setup.S -- OluxOS setup code
+ * setup.S -- OluxOS kernel setup code
  *
  */
 
+#include <ia32/platform.h>
+
 
 .file       "setup.S"
-
-
-STACK_SIZE=64
 
 
 /******************************************************************************
  * Code Segment
  */
 .text
-.global     _setup, __KERNEL_CS, __KERNEL_DS, __USER_CS, __USER_DS, __ktask_seg, __utask_seg, KrnTSSD, UsrTSSD, __ldt_seg
+.global     _setup_start, __KERNEL_CS, __KERNEL_DS, __USER_CS, __USER_DS, __ktask_seg, __utask_seg, KrnTSSD, UsrTSSD, __ldt_seg
 
 
-_setup:
+_setup_start:
 
 
     // Setup our Global Segment Descriptors
-    mov     $__gdt, %eax
-    mov     %eax, (__gdtptr + 2)
-    lgdt    (__gdtptr)
+    mov     $(__gdt - _setup_start + KRN_LOAD_ADDR), %eax
+    mov     %eax, (__gdtptr - _setup_start + KRN_LOAD_ADDR + 2)
+    lgdt    (__gdtptr - _setup_start + KRN_LOAD_ADDR)
 
-
-    // Setup Stack Pointer
-    mov     $__stack + STACK_SIZE, %esp
-
-
+    
     // Setup DS, ES, GS, FS
     mov     $__KERNEL_DS, %ax
     mov     %ax, %ds
@@ -46,7 +41,7 @@ _setup:
 
 
     // Initialize stack segment
-    movl    $(__stack + STACK_SIZE), %esp
+    movl    $(__stack - _setup_start + KRN_LOAD_ADDR + KRN_STACK_SZ), %esp
 
 
     // Reset flags
@@ -61,17 +56,11 @@ _setup:
 
 
 
-
 /******************************************************************************
  * Global segment descriptor
- */
-.data
-.align 16
-
-
-/*
  * Globel Descriptors
  */
+.align 16
 __gdt:
 
 
@@ -220,6 +209,6 @@ __gdtptr:
 /******************************************************************************
  * Stack
  */
-.common     __stack, STACK_SIZE
+.common     __stack, KRN_STACK_SZ
 
 

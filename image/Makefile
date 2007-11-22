@@ -27,19 +27,20 @@ MAKEFLAGS=--quiet
 
 all:
 	$(DD) if=/dev/zero of=$(SYSIMG) bs=$(IMGSIZE) count=1
-	$(YES) | $(MKE2FS) $(SYSIMG)
-	$(SUDO) $(MODPROBE) loop
-	$(SUDO) $(MOUNT) -o loop ./$(SYSIMG) $(IMGTEMP)
+	$(DD) if=../$(KERNELNAME) of=$(SYSIMG) bs=$(IMGSIZE) count=1 conv=notrunc
+	#$(YES) | $(MKE2FS) $(SYSIMG)
+	#$(SUDO) $(MODPROBE) loop
+	#$(SUDO) $(MOUNT) -o loop ./$(SYSIMG) $(IMGTEMP)
 
-	$(SUDO) $(CP) -rf $(TEMPLATES)/* $(IMGTEMP)
-	$(SYNC)
-	$(SUDO) $(CP) ../$(KERNELNAME) $(IMGTEMP)/boot
-	$(SUDO) $(RM) -rf $(IMGTEMP)/lost+found
+	#$(SUDO) $(CP) -rf $(TEMPLATES)/* $(IMGTEMP)
+	#$(SYNC)
+	#$(SUDO) $(CP) ../$(KERNELNAME) $(IMGTEMP)/boot
+	#$(SUDO) $(RM) -rf $(IMGTEMP)/lost+found
 
-	$(CAT) $(GRUBSCRIPT) | $(GRUB) --batch
+	#$(CAT) $(GRUBSCRIPT) | $(GRUB) --batch
 
-	$(SUDO) $(UMOUNT) $(IMGTEMP)
-	$(CHOWN) -R merck:wheel $(SYSIMG)
+	#$(SUDO) $(UMOUNT) $(IMGTEMP)
+	#$(CHOWN) -R merck:wheel $(SYSIMG)
 	$(CP) $(SYSIMG) ..
 
 

@@ -74,8 +74,8 @@ void krn_entry( void ) {
 
 
     // Initialized task
-    TskInit();
-    TskStart();
+    //TskInit();
+    //TskStart();
 
 
     // Initialize IDE Hard Disk
