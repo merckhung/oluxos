@@ -38,12 +38,24 @@ BOOTOBJLIST			=	.bootobj.lst
 
 IMGSIZE				=	1474560
 SYSIMG				=	OluxOS.img
-KERNELNAME			=	OluxOS.krn
+KRNNAME				=	OluxOS.krn
+KRNMAIN				=	kernel
 BOOTSECT			=	bootsect
+UTILS				=	utils
 
 
+.PHONY:	$(UTILS)
 
-$(KERNELNAME): $(BOOTSECT) $(OBJECTS)
+
+all: $(BOOTSECT) $(KRNMAIN) $(KRNNAME)
+
+
+$(KRNNAME):
+	$(MAKE) -C $(UTILS)
+	$(UTILS)/krnimg -b $(BOOTSECT) -k $(KRNMAIN) -o $(KRNNAME)
+
+
+$(KRNMAIN): $(OBJECTS)
 	$(ECHO) '   $($(QUIET)CMD_LD)'
 	$(CMD_LD) -T arch/$(ARCH)/kernel.lds
 
@@ -67,23 +79,19 @@ $(BOOTSECT): $(BOOTOBJS)
 
 
 clean:
+	$(MAKE) -C $(UTILS) clean
 	$(RM) -f $(shell cat $(OBJECTLIST) 2> /dev/null)
 	$(RM) -f $(shell cat $(BOOTOBJLIST) 2> /dev/null)
 	$(RM) -f $(OBJECTLIST) $(BOOTOBJLIST)
-	$(RM) $(BOOTSECT) $(KERNELNAME) *.map *.img *.lst
-	$(MAKE) -C image clean
-
-
-img:
-	$(MAKE) -C image all
+	$(RM) $(BOOTSECT) $(KRNMAIN) $(KRNNAME) $(SYSIMG) *.map *.lst
 
 
 emu:
 	$(DD) if=/dev/zero of=$(SYSIMG) bs=$(IMGSIZE) count=1
-	$(DD) if=$(KERNELNAME) of=$(SYSIMG) bs=$(IMGSIZE) count=1 conv=notrunc
-	qemu -hda OluxOS.img -m 256
+	$(DD) if=$(KRNNAME) of=$(SYSIMG) bs=$(IMGSIZE) count=1 conv=notrunc
+	qemu -hda $(SYSIMG) -m 256
 
 
-over: clean $(BOOTSECT) $(KERNELNAME) emu
+over: clean all emu
 
 
