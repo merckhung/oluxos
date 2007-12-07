@@ -72,7 +72,7 @@ _bpb:
 .fill   467, 1, 0
 
 __krnsecs:
-    .byte   6
+    .byte   0
 
 .word   0xaa55
 
