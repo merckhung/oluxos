@@ -32,7 +32,7 @@ VPATH				=	arch/$(ARCH)/boot:arch/$(ARCH)/kernel:arch/$(ARCH)/component:arch/$(A
 VPATH				+=	:lib:driver/console:driver/framebuffer:driver/input:driver/pci:driver/resource:driver/ide:fs
 BOOTOBJS			=	boot.o info.o pm.o
 OBJECTS				=	setup.o krn.o clib.o console.o interrupt.o handler.o debug.o io.o kbd.o pci.o page.o
-OBJECTS				+=	timer.o i8259.o task.o resource.o ide.o menu.o fat.o
+OBJECTS				+=	timer.o i8259.o task.o resource.o ide.o menu.o fat.o kgdb_serial.o
 OBJECTLIST			=	.krnobj.lst
 BOOTOBJLIST			=	.bootobj.lst
 

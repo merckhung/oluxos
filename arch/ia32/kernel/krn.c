@@ -21,6 +21,7 @@
 #include <driver/resource.h>
 #include <driver/ide.h>
 #include <fs/fat.h>
+#include <ia32/kgdb_serial.h>
 
 
 static struct IRQStack_t IRQStack;
@@ -39,6 +40,14 @@ static struct IRQStack_t IRQStack;
 //  This is IA32 kerne entry point
 //
 void krn_entry( void ) {
+
+
+    // Initialize Serial Port
+    KgdbInit();
+    KgdbPutChar( 'O' );
+    KgdbPutChar( 'l' );
+    KgdbPutChar( 'u' );
+    KgdbPutChar( 'x' );
 
 
     // Clear screen and print welcome message
