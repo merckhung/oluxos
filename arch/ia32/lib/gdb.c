@@ -5,20 +5,16 @@
  * @OLUXORG_LICENSE_HEADER_START@
  * @OLUXORG_LICENSE_HEADER_END@
  *
- * serial.c -- OluxOS IA32 text mode serial routines
+ * gdb.c -- OluxOS IA32 Remote GDB Routines
  *
  */
 #include <types.h>
 #include <clib.h>
 #include <ia32/io.h>
+#include <ia32/gdb.h>
 
 
-#define COMA    0x3f8
-#define COMB    0x2f8
-#define COMIO   COMA
-
-
-void KgdbInit( void ) {
+void GdbInit( void ) {
 
     // Turn off Interrupt
     IoOutByte( 0x00, COMIO + 1 );
@@ -44,13 +40,13 @@ void KgdbInit( void ) {
 }
 
 
-void KgdbPutChar( char c ) {
+void GdbPutChar( char c ) {
 
     IoOutByte( c, COMIO ); 
 }
 
 
-int KgdbGetChar( void ) {
+int GdbGetChar( void ) {
 
     if( IoInByte( COMIO + 5 ) & 0x01 ) {
     
@@ -61,7 +57,7 @@ int KgdbGetChar( void ) {
 }
 
 
-void KgdbExceptionHandler( int exception_number, void *exception_address ) {
+void GdbExceptionHandler( int exception_number, void *exception_address ) {
 
 
 

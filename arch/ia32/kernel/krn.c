@@ -21,7 +21,7 @@
 #include <driver/resource.h>
 #include <driver/ide.h>
 #include <fs/fat.h>
-#include <ia32/kgdb_serial.h>
+#include <ia32/gdb.h>
 
 
 static struct IRQStack_t IRQStack;
@@ -43,11 +43,11 @@ void krn_entry( void ) {
 
 
     // Initialize Serial Port
-    KgdbInit();
-    KgdbPutChar( 'O' );
-    KgdbPutChar( 'l' );
-    KgdbPutChar( 'u' );
-    KgdbPutChar( 'x' );
+    GdbInit();
+    GdbPutChar( 'O' );
+    GdbPutChar( 'l' );
+    GdbPutChar( 'u' );
+    GdbPutChar( 'x' );
 
 
     // Clear screen and print welcome message
