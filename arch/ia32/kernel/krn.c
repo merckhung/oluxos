@@ -8,6 +8,7 @@
  * krn.c -- OluxOS IA32 kernel entry point
  *
  */
+#include <version.h>
 #include <types.h>
 #include <clib.h>
 #include <ia32/page.h>
@@ -52,8 +53,8 @@ void krn_entry( void ) {
 
     // Clear screen and print welcome message
     TcClear();
-    TcPrint( "Copyright (C) 2006 - 2007 Olux Organization all rights reserved.\n" );
-    TcPrint( "Olux Operating System v0.1\n\n" );
+    TcPrint( COPYRIGHT_STR"\n" );
+    TcPrint( PRODUCT_NAME" version "KRN_VER"\n\n" );
 
 
     // Setup IRQ stack

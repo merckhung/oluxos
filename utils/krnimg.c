@@ -15,11 +15,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <version.h>
 
 
-#define VERSION "krnimg Version 0.1 (c) 2006 - 2007 Olux Organization All rights reserved."
 
-
+#define VERSION "krnimg version 0.1 (C) "COPYRIGHT_YEAR" "COMPANY_NAME
 #define DEFKRN  "kernel"
 #define DEFBOOT "bootsect"
 #define DEFIMG  "OluxOS.krn"
@@ -35,9 +35,9 @@ static void usage( void ) {
     fprintf( stderr, "\n" );
     fprintf( stderr, VERSION"\n" );
     fprintf( stderr, "Usage: krnimg -b " DEFBOOT " -k " DEFKRN " -o " DEFIMG " [-h]\n\n" );
-    fprintf( stderr, "\t-b\tOluxOS Boot Sector(0x00007c00) Binary\n" );
-    fprintf( stderr, "\t-k\tOluxOS Kernel Main(0x00100000) Binary\n" );
-    fprintf( stderr, "\t-o\tOluxOS Kernel Image(Output)\n" );
+    fprintf( stderr, "\t-b\t"KRN_NAME" Binary of Boot Sector\t(0x0007c000)\n" );
+    fprintf( stderr, "\t-k\t"KRN_NAME" Binary of Kernel Code\t(0x00100000)\n" );
+    fprintf( stderr, "\t-o\t"KRN_NAME" Kernel Image\t\t(Output)\n" );
     fprintf( stderr, "\t-h\tprint this message.\n");
     fprintf( stderr, "\n");
 }
@@ -205,9 +205,9 @@ int main( int argc, char **argv ) {
     // Write Done
     //
     printf( "Created Kernel Image %s successfully\n", img_name );
-    printf( "BootSector: %d bytes\n", boot_sz );
-    printf( "Main Kernel: %d bytes (Start from: 0x%8.8X)\n", krn_sz, boot_sz );
-    printf( "Kernel Image Size: %d bytes, %d Blocks\n", boot_sz + krn_sz, c );
+    printf( "Boot Sector: %d bytes\n", boot_sz );
+    printf( "Kernel Code: %d bytes (Offset: 0x%8.8X)\n", krn_sz, boot_sz );
+    printf( "Kernel Image Size: %d bytes, %d sectors\n", boot_sz + krn_sz, c );
 
 
     err = 0;

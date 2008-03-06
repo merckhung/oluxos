@@ -1,7 +1,7 @@
 include ../make.tmpl
 
 TARGET				=	krnimg
-CFLAGS				=	-Wall
+CFLAGS				=	-O2 -Wall -I../include
 LDFLAGS				=
 
 
