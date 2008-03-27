@@ -304,33 +304,27 @@ u32 CbBinToBcd( u32 value ) {
 //
 // CbBcdToBin   -- Convert BCD to Binary
 //
-u32 CbBcdToBin( u32 dec, s8 *buf, u32 len ) {
+// Input:
+//  value       -- BCD value to do convert
+//
+// Return:
+//  Binary value
+//
+u32 CbBcdToBin( u32 value ) {
 
-    u32 i, j;
-    s8 forward[ BUF_LEN ], reverse[ BUF_LEN ];
+    u32 i, j, rs;
 
+    for( i = 0, j = 0, rs = 0 ; ; i += 4, j++ ) {
 
-    for( i = 0 ; i < BUF_LEN ; i++ ) {
+        if( !(value >> i) ) {
+        
+            break;
+        }
 
-        reverse[ i ] = dec % 2 ? '1' : '0' ;
-        dec /= 2;
+        rs += (CbPower( 10, j ) * ((value >> i) & 0xF));
     }
 
-
-    reverse[ BUF_LEN - 1 ] = 0;
-
-
-    for( i = 0, j = (BUF_LEN - 2) ; i < (BUF_LEN - 1) ; i++, j-- ) {
-
-        forward[ i ] = reverse[ j ];
-    }
-
-
-    forward[ i ] = 0;
-    CbStrCpy( buf, (forward + ( (BUF_LEN - 1) - len)), len );
-
-
-    return 0;
+    return rs;
 }
 
 
