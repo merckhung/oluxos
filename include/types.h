@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
  * @OLUXORG_LICENSE_HEADER_START@
@@ -17,6 +17,18 @@ typedef     char                    __s8;
 typedef     short int               __s16;
 typedef     int                     __s32;
 typedef     long long int           __s64;
+
+
+typedef     unsigned char           u8;
+typedef     unsigned short int      u16;
+typedef     unsigned int            u32;
+typedef     unsigned long long int  u64;
+
+typedef     char                    s8;
+typedef     short int               s16;
+typedef     int                     s32;
+typedef     long long int           s64;
+
 
 typedef     __u8                    u_int8_t;
 typedef     __u16                   u_int16_t;

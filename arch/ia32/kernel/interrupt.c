@@ -57,7 +57,7 @@ void IntInitInterrupt( void ) {
 
 
     // Initialize
-    memset( IDTTable, 0, SZ_INTENTRY );
+    CbMemSet( IDTTable, 0, SZ_INTENTRY );
 
 
     IntSetIDT( 0, (__u32)divide_error, (__u16)__KERNEL_CS, TRAP_GATE_FLAG );
@@ -143,7 +143,7 @@ void IntSetIDT( __u8 index, __u32 offset, __u16 seg, __u8 flag ) {
 //
 void IntDelIDT( __u8 index ) {
 
-    memset( IDTTable + (index * 8), 0, SZ_INTENTRY );
+    CbMemSet( IDTTable + (index * 8), 0, SZ_INTENTRY );
 }
 
 

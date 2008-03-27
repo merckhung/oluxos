@@ -41,7 +41,7 @@ void MenuTitle( void ) {
     __s8 *title = "OluxOS Setup Utility";
     __s32 i;
 
-    for( i = 0 ; i < strlen( title ) ; i++ ) {
+    for( i = 0 ; i < CbStrLen( title ) ; i++ ) {
     
         *(ScnPtr + (i * 2) + (30 * 2)) = *(title + i);
     }
@@ -54,7 +54,7 @@ void MenuItem( void ) {
     __s32 i, j, k;
 
     i = COLUMN * 2 * 1;
-    j = strlen( item ) * 2 + i;
+    j = CbStrLen( item ) * 2 + i;
 
     for( k = 0 ; i < j ; i++ ) {
     
@@ -78,7 +78,7 @@ void MenuHelp( void ) {
     __s32 i, j, k;
 
     i = COLUMN * 2 * 23;
-    j = strlen( help ) * 2 + i;
+    j = CbStrLen( help ) * 2 + i;
 
     for( k = 0 ; i < j ; i++ ) {
     

@@ -58,7 +58,7 @@ void krn_entry( void ) {
 
 
     // Setup IRQ stack
-    memset( &IRQStack.stack, 0, SZ_IRQ_STACK );
+    CbMemSet( &IRQStack.stack, 0, SZ_IRQ_STACK );
     IRQStack.esp = (__u32)(IRQStack.stack + SZ_IRQ_STACK);
     __asm__ __volatile__ (
     

@@ -114,7 +114,7 @@ void TskInit( void ) {
 
 
     DbgPrint( "usermem = 0x%8X, value = 0x%8X\n", usermem, *usermem );
-    memcpy( *usermem, TskUsr1, 512 );
+    CbMemCpy( (void *)usermem, TskUsr1, 512 );
 
 
     //

@@ -66,7 +66,7 @@ void TcPrint( const __s8 *format, ... ) {
                 case 'x' :
                     for( digit-- ; digit >= 0 ; digit-- ) {
 
-                        tmp = itoa( (__s8)( (((__u32)(*arg)) >> (digit * 4)) & 0xf), upper );
+                        tmp = CbBinToAscii( (__s8)( (((__u32)(*arg)) >> (digit * 4)) & 0xf), upper );
                         if( specify ) {
                         
                             TcPutchar( tmp );
@@ -108,7 +108,7 @@ void TcPrint( const __s8 *format, ... ) {
                     digit = 8;
                     for( digit-- ; digit >= 0 ; digit-- ) {
 
-                        tmp = itoa( (__s8)( (((__u32)(itobcd((__s32)*arg))) >> (digit * 4)) & 0xf), upper );
+                        tmp = CbBinToAscii( (__s8)( (((__u32)(CbBinToBcd((__s32)*arg))) >> (digit * 4)) & 0xf), upper );
                         if( (tmp != '0') || had ) {
 
                             had = 1; 
@@ -171,7 +171,7 @@ __s32 TcCalDigit( const __s8 *p, __s32 *digit ) {
     *digit = 0;
     for( j = 0 ; j < i ; j++ ) {
     
-        *digit += pow( 10, i - j - 1 ) * buf[ j ];
+        *digit += CbPower( 10, i - j - 1 ) * buf[ j ];
     }
 
     return i;

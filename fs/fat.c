@@ -44,7 +44,7 @@ void FsFatInit( void ) {
 #if 1
     DbgPrint( "\n" );
 
-    strncpy( tmp, p->BS_OEMName, sizeof( p->BS_OEMName ) );
+    CbStrCpy( tmp, p->BS_OEMName, sizeof( p->BS_OEMName ) );
     tmp[ sizeof( p->BS_OEMName ) ] = 0;
     DbgPrint( "BS_OEMName     = %s\n", p->BS_OEMName );
     DbgPrint( "BPB_BytePerSec = 0x%4X\n", p->BPB_BytePerSec );
@@ -73,11 +73,11 @@ void FsFatInit( void ) {
 
             DbgPrint( "BS_VolID       = 0x%8X\n", p16->BS_VolID );
 
-            strncpy( tmp, p16->BS_VolLab, sizeof( p16->BS_VolLab ) );
+            CbStrCpy( tmp, p16->BS_VolLab, sizeof( p16->BS_VolLab ) );
             tmp[ sizeof( p16->BS_VolLab ) ] = 0;
             DbgPrint( "BS_VolLab      = %s\n", tmp );
 
-            strncpy( tmp, p16->BS_FilSysType, sizeof( p16->BS_FilSysType ) );
+            CbStrCpy( tmp, p16->BS_FilSysType, sizeof( p16->BS_FilSysType ) );
             tmp[ sizeof( p16->BS_FilSysType ) ] = 0;
             DbgPrint( "BS_FilSysType  = %s\n", tmp );
 
