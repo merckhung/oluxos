@@ -235,7 +235,7 @@ s8 CbBinToAscii( const s8 value, const s8 upper ) {
 u32 CbAsciiToBin( const s8 *buf ) {
 
     u32 i, j, size, cal = 0;
-    s8 *hex = "0123456789abcdef";
+    s8 *hex1 = "0123456789abcdef";
     s8 *hex2 = "0123456789ABCDEF";
 
 
@@ -250,7 +250,7 @@ u32 CbAsciiToBin( const s8 *buf ) {
 
         for( j = 0 ; j < 16 ; j++ ) {
 
-            if( (hex[ j ] == buf[ i ]) || (hex2[ j ] == buf[ i ]) ) {
+            if( (hex1[ j ] == buf[ i ]) || (hex2[ j ] == buf[ i ]) ) {
 
                 break;
             }

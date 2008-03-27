@@ -89,15 +89,15 @@ void krn_entry( void ) {
 
 
     // Initialize IDE Hard Disk
-    //IDEInit();
+    IDEInit();
 
  
     // Init keyboard
-    //KbdInitKeyboard();
+    KbdInitKeyboard();
 
 
     // Init timer
-    //TmInitTimer();
+    TmInitTimer();
 
 
     // Start task scheduler
