@@ -61,7 +61,7 @@ s32 CbPower( s32 x, s32 y );
 // General Routines
 //
 u32 CbParseFormat( const s8 *fmt, u32 *digit, u32 *pad, s8 *fc );
-s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, ... );
+s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, const s8 **args );
 
 
 

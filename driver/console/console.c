@@ -36,12 +36,11 @@ static u8 yPos = 0;
 //
 void TcPrint( const s8 *format, ... ) {
 
-    s8 *args = (s8 *)(&format) + 1;
     s8 *p;
 
 
     // Handle String Format
-    if( CbFmtPrint( buf, CONSOLE_BUF_LEN, format, args ) ) {
+    if( CbFmtPrint( buf, CONSOLE_BUF_LEN, format, (&format) + 1 ) ) {
     
         return;
     }

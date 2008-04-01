@@ -263,6 +263,13 @@ u32 CbBinToAsciiBuf( u32 value, s8 *buf, s8 upper, u32 digit, u32 pad ) {
     }
 
 
+    // If input value == 0
+    if( !i ) {
+    
+        *p = '0'; 
+    }
+
+
     // Handle digit, pad, and push into buffer
     len = CbStrLen( tmp );
 
@@ -581,15 +588,14 @@ nodexit:
 //  buf         -- Output buffer
 //  sz          -- Size of buffer
 //  format      -- Format string
-//  ...         -- Arguments
+//  args        -- Arguments
 //
 // Return:
 //  Success : 0
 //  Error   : 1
 //
-s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, ... ) {
+s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, const s8 **args ) {
 
-    s8 **args = (s8 **) (&format) + 1;
     s8 *obuf = buf;
     s8 fc, upper;
     u32 digit, pad;
