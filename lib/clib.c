@@ -589,7 +589,7 @@ nodexit:
 //
 s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, ... ) {
 
-    s8 **arg = (s8 **) (&format) + 1;
+    s8 **args = (s8 **) (&format) + 1;
     s8 *obuf = buf;
     s8 fc, upper;
     u32 digit, pad;
@@ -649,14 +649,14 @@ s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, ... ) {
 
                 case 'x' :
 
-                    buf += CbBinToAsciiBuf( (u32)*arg, buf, upper, digit, pad );
+                    buf += CbBinToAsciiBuf( (u32)*args, buf, upper, digit, pad );
                     break;
 
 
                 // Character Print
                 case 'c' :
 
-                    *buf = (s32)*arg;
+                    *buf = (s32)*args;
                     buf++;
                     break;
 
@@ -664,9 +664,9 @@ s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, ... ) {
                 // String Print
                 case 's' :
 
-                    for( ; **arg ; (*arg)++, buf++ ) {
+                    for( ; **args ; (*args)++, buf++ ) {
 
-                        *buf = (s8)**arg;
+                        *buf = (s8)**args;
                     }
                     break;
 
@@ -674,7 +674,7 @@ s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, ... ) {
                 // Decimal Print
                 case 'd' :
 
-                    buf += CbBinToAsciiBuf( CbBinToBcd( (u32)*arg ), buf, upper, digit, pad );   
+                    buf += CbBinToAsciiBuf( CbBinToBcd( (u32)*args ), buf, upper, digit, pad );   
                     break;
 
 
@@ -684,8 +684,8 @@ s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, ... ) {
             }
 
             
-            // Move to next argument
-            arg++;
+            // Move to next argsument
+            args++;
     }
 
 

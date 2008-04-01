@@ -35,7 +35,7 @@ VPATH				+=	:lib:driver/console:driver/framebuffer:driver/input:driver/pci:drive
 BOOTOBJS			=	boot.o info.o pm.o
 
 OBJECTS				=	setup.o krn.o clib.o console.o interrupt.o handler.o debug.o io.o kbd.o pci.o page.o
-OBJECTS				+=	timer.o i8259.o task.o resource.o ide.o menu.o fat.o gdb.o
+OBJECTS				+=	timer.o i8259.o task.o resource.o ide.o menu.o fat.o gdb.o sercon.o
 
 OBJECTLIST			=	.krnobj.lst
 BOOTOBJLIST			=	.bootobj.lst

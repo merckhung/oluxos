@@ -21,35 +21,35 @@
 #ifdef KERNEL_DEBUG
 typedef struct {
 
-    __u32 eax;
-    __u32 ebx;
-    __u32 ecx;
-    __u32 edx;
+    u32 eax;
+    u32 ebx;
+    u32 ecx;
+    u32 edx;
 
-    __u32 esi;
-    __u32 edi;
-    __u32 ebp;
-    __u32 esp;
+    u32 esi;
+    u32 edi;
+    u32 ebp;
+    u32 esp;
 
-    __u32 efl;
+    u32 efl;
 
-    __u16 cs;
-    __u16 ds;
-    __u16 es;
-    __u16 fs;
-    __u16 gs;
-    __u16 ss;
+    u16 cs;
+    u16 ds;
+    u16 es;
+    u16 fs;
+    u16 gs;
+    u16 ss;
 
-    __u64 gdt;
+    u64 gdt;
 
-    __u64 ldt;
+    u64 ldt;
 
-    __u64 idt;
+    u64 idt;
 
-    __u32 cr0;
-    __u32 cr2;
-    __u32 cr3;
-    __u32 cr4;
+    u32 cr0;
+    u32 cr2;
+    u32 cr3;
+    u32 cr4;
 
 } DbgRegs_t;
 

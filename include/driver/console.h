@@ -9,6 +9,7 @@
 
 
 #define     VIDEO_TEXT_ADDR     0xb8000
+#define     CONSOLE_BUF_LEN     1024
 
 #define     COLUMN      80
 #define     LINE        25
@@ -17,11 +18,11 @@
 #define     CRTC_DATA   0x3d5
 
 
-void TcPrint( const __s8 *format, ... );
-__s32 TcCalDigit( const __s8 *p, __s32 *digit );
+void TcPrint( const s8 *format, ... );
+s32 TcCalDigit( const s8 *p, s32 *digit );
 void TcClear( void );
-void TcCursorSet( __u8 x, __u8 y );
-void TcPutchar( __s8 c );
-void TcRollUp( __u8 lines );
+void TcCursorSet( u8 x, u8 y );
+void TcPutchar( s8 c );
+void TcRollUp( u8 lines );
 
 

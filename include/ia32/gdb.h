@@ -8,11 +8,6 @@
  */
 
 
-#define COMA    0x3f8
-#define COMB    0x2f8
-#define COMIO   COMA
-
-
 void GdbInit( void );
 void GdbPutChar( char c );
 int GdbGetChar( void );

@@ -45,10 +45,6 @@ void krn_entry( void ) {
 
     // Initialize Serial Port
     GdbInit();
-    GdbPutChar( 'O' );
-    GdbPutChar( 'l' );
-    GdbPutChar( 'u' );
-    GdbPutChar( 'x' );
 
 
     // Clear screen and print welcome message
@@ -89,15 +85,15 @@ void krn_entry( void ) {
 
 
     // Initialize IDE Hard Disk
-    IDEInit();
+    //IDEInit();
 
  
     // Init keyboard
-    KbdInitKeyboard();
+    //KbdInitKeyboard();
 
 
     // Init timer
-    TmInitTimer();
+    //TmInitTimer();
 
 
     // Start task scheduler

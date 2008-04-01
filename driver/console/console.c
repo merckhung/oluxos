@@ -12,11 +12,13 @@
 #include <clib.h>
 #include <ia32/io.h>
 #include <driver/console.h>
+#include <driver/sercon.h>
 
 
-static volatile __u8 *VideoRamPtr = (__u8 *)VIDEO_TEXT_ADDR;
-static __u8 xPos = 0;
-static __u8 yPos = 0;
+static volatile u8 *VideoRamPtr = (u8 *)VIDEO_TEXT_ADDR;
+s8 buf[ CONSOLE_BUF_LEN ];
+static u8 xPos = 0;
+static u8 yPos = 0;
 
 
 //
@@ -32,149 +34,25 @@ static __u8 yPos = 0;
 // Description:
 //  Print string on console just like standard C printf() routine
 //
-void TcPrint( const __s8 *format, ... ) {
+void TcPrint( const s8 *format, ... ) {
 
-    __s32 digit;
-    __s8 **arg = (__s8 **) (&format) + 1;
-
-    for( ; *format ; format++ ) {
-
-        if( *format == '%' ) {
-
-            __s8 upper = 0, had = 0, specify = 1;
-            __s8 tmp;
-
-            // Skip '%'
-            format++;
-
-            // Calculate and convert digit
-            format += TcCalDigit( format, &digit );
-
-            // Auto sizing
-            if( !digit ) {
-
-                digit = sizeof( __u32 );
-                specify = 0;
-            }
-
-            switch( *format ) {
+    s8 *args = (s8 *)(&format) + 1;
+    s8 *p;
 
 
-                // Hex Print
-                case 'X' :
-                    upper = 1;
-                case 'x' :
-                    for( digit-- ; digit >= 0 ; digit-- ) {
-
-                        tmp = CbBinToAscii( (__s8)( (((__u32)(*arg)) >> (digit * 4)) & 0xf), upper );
-                        if( specify ) {
-                        
-                            TcPutchar( tmp );
-                        }
-                        else {
-                        
-                            if( (tmp != '0') || had ) {
-
-                                had = 1;
-                                TcPutchar( tmp );
-                            }
-                            else if( !had && !digit) {
-
-                                TcPutchar( tmp );
-                            }
-                        }
-                    }
-                    break;
-
-
-                // ASCII Print
-                case 'c' :
-
-                    TcPutchar( (__u32)*arg );
-                    break;
-
-                
-                // String Print
-                case 's' :
-                    for( ; **arg ; (*arg)++ ) {
-                
-                        TcPutchar( **arg );
-                    }
-                    break;
-
-
-                // Decimal Print
-                case 'd' :
-                    digit = 8;
-                    for( digit-- ; digit >= 0 ; digit-- ) {
-
-                        tmp = CbBinToAscii( (__s8)( (((__u32)(CbBinToBcd((__s32)*arg))) >> (digit * 4)) & 0xf), upper );
-                        if( (tmp != '0') || had ) {
-
-                            had = 1; 
-                            TcPutchar( tmp );
-                        }
-                        else if( !had && !digit) {
-                        
-                            TcPutchar( tmp );
-                        }
-                    }
-                    break;
-
-
-                // Cannot parse syntax
-                default :
-                    continue;
-            }
-
-            arg++;
-        }
-        else {
-
-            TcPutchar( *format );
-        }
-    }
-}
-
-
-//
-// TcCalDigit
-//
-// Input:
-//  p       : String buffer
-//  digit   : number of digit output
-//
-// Return:
-//  None
-//
-// Description:
-//  Calculate number of digit
-//
-#define     MAX_FORMAT_DIGIT    2
-__s32 TcCalDigit( const __s8 *p, __s32 *digit ) {
-
-    __s32 i, j;
-    __s8 buf[ MAX_FORMAT_DIGIT ];
-
-    for( i = 0 ; i < MAX_FORMAT_DIGIT ; i++, p++ ) {
+    // Handle String Format
+    if( CbFmtPrint( buf, CONSOLE_BUF_LEN, format, args ) ) {
     
-        if( (*p >= '0') && (*p <= '9') ) {
-
-            buf[ i ] = *p - '0';
-        }
-        else {
-        
-            break;
-        }
+        return;
     }
 
-    *digit = 0;
-    for( j = 0 ; j < i ; j++ ) {
     
-        *digit += CbPower( 10, i - j - 1 ) * buf[ j ];
+    // Output to console
+    for( p = buf ; *p ; p++ ) {
+    
+        TcPutchar( *p );
+        ScPutChar( *p );
     }
-
-    return i;
 }
 
 
@@ -192,7 +70,7 @@ __s32 TcCalDigit( const __s8 *p, __s32 *digit ) {
 //
 void TcClear( void ) {
 
-    __u16 i;
+    u16 i;
 
     for( i = 0 ; i < (COLUMN * 2 * LINE) ; i++ ) {
     
@@ -216,10 +94,10 @@ void TcClear( void ) {
 // Description:
 //  Set console cursor position
 //
-void TcCursorSet( __u8 x, __u8 y ) {
+void TcCursorSet( u8 x, u8 y ) {
 
 
-    __u16 offset;
+    u16 offset;
 
 
     if( x >= COLUMN ) {
@@ -238,11 +116,11 @@ void TcCursorSet( __u8 x, __u8 y ) {
     offset = (yPos * COLUMN) + xPos;
 
     IoOutByte( 0x0e, CRTC_ADDR );
-    IoOutByte( (__u8)((offset >> 8) & 0xff) , CRTC_DATA );
+    IoOutByte( (u8)((offset >> 8) & 0xff) , CRTC_DATA );
 
 
     IoOutByte( 0x0f, CRTC_ADDR );
-    IoOutByte( (__u8)(offset & 0xff) , CRTC_DATA );
+    IoOutByte( (u8)(offset & 0xff) , CRTC_DATA );
 }
 
 
@@ -258,7 +136,7 @@ void TcCursorSet( __u8 x, __u8 y ) {
 // Description:
 //  Put one char on screen
 //
-void TcPutchar( __s8 c ) {
+void TcPutchar( s8 c ) {
 
     if( c == '\n' ) {
     
@@ -304,9 +182,9 @@ void TcPutchar( __s8 c ) {
 // Description:
 //  Roll up screen
 //
-void TcRollUp( __u8 lines ) {
+void TcRollUp( u8 lines ) {
 
-    __u16 i, sp, ep;
+    u16 i, sp, ep;
 
 
     if( lines >= LINE ) {
