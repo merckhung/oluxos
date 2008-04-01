@@ -15,7 +15,8 @@
 #define NULL            0
 #define FALSE           0
 #define TRUE            1
-#define BUF_LEN         65
+#define FMT_MAX_DIG     8
+
 
 
 enum {
@@ -41,7 +42,8 @@ s8 *CbIndex( const s8 *buf, const s8 ch );
 //
 // ASCII Routines
 //
-s8 CbBinToAscii( const s8 value, const s8 upper );
+s8 CbBinToAscii( s8 value, s8 upper );
+u32 CbBinToAsciiBuf( u32 value, s8 *buf, s8 upper, u32 digit, u32 pad );
 u32 CbAsciiToBin( const s8 *buf );
 u32 CbBinToBcd( u32 value );
 u32 CbBcdToBin( u32 value );
@@ -52,6 +54,14 @@ u32 CbBcdToBin( u32 value );
 // Math Routines
 //
 s32 CbPower( s32 x, s32 y );
+
+
+
+//
+// General Routines
+//
+u32 CbParseFormat( const s8 *fmt, u32 *digit, u32 *pad, s8 *fc );
+s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, ... );
 
 
 

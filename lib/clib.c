@@ -195,12 +195,12 @@ s8 *CbIndex( const s8 *buf, const s8 ch ) {
 //
 // Input:
 //  value       -- Byte to do convert
-//  upper       -- Use upper case or not
+//  upper       -- Upper or Lower case
 //
 // Return:
 //  ASCII code
 //
-s8 CbBinToAscii( const s8 value, const s8 upper ) {
+s8 CbBinToAscii( s8 value, s8 upper ) {
 
     if( value > 15 ) {
 
@@ -221,6 +221,93 @@ s8 CbBinToAscii( const s8 value, const s8 upper ) {
 
     return value + '0';
 }
+
+
+//
+// CbBinToAsciiBuf  --  Convert a Binary value to Ascii code then push into buffer
+//
+// Input:
+//  value       -- Binary value to do convert
+//  buf         -- Destination buffer
+//  upper       -- Upper or Lower case
+//  digit       -- Digit
+//  pad         -- Digit of Zero Pad
+//
+// Return:
+//  Byte just wrote
+//
+u32 CbBinToAsciiBuf( u32 value, s8 *buf, s8 upper, u32 digit, u32 pad ) {
+
+    s32 hexdig = sizeof( value ) * 2;
+    s8 *orig = buf, tmp[ hexdig + 1 ], *p, c;
+    u32 len, i, dp;
+
+
+    // Initialization
+    p = tmp;
+    CbMemSet( tmp, 0, hexdig + 1 );
+
+
+    // Convert each half byte to ascii
+    for( hexdig--, i = 0 ; hexdig >= 0 ; hexdig-- ) {
+    
+        c = (value >> (hexdig * 4)) & 0xF;
+        if( !i && !c ) {
+        
+            continue;
+        }
+
+        *p = CbBinToAscii( c, upper );
+        p++;
+        i = 1;
+    }
+
+
+    // Handle digit, pad, and push into buffer
+    len = CbStrLen( tmp );
+
+
+    dp = pad;
+    if( digit > pad ) {
+    
+        dp = digit;    
+    }
+
+
+    i = dp - len;
+    if( len >= dp ) {
+    
+        i = 0;
+    }
+
+    
+    // Padding
+    for( ; i-- ; buf++ ) {
+    
+        c = '0';
+        if( digit > pad ) {
+        
+            if( i >= (pad - len)  ) {
+            
+                c = ' ';
+            }
+        }
+
+
+        *buf = c;
+    }
+
+
+    // Copy ASCII
+    for( i = 0 ; i < len ; i++, buf++ ) {
+    
+        *buf = tmp[ i ];
+    }
+
+
+    return (buf - orig);
+}
+
 
 
 //
@@ -359,5 +446,251 @@ s32 CbPower( s32 x, s32 y ) {
 
     return sum;
 }
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// General Routines                                                           //
+////////////////////////////////////////////////////////////////////////////////
+
+
+//
+// CbParseFormat-- Parsing format digit
+//
+// Input:
+//  buf         -- String buffer
+//  digit       -- Number of digit
+//  pad         -- Number of digit of zero pad
+//  fc          -- Format char
+//
+// Return:
+//  Number of digit
+//
+// Known Bug:
+//  %16.24d will become digit = 0x16, pad = 0x24, not decimal value
+//
+u32 CbParseFormat( const s8 *fmt, u32 *digit, u32 *pad, s8 *fc ) {
+
+    s8 buf[ FMT_MAX_DIG + 1 ];
+    u8 i, j, p;
+    s8 value[ 2 ];
+    s8 *orig = (s8 *)fmt;
+
+
+    // Initialization
+    *digit = 0;
+    *pad = 0;
+    *fc = 0;
+    p = 0;
+
+
+    // Check '%'
+    if( *fmt != '%' ) {
+    
+        return 0;
+    }
+
+
+    // Skip '%'
+    fmt++;
+
+
+    // Parsing format
+    for( j = 0 ; j < 2 ; j++ ) {
+
+
+        // Clear buffer
+        CbMemSet( buf, 0, FMT_MAX_DIG + 1 );
+
+        
+        for( i = 0 ; i < FMT_MAX_DIG ; fmt++ ) {
+
+            // Check '.' character
+            if( *fmt == '.' ) {
+
+                if( p == 1 ) {
+                
+                    return 0;
+                }
+
+                p = 1;
+                fmt++;
+                break;
+            }
+
+
+            // Check if it's ASCII
+            if( (*fmt < '0') || (*fmt > '9') ) {
+        
+                break;
+            }
+
+
+            // Push into buffer
+            buf[ i ] = *fmt;
+            i++;
+        }
+
+
+        // Convert buffer to binary
+        value[ j ] = CbAsciiToBin( buf );        
+    }
+
+
+    // If it's a valid format char, move to next
+    switch( *fmt ) {
+    
+        case 'd':
+        case 'x':
+        case 'X':
+        case 'p':
+            goto norexit;
+
+        case 'c':
+        case 's':
+            goto nodexit;
+
+        default:
+            return 0;
+    }
+
+
+norexit:
+
+
+    // Write result
+    *digit = value[ 0 ];
+    *pad = value[ 1 ];
+
+
+nodexit:
+
+    *fc = *fmt;
+    fmt++;
+
+    // Return offset 
+    return (fmt - orig);
+}
+
+
+
+//
+// CbFmtPrint   -- Format print format
+//
+// Input:
+//  buf         -- Output buffer
+//  sz          -- Size of buffer
+//  format      -- Format string
+//  ...         -- Arguments
+//
+// Return:
+//  Success : 0
+//  Error   : 1
+//
+s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, ... ) {
+
+    s8 **arg = (s8 **) (&format) + 1;
+    s8 *obuf = buf;
+    s8 fc, upper;
+    u32 digit, pad;
+
+
+    // Clear memory first
+    CbMemSet( buf, 0, sz );
+
+
+    // Manipulate String
+    for( ; *format ; ) {
+
+
+        // Check buffer overflow
+        if( (buf - obuf) > sz ) {
+        
+            return 1;
+        }
+
+
+        // Direct put char if it's not '%' char
+        if( *format != '%' ) {
+        
+            *buf = *format;
+            buf++;
+            format++;
+            continue;
+        }
+
+
+        // Handle '%%'
+        if( *(format + 1) == '%' ) {
+        
+            *buf = *format;
+            buf++;
+            format += 2;
+            continue;
+        }
+
+
+        // Get digit, pad, offset from format string
+        // Then offset to the end of format string
+        format += CbParseFormat( format, &digit, &pad, &fc );
+
+
+        // Initialization
+        upper = LOWERCASE;
+
+
+        // Print Format
+        switch( fc ) {
+
+                // Hexadecimal Print
+                case 'X' :
+
+                    upper = UPPERCASE;
+
+                case 'x' :
+
+                    buf += CbBinToAsciiBuf( (u32)*arg, buf, upper, digit, pad );
+                    break;
+
+
+                // Character Print
+                case 'c' :
+
+                    *buf = (s32)*arg;
+                    buf++;
+                    break;
+
+
+                // String Print
+                case 's' :
+
+                    for( ; **arg ; (*arg)++, buf++ ) {
+
+                        *buf = (s8)**arg;
+                    }
+                    break;
+
+
+                // Decimal Print
+                case 'd' :
+
+                    buf += CbBinToAsciiBuf( CbBinToBcd( (u32)*arg ), buf, upper, digit, pad );   
+                    break;
+
+
+                // Bad syntax
+                default :
+                    return 1;
+            }
+
+            
+            // Move to next argument
+            arg++;
+    }
+
+
+    return 0;
+}
+
 
 
