@@ -16,7 +16,7 @@
 
 
 static volatile u8 *VideoRamPtr = (u8 *)VIDEO_TEXT_ADDR;
-s8 buf[ CONSOLE_BUF_LEN ];
+static s8 buf[ CONSOLE_BUF_LEN ];
 static u8 xPos = 0;
 static u8 yPos = 0;
 
@@ -50,7 +50,10 @@ void TcPrint( const s8 *format, ... ) {
     // Output to console
     for( p = buf ; *p ; p++ ) {
     
+        // Output to VGA Text Mode Screen
         TcPutchar( *p );
+
+        // Output to Serial Console
         ScPutChar( *p );
     }
 }
