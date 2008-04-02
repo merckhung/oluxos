@@ -5,16 +5,16 @@
  * @OLUXORG_LICENSE_HEADER_START@
  * @OLUXORG_LICENSE_HEADER_END@
  *
- * sercon.c -- OluxOS IA32 Serial Console Routines
+ * serial.c -- OluxOS IA32 Serial Port Driver Routines
  *
  */
 #include <types.h>
 #include <clib.h>
 #include <ia32/io.h>
-#include <driver/sercon.h>
+#include <driver/serial.h>
 
 
-void ScInit( void ) {
+void SrInit( void ) {
 
     // Turn off Interrupt
     IoOutByte( 0x00, COMIO + 1 );
@@ -22,9 +22,9 @@ void ScInit( void ) {
     // DLAB ON
     IoOutByte( 0x80, COMIO + 3 );
 
-    // Baud rate = 19200
+    // Baudrate = 115200
     // Divisor Low Byte
-    IoOutByte( 0x06, COMIO );
+    IoOutByte( 0x01, COMIO );
 
     // Divisor High Byte
     IoOutByte( 0x00, COMIO + 1 );
@@ -40,13 +40,13 @@ void ScInit( void ) {
 }
 
 
-void ScPutChar( char c ) {
+void SrPutChar( char c ) {
 
     IoOutByte( c, COMIO ); 
 }
 
 
-int ScGetChar( void ) {
+int SrGetChar( void ) {
 
     if( IoInByte( COMIO + 5 ) & 0x01 ) {
     

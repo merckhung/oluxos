@@ -12,7 +12,6 @@
 #include <clib.h>
 #include <ia32/io.h>
 #include <driver/console.h>
-#include <driver/sercon.h>
 
 
 static volatile u8 *VideoRamPtr = (u8 *)VIDEO_TEXT_ADDR;
@@ -51,9 +50,6 @@ void TcPrint( const s8 *format, ... ) {
     
         // Output to VGA Text Mode Screen
         TcPutchar( *p );
-
-        // Output to Serial Console
-        ScPutChar( *p );
     }
 }
 

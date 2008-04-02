@@ -12,24 +12,24 @@
 #include <clib.h>
 #include <ia32/io.h>
 #include <ia32/gdb.h>
-#include <driver/sercon.h>
+#include <driver/serial.h>
 
 
 void GdbInit( void ) {
 
-    void ScInit( void );
+    void SrInit( void );
 }
 
 
 void GdbPutChar( char c ) {
 
-    ScPutChar( c );
+    SrPutChar( c );
 }
 
 
 int GdbGetChar( void ) {
 
-    return ScGetChar();
+    return SrGetChar();
 }
 
 

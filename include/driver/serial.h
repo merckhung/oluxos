@@ -13,8 +13,8 @@
 #define COMIO   COMA
 
 
-void ScInit( void );
-void ScPutChar( char c );
-int ScGetChar( void );
+void SrInit( void );
+void SrPutChar( char c );
+int SrGetChar( void );
 
 
