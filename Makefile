@@ -94,7 +94,7 @@ clean:
 emu:
 	$(DD) if=/dev/zero of=$(SYSIMG) bs=$(IMGSIZE) count=1
 	$(DD) if=$(KRNNAME) of=$(SYSIMG) bs=$(IMGSIZE) count=1 conv=notrunc
-	qemu -hda $(SYSIMG) -m 256
+	qemu -hda $(SYSIMG) -m 256 -no-kqemu -s
 
 
 over: clean all emu

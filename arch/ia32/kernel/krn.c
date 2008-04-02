@@ -108,6 +108,7 @@ void krn_entry( void ) {
     // Start Setup Menu
     //MenuInit();
     
+
     // FAT file system
     //FsFatInit();
 
