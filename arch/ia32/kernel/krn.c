@@ -21,8 +21,11 @@
 #include <driver/pci.h>
 #include <driver/resource.h>
 #include <driver/ide.h>
+#include <driver/serial.h>
+#include <driver/sercon.h>
 #include <fs/fat.h>
 #include <ia32/gdb.h>
+
 
 
 static struct IRQStack_t IRQStack;
@@ -44,7 +47,9 @@ void krn_entry( void ) {
 
 
     // Initialize Serial Port
-    GdbInit();
+    SrInit();
+    ScPrint( COPYRIGHT_STR"\n" );
+    ScPrint( PRODUCT_NAME" version "KRN_VER"\n\n" );
 
 
     // Clear screen and print welcome message

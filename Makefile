@@ -36,7 +36,7 @@ VPATH				+=	:driver/serial
 BOOTOBJS			=	boot.o info.o pm.o
 
 OBJECTS				=	setup.o krn.o clib.o console.o interrupt.o handler.o debug.o io.o kbd.o pci.o page.o
-OBJECTS				+=	timer.o i8259.o task.o resource.o ide.o menu.o fat.o gdb.o serial.o
+OBJECTS				+=	timer.o i8259.o task.o resource.o ide.o menu.o fat.o gdb.o serial.o sercon.o
 
 OBJECTLIST			=	.krnobj.lst
 BOOTOBJLIST			=	.bootobj.lst

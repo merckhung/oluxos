@@ -49,7 +49,7 @@ void TcPrint( const s8 *format, ... ) {
     for( p = buf ; *p ; p++ ) {
     
         // Output to VGA Text Mode Screen
-        TcPutchar( *p );
+        TcPutChar( *p );
     }
 }
 
@@ -123,7 +123,7 @@ void TcCursorSet( u8 x, u8 y ) {
 
 
 //
-// TcPutchar
+// TcPutChar
 //
 // Input:
 //  c       : Character to put on screen
@@ -134,7 +134,7 @@ void TcCursorSet( u8 x, u8 y ) {
 // Description:
 //  Put one char on screen
 //
-void TcPutchar( s8 c ) {
+void TcPutChar( s8 c ) {
 
     if( c == '\n' ) {
     
