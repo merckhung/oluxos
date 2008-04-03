@@ -22,7 +22,7 @@
 // CbMemSet -- Fill memory with constant byte
 //
 // Input:
-//  mem     --  Memory pointer
+//  *mem    --  Memory pointer
 //  ch      --  Constant byte to write
 //  sz      --  Size of Memory buffer
 //
@@ -46,8 +46,8 @@ void *CbMemSet( void *mem, u8 ch, u32 sz ) {
 // CbMemCpy -- Copy memory area
 //
 // Input:
-//  dest    -- Destination memory pointer
-//  src     -- Source memory pointer
+//  *dest   -- Destination memory pointer
+//  *src    -- Source memory pointer
 //  sz      -- Size of area to copy
 //
 // Return:
@@ -71,7 +71,7 @@ void *CbMemCpy( void *dest, const void *src, u32 sz ) {
 // CbStrLen -- Calculate the length of a string
 //
 // Input:
-//  str     -- String pointer
+//  *str    -- String pointer
 //
 // Return:
 //  Length of string
@@ -90,8 +90,8 @@ u32 CbStrLen( const s8 *str ) {
 // CbStrCpy -- Copy a string
 //
 // Input:
-//  dest    -- Destination string
-//  src     -- Source string
+//  *dest   -- Destination string
+//  *src    -- Source string
 //  sz      -- Length of string
 //
 // Return:
@@ -123,8 +123,8 @@ s8 *CbStrCpy( s8 *dest, const s8 *src, u32 sz ) {
 // CbStrCmp -- Compare two strings
 //
 // Input:
-//  dest    -- Destination string
-//  src     -- Source string
+//  *dest   -- Destination string
+//  *src    -- Source string
 //  sz      -- Length of string
 //
 // Return:
@@ -161,7 +161,7 @@ s32 CbStrCmp( const s8 *dest, const s8 *src, u32 sz ) {
 // CbIndex  -- Locate character in string
 //
 // Input:
-//  buf     -- String pointer
+//  *buf    -- String pointer
 //  ch      -- Character to locate
 //
 // Return:
@@ -228,7 +228,7 @@ s8 CbBinToAscii( s8 value, s8 upper ) {
 //
 // Input:
 //  value       -- Binary value to do convert
-//  buf         -- Destination buffer
+//  *buf        -- Destination buffer
 //  upper       -- Upper or Lower case
 //  digit       -- Digit
 //  pad         -- Digit of Zero Pad
@@ -318,19 +318,52 @@ u32 CbBinToAsciiBuf( u32 value, s8 *buf, s8 upper, u32 digit, u32 pad ) {
 
 
 //
-// CbAsciiToBin -- Convert ASCII to Binary
+// CbAsciiToBin -- Convert ASCII Byte to Binary
 //
 // Input:
-//  buf         -- String pointer
+//  value       -- ASCII Code
 //
 // Return:
 //  Binary value
 //
-u32 CbAsciiToBin( const s8 *buf ) {
+s8 CbAsciiToBin( s8 value ) {
 
-    u32 i, j, size, cal = 0;
-    s8 *hex1 = "0123456789abcdef";
-    s8 *hex2 = "0123456789ABCDEF";
+
+    if( (value >= '0') && (value <= '9') ) {
+    
+        return (value - '0');
+    }
+
+    
+    if( (value >= 'A') && (value <= 'F')  ) {
+    
+        return (value - 'A') + 10;
+    }
+
+
+    if( (value >= 'a') && (value <= 'f')  ) {
+    
+        return (value - 'a') + 10;
+    }
+
+
+    return 0;
+}
+
+
+
+//
+// CbAsciiBufToBin  -- Convert ASCII Buffer to Binary
+//
+// Input:
+//  *buf        -- String pointer
+//
+// Return:
+//  Binary value
+//
+u32 CbAsciiBufToBin( const s8 *buf ) {
+
+    u32 i, size, cal = 0;
 
 
     if( !buf ) {
@@ -342,15 +375,7 @@ u32 CbAsciiToBin( const s8 *buf ) {
     size = CbStrLen( buf );
     for( i = 0 ; buf[ i ] ; i++ ) {
 
-        for( j = 0 ; j < 16 ; j++ ) {
-
-            if( (hex1[ j ] == buf[ i ]) || (hex2[ j ] == buf[ i ]) ) {
-
-                break;
-            }
-        }
-
-        cal += (j * CbPower( 16, size - i - 1 ));
+        cal += (CbAsciiToBin( buf[ i ] ) * CbPower( 16, size - i - 1 ));
     }
 
 
@@ -465,10 +490,10 @@ s32 CbPower( s32 x, s32 y ) {
 // CbParseFormat-- Parsing format digit
 //
 // Input:
-//  buf         -- String buffer
-//  digit       -- Number of digit
-//  pad         -- Number of digit of zero pad
-//  fc          -- Format char
+//  *fmt        -- String buffer
+//  *digit      -- Number of digit
+//  *pad        -- Number of digit of zero pad
+//  *fc         -- Format char
 //
 // Return:
 //  Number of digit
@@ -540,7 +565,7 @@ u32 CbParseFormat( const s8 *fmt, u32 *digit, u32 *pad, s8 *fc ) {
 
 
         // Convert buffer to binary
-        value[ j ] = CbAsciiToBin( buf );        
+        value[ j ] = CbAsciiBufToBin( buf );        
     }
 
 
@@ -585,10 +610,10 @@ nodexit:
 // CbFmtPrint   -- Format print format
 //
 // Input:
-//  buf         -- Output buffer
+//  *buf        -- Output buffer
 //  sz          -- Size of buffer
-//  format      -- Format string
-//  args        -- Arguments
+//  *format     -- Format string
+//  **args      -- Arguments
 //
 // Return:
 //  Success : 0

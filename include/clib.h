@@ -44,7 +44,8 @@ s8 *CbIndex( const s8 *buf, const s8 ch );
 //
 s8 CbBinToAscii( s8 value, s8 upper );
 u32 CbBinToAsciiBuf( u32 value, s8 *buf, s8 upper, u32 digit, u32 pad );
-u32 CbAsciiToBin( const s8 *buf );
+s8 CbAsciiToBin( s8 value );
+u32 CbAsciiBufToBin( const s8 *buf );
 u32 CbBinToBcd( u32 value );
 u32 CbBcdToBin( u32 value );
 

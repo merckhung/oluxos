@@ -22,9 +22,9 @@
 void GdbInit( void );
 void GdbPutChar( s8 c );
 s8 GdbGetChar( void );
-void GdbGetPacket( s8 *buf );
+s8 *GdbGetPacket( s8 *buf );
 void GdbSendPacket( s8 *buf );
-void GdbExceptionHandler( u32 exception_number, void *exception_address );
+void GdbExceptionHandler( u32 ExceptionVector );
 
 
 
