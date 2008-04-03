@@ -40,13 +40,13 @@ void SrInit( void ) {
 }
 
 
-void SrPutChar( char c ) {
+void SrPutChar( s8 c ) {
 
     IoOutByte( c, COMIO ); 
 }
 
 
-int SrGetChar( void ) {
+s8 SrGetChar( void ) {
 
     if( IoInByte( COMIO + 5 ) & 0x01 ) {
     

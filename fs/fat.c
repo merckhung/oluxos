@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
  * @OLUXORG_LICENSE_HEADER_START@
@@ -17,7 +17,7 @@
 
 void FsFatInit( void ) {
 
-    __s8 buf[ 512 ], buf1[ 512 ], tmp[ 12 ];
+    s8 buf[ 512 ], buf1[ 512 ], tmp[ 12 ];
     FsFatBPB_t *p;
 
 
@@ -27,7 +27,7 @@ void FsFatInit( void ) {
 
 
 #if 0
-    __s32 i;
+    s32 i;
 
     for( i = 0 ; i < 512 ; i++ ) {
 
@@ -82,7 +82,7 @@ void FsFatInit( void ) {
             DbgPrint( "BS_FilSysType  = %s\n", tmp );
 
 
-            __u32 RootDirSectors =
+            u32 RootDirSectors =
             ((p->BPB_RootEntCnt * 32) + (p->BPB_BytePerSec - 1)) / p->BPB_BytePerSec;
 
 
@@ -94,7 +94,7 @@ void FsFatInit( void ) {
 
 
 #if 1
-            __s32 i;
+            s32 i;
 
             for( i = 0 ; i < 512 ; i++ ) {
 

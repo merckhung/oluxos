@@ -14,7 +14,7 @@
 
 
 void SrInit( void );
-void SrPutChar( char c );
-int SrGetChar( void );
+void SrPutChar( s8 c );
+s8 SrGetChar( void );
 
 
