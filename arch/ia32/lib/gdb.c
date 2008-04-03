@@ -18,6 +18,28 @@
 static s8 GdbInBuf[ GDB_BUF_LEN ];
 static s8 GdbOutBuf[ GDB_BUF_LEN ];
 
+static u32 ExcTranTbl[][ 2 ] = {
+
+    { 0,    8   },
+    { 1,    5   },
+    { 1,    5   },
+    { 3,    5   },
+    { 4,    16  },
+    { 5,    16  },
+    { 6,    4   },
+    { 7,    8   },
+    { 8,    7   },
+    { 9,    11  },
+    { 10,   11  },
+    { 11,   11  },
+    { 12,   11  },
+    { 13,   11  },
+    { 14,   11  },
+    { 16,   7   },
+    { ~0,   7   }
+};
+
+
 
 void GdbInit( void ) {
 
@@ -152,16 +174,173 @@ void GdbSendPacket( s8 *buf ) {
 
         // Checksum
         GdbPutChar( CbBinToAscii( cksm >> 4, LOWERCASE ) );
-        GdbPutChar( CbBinToAscii( cksm, LOWERCASE ) );
+        GdbPutChar( CbBinToAscii( cksm & 0x0F, LOWERCASE ) );
     
     
     } while( GdbGetChar() != '+' );
 }
 
 
+u8 TranslateException( u32 ExceptionVector ) {
+
+    u8 i;
+
+
+    for( i = 0 ; ; i++ ) {
+
+        
+        // Not found
+        if( (ExcTranTbl[ i ][ 0 ] == ~0) || (ExceptionVector == ExcTranTbl[ i ][ 0 ]) ) {
+        
+            return ExcTranTbl[ i ][ 1 ];
+        }
+    }
+
+
+    return 7;
+}
+
+
 void GdbExceptionHandler( u32 ExceptionVector ) {
 
+    s8 *p = GdbOutBuf, semicolon = ';', colon = ':';
+    u8 sigval;
 
+
+    // Translate Exception to Signal
+    sigval = TranslateException( ExceptionVector );
+
+
+    // Signal
+    *p++ = 'T';
+    *p++ = CbBinToAscii( sigval >> 4, LOWERCASE );
+    *p++ = CbBinToAscii( sigval & 0x0F, LOWERCASE );
+
+
+    // ESP
+    *p++ = CbBinToAscii( ESP, LOWERCASE );
+    *p++ = colon;
+    p    = 0;
+    *p++ = semicolon;
+
+    
+    // EBP
+    *p++ = CbBinToAscii( EBP, LOWERCASE );
+    *p++ = colon;
+    p    = 0;
+    *p++ = semicolon;
+
+
+    // ESP
+    *p++ = CbBinToAscii( EIP, LOWERCASE );
+    *p++ = colon;
+    p    = 0;
+    *p++ = semicolon;
+
+
+    // Terminate Char
+    *p++ = NULL;
+
+
+    // Send Packet
+    GdbSendPacket( GdbOutBuf );
+
+
+    while( 1 ) {
+    
+
+        // Clear output buffer
+        GdbOutBuf[ 0 ] = NULL;
+
+
+        // Receive packet
+        p = GdbGetPacket( GdbInBuf );
+
+
+        switch( *p++ ) {
+        
+
+            case '?':
+
+                GdbOutBuf[ 0 ] = 'S';
+                GdbOutBuf[ 0 ] = CbBinToAscii( sigval >> 4, LOWERCASE );
+                GdbOutBuf[ 0 ] = CbBinToAscii( sigval & 0x0F, LOWERCASE );
+                GdbOutBuf[ 0 ] = NULL;
+                break;
+
+
+            // Debug Flag
+            case 'd':
+
+
+                break;
+              
+
+            // Return CPU registers
+            case 'g':
+
+
+                break;
+
+
+            // Set CPU registers
+            case 'G':
+
+
+                break;
+
+
+            // Set one CPU register
+            case 'P':
+
+
+                break;
+
+
+            // Read Memory
+            case 'm':
+
+
+                break;
+
+
+            // Write Memory
+            case 'M':
+
+                
+                break;
+
+
+            // Step one instruction
+            case 's':
+
+
+                break;
+
+
+            // Continue run
+            case 'c':
+
+
+                break;
+
+
+            // Kill the program
+            case 'k':
+
+
+                break;
+
+
+            default:
+
+                break;
+        }
+
+
+        // Send packet, reply the request
+        GdbSendPacket( GdbOutBuf );
+    }
 }
 
 

@@ -15,6 +15,27 @@
 #define GDB_BUF_LEN     400
 
 
+enum {
+
+    EAX,
+    ECX,
+    EDX,
+    EBX,
+    ESP,
+    EBP,
+    ESI,
+    EDI,
+    EIP,
+    EFLAGS,
+    CS,
+    SS,
+    DS,
+    ES,
+    FS,
+    GS
+};
+
+
 
 //
 // Prototypes
