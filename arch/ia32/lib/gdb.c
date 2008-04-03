@@ -12,6 +12,7 @@
 #include <clib.h>
 #include <ia32/io.h>
 #include <ia32/gdb.h>
+#include <ia32/debug.h>
 #include <driver/serial.h>
 
 
@@ -185,14 +186,13 @@ u8 TranslateException( u32 ExceptionVector ) {
 
     u8 i;
 
-
     for( i = 0 ; ; i++ ) {
 
         
         // Not found
         if( (ExcTranTbl[ i ][ 0 ] == ~0) || (ExceptionVector == ExcTranTbl[ i ][ 0 ]) ) {
         
-            return ExcTranTbl[ i ][ 1 ];
+            return ExcTranTbl[ i ][ 1 ] & 0xFF;
         }
     }
 
@@ -204,7 +204,7 @@ u8 TranslateException( u32 ExceptionVector ) {
 void GdbExceptionHandler( u32 ExceptionVector ) {
 
     s8 *p = GdbOutBuf, semicolon = ';', colon = ':';
-    u8 sigval;
+    u8 sigval, step;
 
 
     // Translate Exception to Signal
@@ -246,6 +246,10 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
     GdbSendPacket( GdbOutBuf );
 
 
+    // Default step = 0
+    step = 0;
+
+
     while( 1 ) {
     
 
@@ -272,7 +276,7 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
             // Debug Flag
             case 'd':
 
-
+                DbgPrint( "Remote GDB OP=d, Not Implemented\n" );
                 break;
               
 
@@ -314,8 +318,7 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
             // Step one instruction
             case 's':
 
-
-                break;
+                step = 1;
 
 
             // Continue run
@@ -328,12 +331,13 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
             // Kill the program
             case 'k':
 
-
+                DbgPrint( "Remote GDB OP=k, Not Implemented\n" );
                 break;
 
 
             default:
 
+                DbgPrint( "Remote GDB: Unrecognized Operation\n" );
                 break;
         }
 

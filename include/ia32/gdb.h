@@ -45,6 +45,7 @@ void GdbPutChar( s8 c );
 s8 GdbGetChar( void );
 s8 *GdbGetPacket( s8 *buf );
 void GdbSendPacket( s8 *buf );
+u8 TranslateException( u32 ExceptionVector );
 void GdbExceptionHandler( u32 ExceptionVector );
 
 
