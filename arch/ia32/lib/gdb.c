@@ -16,71 +16,82 @@
 #include <driver/serial.h>
 
 
-#define SaveAllRegs()                   \
+#define SaveAllRegsFirstStage()         \
     __asm__ __volatile__ (              \
                                         \
-        "movl   %eax, SaveRegs\n"       \
-        "movl   %ecx, SaveRegs+4\n"     \
-        "movl   %edx, SaveRegs+8\n"     \
-        "movl   %ebx, SaveRegs+12\n"    \
-        "movl   %ebp, SaveRegs+20\n"    \
-        "movl   %esi, SaveRegs+24\n"    \
-        "movl   %edi, SaveRegs+28\n"    \
+        "movl   %eax, SavedAllRegs\n"       \
+        "movl   %ecx, SavedAllRegs+4\n"     \
+        "movl   %edx, SavedAllRegs+8\n"     \
+        "movl   %ebx, SavedAllRegs+12\n"    \
+        "movl   %ebp, SavedAllRegs+20\n"    \
+        "movl   %esi, SavedAllRegs+24\n"    \
+        "movl   %edi, SavedAllRegs+28\n"    \
         "xorw   %ax, %ax\n"             \
-        "movw   %ax, SaveRegs+42\n"     \
-        "movw   %ax, SaveRegs+46\n"     \
-        "movw   %ds, SaveRegs+48\n"     \
-        "movw   %ax, SaveRegs+50\n"     \
-        "movw   %es, SaveRegs+52\n"     \
-        "movw   %ax, SaveRegs+54\n"     \
-        "movw   %fs, SaveRegs+56\n"     \
-        "movw   %ax, SaveRegs+58\n"     \
-        "movw   %gs, SaveRegs+60\n"     \
-        "movw   %ax, SaveRegs+62\n"     \
+        "movw   %ax, SavedAllRegs+42\n"     \
+        "movw   %ax, SavedAllRegs+46\n"     \
+        "movw   %ds, SavedAllRegs+48\n"     \
+        "movw   %ax, SavedAllRegs+50\n"     \
+        "movw   %es, SavedAllRegs+52\n"     \
+        "movw   %ax, SavedAllRegs+54\n"     \
+        "movw   %fs, SavedAllRegs+56\n"     \
+        "movw   %ax, SavedAllRegs+58\n"     \
+        "movw   %gs, SavedAllRegs+60\n"     \
+        "movw   %ax, SavedAllRegs+62\n"     \
+    );
+
+
+#define SaveErrorCode()                 \
+    __asm__ __volatile__ (              \
         "popl   %ebx\n"                 \
-        "movl   %ebx, SaveErrCode\n"    \
+        "movl   %ebx, SavedErrorCode\n"    \
+    );
+
+
+#define SaveAllRegsSecondStage()        \
+    __asm__ __volatile__ (              \
         "popl   %ebx\n"                 \
-        "movl   %ebx, SaveRegs+32\n"    \
+        "movl   %ebx, SavedAllRegs+32\n"    \
         "popl   %ebx\n"                 \
-        "movl   %ebx, SaveRegs+40\n"    \
+        "movl   %ebx, SavedAllRegs+40\n"    \
         "popl   %ebx\n"             \
-        "movl   %ebx, SaveRegs+36\n"    \
-        "movw   %ss, SaveRegs+44\n"     \
-        "movl   %esp, SaveRegs+16\n"    \
+        "movl   %ebx, SavedAllRegs+36\n"    \
+        "movw   %ss, SavedAllRegs+44\n"     \
+        "movl   %esp, SavedAllRegs+16\n"    \
     );
 
 
 #define RestoreAllRegs()                \
     __asm__ __volatile__ (              \
                                         \
-        "movl   SaveRegs+16, %esp\n"    \
-        "movw   SaveRegs+44, %ss\n"     \
-        "movw   SaveRegs+60, %gs\n"     \
-        "movw   SaveRegs+56, %fs\n"     \
-        "movw   SaveRegs+52, %es\n"     \
-        "movw   SaveRegs+48, %ds\n"     \
-        "movl   SaveRegs+28, %edi\n"    \
-        "movl   SaveRegs+24, %esi\n"    \
-        "movl   SaveRegs+20, %ebp\n"    \
-        "movl   SaveRegs+12, %ebx\n"    \
-        "movl   SaveRegs+8, %edx\n"     \
-        "movl   SaveRegs+4, %ecx\n"     \
-        "movl   SaveRegs+36, %eax\n"    \
+        "movl   SavedAllRegs+16, %esp\n"    \
+        "movw   SavedAllRegs+44, %ss\n"     \
+        "movw   SavedAllRegs+60, %gs\n"     \
+        "movw   SavedAllRegs+56, %fs\n"     \
+        "movw   SavedAllRegs+52, %es\n"     \
+        "movw   SavedAllRegs+48, %ds\n"     \
+        "movl   SavedAllRegs+28, %edi\n"    \
+        "movl   SavedAllRegs+24, %esi\n"    \
+        "movl   SavedAllRegs+20, %ebp\n"    \
+        "movl   SavedAllRegs+12, %ebx\n"    \
+        "movl   SavedAllRegs+8, %edx\n"     \
+        "movl   SavedAllRegs+4, %ecx\n"     \
+        "movl   SavedAllRegs+36, %eax\n"    \
         "pushl  %eax\n"                 \
-        "movl   SaveRegs+40, %eax\n"    \
+        "movl   SavedAllRegs+40, %eax\n"    \
         "pushl  %eax\n"                 \
-        "movl   SaveRegs+32, %eax\n"    \
+        "movl   SavedAllRegs+32, %eax\n"    \
         "pushl  %eax\n"                 \
-        "movl   SaveRegs, %eax\n"       \
+        "movl   SavedAllRegs, %eax\n"       \
     );
-
-
-u32 SaveRegs[ 16 ];
-u32 SaveErrCode;
 
 
 static s8 GdbInBuf[ GDB_BUF_LEN ];
 static s8 GdbOutBuf[ GDB_BUF_LEN ];
+
+
+extern u32 SavedAllRegs[ GDB_NUM_REGS ];
+extern u32 SavedErrorCode;
+
 
 static u32 ExcTranTbl[][ 2 ] = {
 
@@ -263,10 +274,39 @@ u8 TranslateException( u32 ExceptionVector ) {
 }
 
 
+u32 ConvertAllRegsToASCII( u32 *arr, u8 count, s8 *buf ) {
+
+    s8 *pbuf = buf;
+
+    for( ; count-- ; arr++ ) {
+
+        pbuf += CbBinToAsciiBuf( *arr, pbuf, LOWERCASE, 0, 0 );
+    }
+
+    return (pbuf - buf);
+}
+
+
+void ConvertASCIIToAllRegs( u32 *arr, u8 count, s8 *buf ) {
+
+    s8 *pbuf = buf;
+    s8 tmp[ 9 ];
+
+    for( ; count-- ; arr++, pbuf += 8 ) {
+    
+        CbStrCpy( tmp, pbuf, 8 );
+        *arr = CbAsciiBufToBin( tmp );
+    }
+}
+
+
 void GdbExceptionHandler( u32 ExceptionVector ) {
 
     s8 *p = GdbOutBuf, semicolon = ';', colon = ':';
     u8 sigval, step;
+
+
+    DbgPrint( "Catched Exception No: %d\n", ExceptionVector );
 
 
     // Translate Exception to Signal
@@ -282,21 +322,21 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
     // ESP
     *p++ = CbBinToAscii( ESP, LOWERCASE );
     *p++ = colon;
-    p   += CbBinToAsciiBuf( SaveRegs[ ESP ], p, LOWERCASE, 0, 0 );
+    p   += CbBinToAsciiBuf( SavedAllRegs[ ESP ], p, LOWERCASE, 0, 0 );
     *p++ = semicolon;
 
     
     // EBP
     *p++ = CbBinToAscii( EBP, LOWERCASE );
     *p++ = colon;
-    p   += CbBinToAsciiBuf( SaveRegs[ EBP ], p, LOWERCASE, 0, 0 );
+    p   += CbBinToAsciiBuf( SavedAllRegs[ EBP ], p, LOWERCASE, 0, 0 );
     *p++ = semicolon;
 
 
     // ESP
     *p++ = CbBinToAscii( EIP, LOWERCASE );
     *p++ = colon;
-    p   += CbBinToAsciiBuf( SaveRegs[ EIP ], p, LOWERCASE, 0, 0 );
+    p   += CbBinToAsciiBuf( SavedAllRegs[ EIP ], p, LOWERCASE, 0, 0 );
     *p++ = semicolon;
 
 
@@ -345,14 +385,14 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
             // Return CPU registers
             case 'g':
 
-
+                ConvertAllRegsToASCII( SavedAllRegs, GDB_NUM_REGS, p );
                 break;
 
 
             // Set CPU registers
             case 'G':
 
-
+                ConvertASCIIToAllRegs( SavedAllRegs, GDB_NUM_REGS, p );
                 break;
 
 

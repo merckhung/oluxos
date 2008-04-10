@@ -35,6 +35,11 @@ extern void invalid_tss( void );
 extern void segment_not_present( void );
 extern void stack_fault( void );
 extern void general_protection_exception( void );
+extern void page_fault_exception( void );
+extern void x86_fpu_floating_point_error( void );
+extern void alignment_check_exception( void );
+extern void machine_check_exception( void );
+extern void simd_floating_point_exception( void );
 
 
 //
@@ -74,10 +79,17 @@ void IntInitInterrupt( void ) {
     IntSetIDT( 11, (u32)segment_not_present, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
     IntSetIDT( 12, (u32)stack_fault, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
     IntSetIDT( 13, (u32)general_protection_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 14, (u32)page_fault_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 15, (u32)ExceptionHandler, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 16, (u32)x86_fpu_floating_point_error, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 17, (u32)alignment_check_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 18, (u32)machine_check_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 19, (u32)simd_floating_point_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+
 
 
     // Setup exceptions handler
-    for( i = 14 ; i <= TRAP_END ; i++ ) {
+    for( i = 20 ; i <= TRAP_END ; i++ ) {
 
         IntSetIDT( i, (u32)ExceptionHandler, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
     }

@@ -13,6 +13,7 @@
 // Definitions
 //
 #define GDB_BUF_LEN     400
+#define GDB_NUM_REGS    16
 
 
 enum {

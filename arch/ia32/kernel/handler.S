@@ -14,13 +14,14 @@
 .global divide_error, debug, nmi, breakpoint, overflow, bound_range_exceeded
 .global invalid_opcode, device_not_available, double_fault, coprocessor_segment_overrun
 .global invalid_tss, segment_not_present, stack_fault, general_protection_exception
+.global page_fault_exception, x86_fpu_floating_point_error, alignment_check_exception
+.global machine_check_exception, simd_floating_point_exception
 
 
 //
 // Pre-interrupt handling
 //
-.macro SaveAllRegs
-    cld
+.macro SaveAllRegsFirstStage
     movl    %eax, SavedAllRegs
     movl    %ecx, SavedAllRegs+4
     movl    %edx, SavedAllRegs+8
@@ -32,8 +33,16 @@
     movw    %es, SavedAllRegs+52
     movw    %fs, SavedAllRegs+56
     movw    %gs, SavedAllRegs+60
+.endm
+
+
+.macro SaveErrorCode
     popl    %ebx
     movl    %ebx, SavedErrorCode
+.endm
+
+
+.macro SaveAllRegsSecondStage
     popl    %ebx
     movl    %ebx, SavedAllRegs+32
     popl    %ebx
@@ -45,7 +54,7 @@
 .endm
 
 
-.macro SaveAllRegsOld
+.macro SaveAllRegs
     cld
     pushl   %es
     pushl   %ss
@@ -65,7 +74,7 @@
 //
 // Restore all register after interrupt handler
 //
-.macro RestoreAllRegs
+.macro RestoreAllRegsException
     movl    SavedAllRegs+16, %esp
     movw    SavedAllRegs+44, %ss
     movw    SavedAllRegs+60, %gs
@@ -88,7 +97,7 @@
 .endm
 
 
-.macro RestoreAllRegsOld
+.macro RestoreAllRegs
     popl    %edi
     popl    %esi
     popl    %ebp
@@ -124,11 +133,13 @@
 // Save All Registers
 //
 .align 4
+.global SavedErrorCode
 SavedErrorCode:
 .long   0
 
 
 .align 4
+.global SavedAllRegs
 SavedAllRegs:
 .rept 16
 .long   0
@@ -150,14 +161,14 @@ InstallInterruptHandler
 .align 4
 InterruptHandler:
 
-    SaveAllRegsOld
+    SaveAllRegs
     subl    $4, %esp                // Get preload interrupt vector
     call    IntHandleIRQ
     addl    $4, %esp                // Discard vector
     jmp     InterruptReturn
 
 InterruptReturn:
-    RestoreAllRegsOld
+    RestoreAllRegs
 
     iret
 
@@ -168,11 +179,22 @@ InterruptReturn:
 //
 divide_error:
 
-    movl    $0xb83be, %esi
-    movb    $'0', (%esi)
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'0', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x00
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -181,11 +203,22 @@ divide_error:
 //
 debug:
 
-    movl    $0xb83be, %esi
-    movb    $'1', (%esi)
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'1', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x01
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -194,11 +227,22 @@ debug:
 //
 nmi:
 
-    movl    $0xb83be, %esi
-    movb    $'2', (%esi)
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'2', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x02
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -207,11 +251,22 @@ nmi:
 //
 breakpoint:
 
-    movl    $0xb83be, %esi
-    movb    $'3', (%esi)
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'3', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x03
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -220,11 +275,22 @@ breakpoint:
 //
 overflow:
 
-    movl    $0xb83be, %esi
-    movb    $'4', (%esi)
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'4', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x04
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -233,11 +299,22 @@ overflow:
 //
 bound_range_exceeded:
 
-    movl    $0xb83be, %esi
-    movb    $'5', (%esi)
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'5', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x05
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -246,11 +323,22 @@ bound_range_exceeded:
 //
 invalid_opcode:
 
-    movl    $0xb83be, %esi
-    movb    $'6', (%esi)
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'6', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x06
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -259,11 +347,22 @@ invalid_opcode:
 //
 device_not_available:
 
-    movl    $0xb83be, %esi
-    movb    $'7', (%esi)
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'7', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x07
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -272,11 +371,23 @@ device_not_available:
 //
 double_fault:
 
-    movl    $0xb83be, %esi
-    movb    $'8', (%esi)
+    SaveAllRegsFirstStage
+    SaveErrorCode
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'8', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x08
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -285,11 +396,22 @@ double_fault:
 //
 coprocessor_segment_overrun:
 
-    movl    $0xb83be, %esi
-    movb    $'9', (%esi)
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83be, %esi
+    //movb    $'9', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x09
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -298,13 +420,25 @@ coprocessor_segment_overrun:
 //
 invalid_tss:
 
-    movl    $0xb83bc, %esi
-    movb    $'1', (%esi)
-    movl    $0xb83be, %esi
-    movb    $'0', (%esi)
+    SaveAllRegsFirstStage
+    SaveErrorCode
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83bc, %esi
+    //movb    $'1', (%esi)
+    //movl    $0xb83be, %esi
+    //movb    $'0', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x0A
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -313,13 +447,25 @@ invalid_tss:
 //
 segment_not_present:
 
-    movl    $0xb83bc, %esi
-    movb    $'1', (%esi)
-    movl    $0xb83be, %esi
-    movb    $'1', (%esi)
+    SaveAllRegsFirstStage
+    SaveErrorCode
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83bc, %esi
+    //movb    $'1', (%esi)
+    //movl    $0xb83be, %esi
+    //movb    $'1', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x0B
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -328,13 +474,25 @@ segment_not_present:
 //
 stack_fault:
 
-    movl    $0xb83bc, %esi
-    movb    $'1', (%esi)
-    movl    $0xb83be, %esi
-    movb    $'2', (%esi)
+    SaveAllRegsFirstStage
+    SaveErrorCode
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83bc, %esi
+    //movb    $'1', (%esi)
+    //movl    $0xb83be, %esi
+    //movb    $'2', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x0C
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
 
 
@@ -343,14 +501,128 @@ stack_fault:
 //
 general_protection_exception:
 
-    movl    $0xb83bc, %esi
-    movb    $'1', (%esi)
-    movl    $0xb83be, %esi
-    movb    $'3', (%esi)
+    SaveAllRegsFirstStage
+    SaveErrorCode
+    SaveAllRegsSecondStage
+
+
+    //movl    $0xb83bc, %esi
+    //movb    $'1', (%esi)
+    //movl    $0xb83be, %esi
+    //movb    $'3', (%esi)
+
+
     //
     // FIXME: exception handle
     //
+    pushl   $0x0D
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
     jmp     ExceptionReturn
+
+
+//
+// Page-Fault Exception -- Handle exception 14 #PF
+//
+page_fault_exception:
+
+    SaveAllRegsFirstStage
+    SaveErrorCode
+    SaveAllRegsSecondStage
+
+
+    //
+    // FIXME: exception handle
+    //
+    pushl   $0x0E
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
+    jmp     ExceptionReturn
+
+
+//
+// x87 FPU Floating-Point Error (#MF) -- Handle exception 16 #MF
+//
+x86_fpu_floating_point_error:
+
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //
+    // FIXME: exception handle
+    //
+    pushl   $0x10
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
+    jmp     ExceptionReturn 
+
+
+//
+// Alignment Check Exception (#AC) -- Handle exception 17 #AC
+//
+alignment_check_exception:
+
+    SaveAllRegsFirstStage
+    SaveErrorCode
+    SaveAllRegsSecondStage
+
+
+    //
+    // FIXME: exception handle
+    //
+    pushl   $0x11
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
+    jmp     ExceptionReturn 
+
+
+//
+// Machine-Check Exception (#MC) -- Handle exception 18 #MC
+//
+machine_check_exception:
+
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //
+    // FIXME: exception handle
+    //
+    pushl   $0x12
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
+    jmp     ExceptionReturn 
+
+
+//
+// SIMD Floating-Point Exception (#XM) -- Handle exception 19 #XM
+//
+simd_floating_point_exception:
+
+    SaveAllRegsFirstStage
+    SaveAllRegsSecondStage
+
+
+    //
+    // FIXME: exception handle
+    //
+    pushl   $0x13
+    call    GdbExceptionHandler
+
+
+    RestoreAllRegsException
+    jmp     ExceptionReturn 
 
 
 ExceptionReturn:

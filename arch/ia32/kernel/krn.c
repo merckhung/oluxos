@@ -101,6 +101,16 @@ void krn_entry( void ) {
     TmInitTimer();
 
 
+#if 0
+    __asm__ __volatile__ (
+
+        "movl   $0x56, %eax\n"
+        "xorl   %ebx, %ebx\n"
+        "div    %bl\n"
+    );
+#endif
+
+
     // Start task scheduler
     //TskScheduler();
     
