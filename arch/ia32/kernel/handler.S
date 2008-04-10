@@ -21,6 +21,32 @@
 //
 .macro SaveAllRegs
     cld
+    movl    %eax, SavedAllRegs
+    movl    %ecx, SavedAllRegs+4
+    movl    %edx, SavedAllRegs+8
+    movl    %ebx, SavedAllRegs+12
+    movl    %ebp, SavedAllRegs+20
+    movl    %esi, SavedAllRegs+24
+    movl    %edi, SavedAllRegs+28
+    movw    %ds, SavedAllRegs+48
+    movw    %es, SavedAllRegs+52
+    movw    %fs, SavedAllRegs+56
+    movw    %gs, SavedAllRegs+60
+    popl    %ebx
+    movl    %ebx, SavedErrorCode
+    popl    %ebx
+    movl    %ebx, SavedAllRegs+32
+    popl    %ebx
+    movl    %ebx, SavedAllRegs+40
+    popl    %ebx
+    movl    %ebx, SavedAllRegs+36
+    movw    %ss, SavedAllRegs+44
+    movl    %esp, SavedAllRegs+16
+.endm
+
+
+.macro SaveAllRegsOld
+    cld
     pushl   %es
     pushl   %ss
     pushl   %ds
@@ -40,6 +66,29 @@
 // Restore all register after interrupt handler
 //
 .macro RestoreAllRegs
+    movl    SavedAllRegs+16, %esp
+    movw    SavedAllRegs+44, %ss
+    movw    SavedAllRegs+60, %gs
+    movw    SavedAllRegs+56, %fs
+    movw    SavedAllRegs+52, %es
+    movw    SavedAllRegs+48, %ds
+    movl    SavedAllRegs+28, %edi
+    movl    SavedAllRegs+24, %esi
+    movl    SavedAllRegs+20, %ebp
+    movl    SavedAllRegs+12, %ebx
+    movl    SavedAllRegs+8, %edx
+    movl    SavedAllRegs+4, %ecx
+    movl    SavedAllRegs+36, %eax
+    pushl   %eax
+    movl    SavedAllRegs+40, %eax
+    pushl   %eax
+    movl    SavedAllRegs+32, %eax
+    pushl   %eax
+    movl    SavedAllRegs, %eax
+.endm
+
+
+.macro RestoreAllRegsOld
     popl    %edi
     popl    %esi
     popl    %ebp
@@ -71,6 +120,19 @@
 
 
 
+//
+// Save All Registers
+//
+.align 4
+SavedErrorCode:
+.long   0
+
+
+.align 4
+SavedAllRegs:
+.rept 16
+.long   0
+.endr
 
 
 
@@ -88,14 +150,14 @@ InstallInterruptHandler
 .align 4
 InterruptHandler:
 
-    SaveAllRegs
+    SaveAllRegsOld
     subl    $4, %esp                // Get preload interrupt vector
     call    IntHandleIRQ
     addl    $4, %esp                // Discard vector
     jmp     InterruptReturn
 
 InterruptReturn:
-    RestoreAllRegs
+    RestoreAllRegsOld
 
     iret
 

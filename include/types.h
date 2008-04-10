@@ -8,6 +8,10 @@
  */
 
 
+#define     FALSE                   0
+#define     TRUE                    1
+
+
 typedef     unsigned char           __u8;
 typedef     unsigned short int      __u16;
 typedef     unsigned int            __u32;
@@ -39,5 +43,8 @@ typedef     __s8                    int8_t;
 typedef     __s16                   int16_t;
 typedef     __s32                   int32_t;
 typedef     __s64                   int64_t;
+
+
+typedef     u8                      bool;
 
 
