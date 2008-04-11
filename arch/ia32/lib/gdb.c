@@ -16,75 +16,6 @@
 #include <driver/serial.h>
 
 
-#define SaveAllRegsFirstStage()         \
-    __asm__ __volatile__ (              \
-                                        \
-        "movl   %eax, SavedAllRegs\n"       \
-        "movl   %ecx, SavedAllRegs+4\n"     \
-        "movl   %edx, SavedAllRegs+8\n"     \
-        "movl   %ebx, SavedAllRegs+12\n"    \
-        "movl   %ebp, SavedAllRegs+20\n"    \
-        "movl   %esi, SavedAllRegs+24\n"    \
-        "movl   %edi, SavedAllRegs+28\n"    \
-        "xorw   %ax, %ax\n"             \
-        "movw   %ax, SavedAllRegs+42\n"     \
-        "movw   %ax, SavedAllRegs+46\n"     \
-        "movw   %ds, SavedAllRegs+48\n"     \
-        "movw   %ax, SavedAllRegs+50\n"     \
-        "movw   %es, SavedAllRegs+52\n"     \
-        "movw   %ax, SavedAllRegs+54\n"     \
-        "movw   %fs, SavedAllRegs+56\n"     \
-        "movw   %ax, SavedAllRegs+58\n"     \
-        "movw   %gs, SavedAllRegs+60\n"     \
-        "movw   %ax, SavedAllRegs+62\n"     \
-    );
-
-
-#define SaveErrorCode()                 \
-    __asm__ __volatile__ (              \
-        "popl   %ebx\n"                 \
-        "movl   %ebx, SavedErrorCode\n"    \
-    );
-
-
-#define SaveAllRegsSecondStage()        \
-    __asm__ __volatile__ (              \
-        "popl   %ebx\n"                 \
-        "movl   %ebx, SavedAllRegs+32\n"    \
-        "popl   %ebx\n"                 \
-        "movl   %ebx, SavedAllRegs+40\n"    \
-        "popl   %ebx\n"             \
-        "movl   %ebx, SavedAllRegs+36\n"    \
-        "movw   %ss, SavedAllRegs+44\n"     \
-        "movl   %esp, SavedAllRegs+16\n"    \
-    );
-
-
-#define RestoreAllRegs()                \
-    __asm__ __volatile__ (              \
-                                        \
-        "movl   SavedAllRegs+16, %esp\n"    \
-        "movw   SavedAllRegs+44, %ss\n"     \
-        "movw   SavedAllRegs+60, %gs\n"     \
-        "movw   SavedAllRegs+56, %fs\n"     \
-        "movw   SavedAllRegs+52, %es\n"     \
-        "movw   SavedAllRegs+48, %ds\n"     \
-        "movl   SavedAllRegs+28, %edi\n"    \
-        "movl   SavedAllRegs+24, %esi\n"    \
-        "movl   SavedAllRegs+20, %ebp\n"    \
-        "movl   SavedAllRegs+12, %ebx\n"    \
-        "movl   SavedAllRegs+8, %edx\n"     \
-        "movl   SavedAllRegs+4, %ecx\n"     \
-        "movl   SavedAllRegs+36, %eax\n"    \
-        "pushl  %eax\n"                 \
-        "movl   SavedAllRegs+40, %eax\n"    \
-        "pushl  %eax\n"                 \
-        "movl   SavedAllRegs+32, %eax\n"    \
-        "pushl  %eax\n"                 \
-        "movl   SavedAllRegs, %eax\n"       \
-    );
-
-
 static s8 GdbInBuf[ GDB_BUF_LEN ];
 static s8 GdbOutBuf[ GDB_BUF_LEN ];
 
@@ -393,27 +324,30 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
             case 'G':
 
                 ConvertASCIIToAllRegs( SavedAllRegs, GDB_NUM_REGS, p );
+                GdbOutBuf[ 0 ] = 'O';
+                GdbOutBuf[ 1 ] = 'K';
+                GdbOutBuf[ 2 ] = NULL;
                 break;
 
 
             // Set one CPU register
             case 'P':
 
-
+                DbgPrint( "Set one CPU Reg: %s\n", p );
                 break;
 
 
             // Read Memory
             case 'm':
 
-
+                DbgPrint( "Read Memory: %s\n", p );
                 break;
 
 
             // Write Memory
             case 'M':
 
-                
+                DbgPrint( "Write Memory: %s\n", p );
                 break;
 
 
@@ -426,7 +360,7 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
             // Continue run
             case 'c':
 
-
+                DbgPrint( "Step/Continue: %s\n", p );
                 break;
 
 
