@@ -1,16 +1,15 @@
-OUTPUT_FORMAT( "binary" )
+OUTPUT_ARCH( armv5t )
 ENTRY( _boot )
-
 
 SECTIONS {
 
-    .text (0x7c00) : {
+    .text (0x0) : {
     
         *(.text)
     }
 
     .data : {
-
+                
         *(.data)
     }
 

@@ -1,0 +1,30 @@
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD boot.o
+
+.text           0x00000000       0xf0
+ *(.text)
+ .text          0x00000000       0xf0 boot.o
+                0x00000000                _SystemBoot
+
+.glue_7         0x000000f0        0x0
+
+.glue_7t        0x000000f0        0x0
+
+.data           0x000000f0        0x0
+ *(.data)
+
+.bss            0x000000f0        0x0
+ *(.bss)
+OUTPUT(boot.exec elf32-littlearm)
+
+Cross Reference Table
+
+Symbol                                            File
+_SystemBoot                                       boot.o
