@@ -16,6 +16,8 @@
 .file       "boot.S"
 
 
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Code Segment                                                              //
 ///////////////////////////////////////////////////////////////////////////////
@@ -74,16 +76,14 @@ _RESET_VECTOR:
 
 
 
+    // Initialize UART
     ldr     r0, =PXA27X_FFUART_BASE
     bl      UartInitialize
 
 
-    mov     r1, #'B'
-    bl      UartTransmit
-
-
-    mov     r1, #'Z'
-    bl      UartTransmit
+    // Display boot message
+    ldr     r2, =__BootMsg
+    bl      UartTransmitBuffer
 
 
     b       .
@@ -91,113 +91,15 @@ _RESET_VECTOR:
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// UartInitialize -- Initialize UART Hardware Unit
-//
-// Input:
-//  R0      -- Base address of UART Unit (FFUART, BTUART, or STUART)
-//
-// Output:
-//  None
-//
-// Modified:
-//  R0
-//  R1
-//
-UartInitialize:
-
-
-    // Save base address
-    str     r0, UartBaseAddress
-
-
-    // Disable Std UART interrupts
-    add     r0, r0, #0x04                       // Base + 0x04, PXA27X_UART_IER
-    eor     r1, r1, r1                          // R1 = 0
-    orr     r1, r1, #PXA27X_UART_UUE            // Enable Std UART unit
-    str     r1, [r0]                            // Write register
-    
-
-    // DLAB = 1
-    sub     r0, r0, #0x08                       // Base + 0x0C, PXA27X_UART_LCR
-    ldr     r1, [r0]
-    orr     r1, r1, #PXA27X_UART_DLAB           //
-    str     r1, [r0]                            // DLAB = 1
-
-
-    // Set Baudrate = 115200bps
-    sub     r0, r0, #0x0C                       // Base + 0x00, PXA27X_FFUART_DLL
-    ldr     r1, =PXA27X_BAUD_115200
-    str     r1, [r0], #0x04                     // Low byte of Divisor, Post Index
-    eor     r1, r1, r1                          // R1 = 0
-    str     r1, [r0]                            // High byte of Divisor, PXA27X_FFUART_DLH, Base + 0x04
-
-
-    // DLAB = 0, set 8-N-1
-    ldr     r0, =PXA27X_FFUART_LCR
-    add     r0, r0, #0x08                       // Base + 0x0C, PXA27X_UART_LCR
-    ldr     r1, [r0]
-    bic     r1, r1, #PXA27X_UART_DLAB            // DLAB = 0
-    orr     r1, r1, #PXA27X_UART_WLS8           // 8-bit, no parity, 1 stop bit
-    str     r1, [r0]
-
-
-    // Enable FIFO, 1 byte
-    sub     r0, r0, #0x04                       // Base + 0x08, PXA27X_UART_FCR
-    ldr     r1, =( PXA27X_UART_TRFIFOE | PXA27X_UART_ITL1 )
-    str     r1, [r0]
-
-
-    // Return
-    bx      lr
-
-
-
+// Data Section                                                              //
 ///////////////////////////////////////////////////////////////////////////////
-// UartTransmit -- Transmit one byte via UART
-//
-// Input:
-//  R1      -- Byte data to transmit
-//
-// Output:
-//  None
-//
-// Modified:
-//  R0
-//  R1
-//
-UartTransmit:
-
-
-    // Send a byte
-    ldr     r0, UartBaseAddress         // Load base address
-    strb    r1, [r0]                    // Send a byte
-
-
-/*
-    // Offset to PXA27X_UART_LSR
-    add     r0, r0, #0x14               // Base + 0x14
-
-
-_WaitTrans:
-
-
-    // Read flags
-    ldr     r1, [r0]
-
-
-    // Check for Transmit Data Request
-    tst     r1, #PXA27X_UART_TDRQ
-    bz      _WaitTrans
-*/
-
-
-    // Return
-    bx      lr
+__BootMsg:
+    .ascii  "Copyright (c) 2008 Olux Organization. All rights reserved.\r\n"
+    .ascii  "Intel XScale PXA27x ARM Processor\r\n"
+    .byte   0
 
 
 
-UartBaseAddress:
-    .long   0x0
 
 
 

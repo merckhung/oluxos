@@ -21,6 +21,9 @@ CFLAGS          	=   -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nostdin
 LDFLAGS         	=   -cref -M -s -N
 
 
+OBJS				=	boot.o uart_pxa.o
+
+
 QEMU				=	/home/merck/software/qemu/bin/qemu
 FLASHPART1			=	/home/merck/software/armemu/flashpart1.img
 FLASHPART2			=	/home/merck/software/armemu/flashpart2.img
@@ -32,8 +35,8 @@ PLATFORM			=	mainstone
 all: clean boot.bin
 
 
-boot.bin: boot.o
-	$(LD) $(LDFLAGS) -o boot.exec $< > boot.map -T boot.lds
+boot.bin: $(OBJS)
+	$(LD) $(LDFLAGS) -o boot.exec $(OBJS) > boot.map -T boot.lds
 	$(OBJCOPY) -O binary boot.exec $@
 	$(DD) if=./$@ of=$(FLASHPART1) bs=$(IMGSIZE) count=1 conv=notrunc
 
