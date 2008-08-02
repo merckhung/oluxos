@@ -1,5 +1,5 @@
 OUTPUT_ARCH( armv5t )
-ENTRY( _boot )
+ENTRY( _SystemBoot )
 
 SECTIONS {
 

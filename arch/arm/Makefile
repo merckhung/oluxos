@@ -26,7 +26,7 @@ FLASHPART1			=	/home/merck/software/armemu/flashpart1.img
 FLASHPART2			=	/home/merck/software/armemu/flashpart2.img
 MEMSIZE				=	256
 IMGSIZE				=	67108864
-PLATFORM			=	connex
+PLATFORM			=	mainstone
 
 
 all: clean boot.bin
@@ -51,7 +51,7 @@ emu:
 
 
 clean:
-	rm -f *.o *.exec *.bin
+	rm -f *.o *.exec *.bin *.map
 
 
 dump:
