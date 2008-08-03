@@ -86,6 +86,39 @@ _RESET_VECTOR:
     bl      UartTransmitBuffer
 
 
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Scrub Internal Memory                                                 //
+    ///////////////////////////////////////////////////////////////////////////
+
+
+    // Base Address
+    ldr     r0, =PXA27X_INTMEM_BASE
+
+    // Pattern
+    ldr     r1, =0x12345678
+
+    // Counter
+    ldr     r2, =PXA27X_INTMEM_SIZE
+
+
+_Next:
+
+
+    // Postindex
+    str     r1, [r0], #0x04
+
+
+    // Decrease counter
+    subs    r2, r2, #0x04
+
+
+    // Jump if not zero
+    bpl     _Next
+ 
+
+    // Stop CPU Here
     b       .
 
 
@@ -117,32 +150,6 @@ __BootMsg:
 
     // Manually put return address into lr
     ldr     lr, _c_rom_start_addr
-    b       .
-
-
-    // Base Address
-    ldr     r0, =0x00000000
-
-    // Offset
-    ldr     r1, =0x00000004
-
-    // Pattern
-    ldr     r2, =0x12345678
-
-    // Counter
-    ldr     r3, =0x80
-
-
-_Next:
-
-    // Postindex
-    str     r2, [r0], r1
-
-    // Decrease counter
-    subs    r3, r3, #1
-
-    // Jump if not zero
-    bpl     _Next
     b       .
 
 
