@@ -1,13 +1,14 @@
-//
-// Copyright (C) 2008 Olux Organization All rights reserved.
-// Author: Merck Hung <merck@olux.org>
-//
-// @OLUXORG_LICENSE_HEADER_START@
-// @OLUXORG_LICENSE_HEADER_END@
-//
-// boot.S -- OluxOS bootstrap code for
-//           Intel XScale PXA27x Processor
-//
+/*
+ * Copyright (C) 2008 Olux Organization All rights reserved.
+ * Author: Merck Hung <merck@olux.org>
+ *
+ * @OLUXORG_LICENSE_HEADER_START@
+ * @OLUXORG_LICENSE_HEADER_END@
+ *
+ * boot.S -- OluxOS bootstrap code for
+ *           Intel XScale PXA27x Processor
+ *
+ */
 
 
 #include "pxa27x.h"
@@ -69,6 +70,7 @@ _FIQ_VECTOR:
 
 
 
+
     ///////////////////////////////////////////////////////////////////////////
     // Initialize Hardware                                                   //
     ///////////////////////////////////////////////////////////////////////////
@@ -93,33 +95,71 @@ _RESET_VECTOR:
     ///////////////////////////////////////////////////////////////////////////
 
 
+
+    // Display Message
+    ldr     r2, =__ScrubIntMem
+    bl      UartTransmitBuffer
+
+
     // Base Address
     ldr     r0, =PXA27X_INTMEM_BASE
 
     // Pattern
-    ldr     r1, =0x12345678
+    ldr     r1, =0x00
 
-    // Counter
+    // Length
     ldr     r2, =PXA27X_INTMEM_SIZE
 
 
-_Next:
+    // Do scrubbing
+    bl      RtScrubMemory
 
 
-    // Postindex
-    str     r1, [r0], #0x04
+    // Display done
+    ldr     r2, =__ActionDone
+    bl      UartTransmitBuffer
 
 
-    // Decrease counter
-    subs    r2, r2, #0x04
 
 
-    // Jump if not zero
-    bpl     _Next
- 
+    ///////////////////////////////////////////////////////////////////////////
+    // Scrub SDRAM Memory                                                    //
+    ///////////////////////////////////////////////////////////////////////////
 
-    // Stop CPU Here
+
+
+    // Display Message
+    ldr     r2, =__ScrubSDRAM
+    bl      UartTransmitBuffer
+
+
+    // Base Address
+    ldr     r0, =PXA27X_SDRAM_BASE
+
+    // Pattern
+    ldr     r1, =0x0
+
+    // Length
+    ldr     r2, =PXA27X_SDRAM_SIZE
+
+
+    // Do scrubbing
+    //bl      RtScrubMemory
+
+
+    // Display done
+    ldr     r2, =__ActionDone
+    bl      UartTransmitBuffer
+
+
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Jump to C Kernel Entry Point                                          //
+    ///////////////////////////////////////////////////////////////////////////
+    b       KernelEntry
     b       .
+
 
 
 
@@ -129,6 +169,21 @@ _Next:
 __BootMsg:
     .ascii  "Copyright (c) 2008 Olux Organization. All rights reserved.\r\n"
     .ascii  "Intel XScale PXA27x ARM Processor\r\n"
+    .byte   0
+
+
+__ScrubIntMem:
+    .ascii  "Scrubbing Internal Memory......"
+    .byte   0
+
+
+__ScrubSDRAM:
+    .ascii  "Scrubbing SDRAM Memory......"
+    .byte   0
+
+
+__ActionDone:
+    .ascii  "done\r\n"
     .byte   0
 
 

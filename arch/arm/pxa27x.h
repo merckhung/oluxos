@@ -1,12 +1,13 @@
-//
-// Copyright (C) 2008 Olux Organization All rights reserved.
-// Author: Merck Hung <merck@olux.org>
-//
-// @OLUXORG_LICENSE_HEADER_START@
-// @OLUXORG_LICENSE_HEADER_END@
-//
-// pxa27x.h -- Intel XScale PXA27x Processor
-//
+/*
+ * Copyright (C) 2008 Olux Organization All rights reserved.
+ * Author: Merck Hung <merck@olux.org>
+ *
+ * @OLUXORG_LICENSE_HEADER_START@
+ * @OLUXORG_LICENSE_HEADER_END@
+ *
+ * pxa27x.h -- Intel XScale PXA27x Processor
+ *
+ */
 
 
 //
@@ -59,7 +60,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// SD RAM                                                                    //
+// SDRAM Memory                                                              //
 ///////////////////////////////////////////////////////////////////////////////
 #define PXA27X_SDRAM_BASE       0xA0000000
 #define PXA27X_SDRAM_SIZE       0x10000000

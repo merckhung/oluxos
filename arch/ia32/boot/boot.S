@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
  * @OLUXORG_LICENSE_HEADER_START@
  * @OLUXORG_LICENSE_HEADER_END@
- *
  *
  * boot.S -- OluxOS bootstrap code
  *
@@ -21,21 +20,24 @@
  *
  */
 
+
 #include <ia32/platform.h>
 
 
 .file       "boot.S"
 
 
-/******************************************************************************
- * Code Segment
- */
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Code Segment                                                              //
+///////////////////////////////////////////////////////////////////////////////
 .text
 .code16
-.global     _boot, __krnsecs
+.global     _SystemBoot, __krnsecs
 
 
-_boot:
+_SystemBoot:
 
     jmp     _bpb
     nop

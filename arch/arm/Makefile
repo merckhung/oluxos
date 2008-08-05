@@ -21,7 +21,7 @@ CFLAGS          	=   -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nostdin
 LDFLAGS         	=   -cref -M -s -N
 
 
-OBJS				=	boot.o uart_pxa.o
+OBJS				=	boot.o uart_pxa.o uart_msm.o routine.o krn.o
 
 
 QEMU				=	/home/merck/software/qemu/bin/qemu
@@ -43,6 +43,10 @@ boot.bin: $(OBJS)
 
 %.o: %.S
 	$(CC) $(ASFLAGS) $(CFLAGS) -c -o $@ $<
+
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 
 dis:

@@ -1,14 +1,14 @@
 /*
- * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
  * @OLUXORG_LICENSE_HEADER_START@
  * @OLUXORG_LICENSE_HEADER_END@
  *
- *
  * pm.S -- OluxOS setup code of protected mode
  *
  */
+
 
 #include <ia32/platform.h>
 
@@ -16,9 +16,11 @@
 .file       "pm.S"
 
 
-/******************************************************************************
- * Code Segment
- */
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Code Segment                                                              //
+///////////////////////////////////////////////////////////////////////////////
 .text
 .code16
 .global     _pm_start
@@ -128,9 +130,11 @@ __pregdtptr:
     .word       0, 0
 
 
-/******************************************************************************
- * Protected Mode 32bit Code Segment
- */
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Protected Mode 32bit Code Segment                                         //
+///////////////////////////////////////////////////////////////////////////////
 .text
 .code32
 _32bit_mode_start:
@@ -197,5 +201,7 @@ aldy_align:
 
 
 __krnimg_start:
+
+
 
 

@@ -1,5 +1,5 @@
 OUTPUT_FORMAT( "binary" )
-ENTRY( _boot )
+ENTRY( _SystemBoot )
 
 
 SECTIONS {
