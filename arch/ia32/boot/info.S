@@ -10,6 +10,9 @@
  */
 
 
+#include <ia32/platform.h>
+
+
 .file       "info.S"
 
 
@@ -20,17 +23,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 .text
 .code16
-.global     _info_start
+.global     _info_start, __e820_count, __e820_data
 
 
 _info_start:
 
 
     // Query E820 System Address Map
-    movl    $0xe820, %eax
     xorl    %ebx, %ebx
-    movl    $20, %ecx
-    movl    $0x534d4150, %edx       // 'SMAP'
 
 
     // Setup buffer
@@ -39,31 +39,42 @@ _info_start:
     movw    $__e820_data, %di
 
 
+_next_record:
+
+
+    // EAX = E820
+    // ECX = Length of buffer
+    // EDX = 'SMAP'
+    movl    $0xe820, %eax
+    movl    $24, %ecx
+    movl    $0x534d4150, %edx
+
+
     // Do query e820
     int     $0x15
-    jc      _e820_err
-
-    
-    // Check return status
-    cmpl    $0x534d4150, %eax
-    jnz     _e820_err     
+    jc      _e820_done
 
 
-    // All done?
-    cmpl    $0, %ecx
-    jz      _e820_done
-
+    // Move to next record
+    addw    $24, %di
+    incb    __e820_count
+    cmp     $0, %ebx
+    jne     _next_record
 
 
 _e820_done:
-_e820_err:
 
 
     jmp     _pm_start
 
 
+.align 4
+__e820_count:
+    .byte   0
+
+
 __e820_data:
-    .fill   20, 1, 0
+    .fill   (24 * 8), 1, 0
 
 
 

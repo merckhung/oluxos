@@ -144,7 +144,7 @@ _RESET_VECTOR:
 
 
     // Do scrubbing
-    //bl      RtScrubMemory
+    bl      RtScrubMemory
 
 
     // Display done
@@ -168,7 +168,7 @@ _RESET_VECTOR:
 ///////////////////////////////////////////////////////////////////////////////
 __BootMsg:
     .ascii  "Copyright (c) 2008 Olux Organization. All rights reserved.\r\n"
-    .ascii  "Intel XScale PXA27x ARM Processor\r\n"
+    .ascii  "Intel XScale PXA270 ARM Processor\r\n"
     .byte   0
 
 

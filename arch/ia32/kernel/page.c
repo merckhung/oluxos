@@ -13,9 +13,9 @@
 #include <ia32/debug.h>
 
 
-static volatile __u32 *PDEPtr;
-static volatile __u32 *PTEPtr;
-volatile __u32  *usermem;
+static volatile u32 *PDEPtr;
+static volatile u32 *PTEPtr;
+volatile u32  *usermem;
 
 
 //
@@ -32,16 +32,16 @@ volatile __u32  *usermem;
 //
 void MmPageInit( void ) {
 
-    int i;
-    __u32 filladdr = 0;
+    s32 i;
+    u32 filladdr = 0;
 
 
     // Initialize Page Directory Entries
-    PDEPtr = (__u32 *)PAGEADDR;
-    PTEPtr = (__u32 *)((__u32)PDEPtr + 0x1000);
+    PDEPtr = (u32 *)PAGEADDR;
+    PTEPtr = (u32 *)((u32)PDEPtr + 0x1000);
     for( i = 0 ; i < PDENUM ; i++ ) {
     
-        *(PDEPtr + i) = ((__u32)PTEPtr + i * 0x1000) | 0x00000003;
+        *(PDEPtr + i) = ((u32)PTEPtr + i * 0x1000) | 0x00000003;
 
         if( (i + 1) == PDENUM ) {
         
@@ -58,7 +58,7 @@ void MmPageInit( void ) {
     // Initialize Page Table Entries
     for( i = 0 ; i < PTENUM ; i++ ) {
 
-        *(PTEPtr + i) = (__u32)(filladdr + i * 0x1000) | 0x00000003;
+        *(PTEPtr + i) = (u32)(filladdr + i * 0x1000) | 0x00000003;
 
         if( i >= (PTENUM - 1024) ) {
 

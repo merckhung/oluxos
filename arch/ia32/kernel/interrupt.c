@@ -57,7 +57,7 @@ extern void simd_floating_point_exception( void );
 void IntInitInterrupt( void ) {
 
 
-    int i;
+    s32 i;
     struct IDTPtr_t IDTPtr;
 
 

@@ -186,3 +186,8 @@
 #define PXA27X_BAUD_38400       0x18
 
 
+// Default Console UART
+#define PXA27X_UART_DEFBASE     PXA27X_FFUART_BASE
+
+
+

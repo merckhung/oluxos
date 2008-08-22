@@ -17,3 +17,15 @@
 void MmPageInit( void );
 
 
+typedef struct E820Result {
+
+    u32         BaseAddrLow;
+    u32         BaseAddrHigh;
+    u32         LengthLow;
+    u32         LengthHigh;
+    u32         RecType;
+    u32         Attributes;
+
+} __attribute__ ((packed));
+
+

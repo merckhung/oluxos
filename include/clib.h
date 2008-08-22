@@ -64,3 +64,12 @@ s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, const s8 **args );
 
 
 
+//
+// CRC Routines
+//
+u32 CRC32( s8 *Buf, u32 Len );
+u16 CRC16( s8 *Buf, u32 Len );
+
+
+
+

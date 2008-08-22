@@ -31,7 +31,7 @@
 // UartInitialize -- Initialize UART Hardware Unit
 //
 // Input:
-//  R0      -- Base address of UART Unit (FFUART, BTUART, or STUART)
+//  None
 //
 // Output:
 //  None
@@ -44,7 +44,7 @@ UartInitialize:
 
 
     // Save base address
-    str     r0, __UartBaseAddress
+    ldr     r0, =PXA27X_UART_DEFBASE
 
 
     // Disable Std UART interrupts
@@ -93,7 +93,7 @@ UartInitialize:
 // UartTransmit -- Transmit one byte via UART
 //
 // Input:
-//  R1      -- Byte data to transmit
+//  None
 //
 // Output:
 //  None
@@ -106,7 +106,7 @@ UartTransmit:
 
 
     // Send a byte
-    ldr     r0, __UartBaseAddress       // Load base address
+    ldr     r0, =PXA27X_UART_DEFBASE    // Load base address
     strb    r1, [r0], #PXA27X_UART_LSR  // Send a byte and offset to 0x14
 
 
@@ -180,8 +180,6 @@ _UartTransmitBufferExit:
 ///////////////////////////////////////////////////////////////////////////////
 // Data Section                                                              //
 ///////////////////////////////////////////////////////////////////////////////
-__UartBaseAddress:
-    .long   0
 
 
 
