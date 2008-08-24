@@ -9,13 +9,16 @@
  *
  */
 #include <types.h>
+#include <ia32/platform.h>
 #include <ia32/page.h>
 #include <ia32/debug.h>
 
 
 static volatile u32 *PDEPtr;
 static volatile u32 *PTEPtr;
-volatile u32  *usermem;
+volatile u32 *usermem;
+volatile u8 *e820_count = (volatile u8 *)E820_COUNT;
+volatile E820Result *e820_base = (volatile E820Result *)E820_BASE;
 
 
 //
@@ -34,6 +37,19 @@ void MmPageInit( void ) {
 
     s32 i;
     u32 filladdr = 0;
+
+
+    // Print E820 Information
+    TcPrint( "E820 Record = %d\n", *e820_count );
+    for( i = 0 ; i < *e820_count ; i++ ) {
+    
+        TcPrint( "E820: 0x%8.8X%8.8X - 0x%8.8X%8.8X <Type 0x%8.8X>\n",
+                 (e820_base + i)->BaseAddrHigh,
+                 (e820_base + i)->BaseAddrLow,
+                 (e820_base + i)->BaseAddrHigh + (e820_base + i)->LengthHigh,
+                 (e820_base + i)->BaseAddrLow + (e820_base + i)->LengthLow,
+                 (e820_base + i)->RecType );
+    }
 
 
     // Initialize Page Directory Entries

@@ -17,7 +17,6 @@
 
 
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // Code Segment                                                              //
 ///////////////////////////////////////////////////////////////////////////////
@@ -31,13 +30,16 @@ _info_start:
 
     // Query E820 System Address Map
     xorl    %ebx, %ebx
+    movw    %bx, %es
 
 
-    // Setup buffer
-    pushw   %cs
-    popw    %es
-    movw    $__e820_data, %di
+    // Clear counter
+    movl    $0, (E820_COUNT)
 
+
+    // Setup buffer pointer
+    movl    $E820_BASE, %edi
+    
 
 _next_record:
 
@@ -57,7 +59,7 @@ _next_record:
 
     // Move to next record
     addw    $24, %di
-    incb    __e820_count
+    incb    (E820_COUNT)
     cmp     $0, %ebx
     jne     _next_record
 
@@ -66,15 +68,5 @@ _e820_done:
 
 
     jmp     _pm_start
-
-
-.align 4
-__e820_count:
-    .byte   0
-
-
-__e820_data:
-    .fill   (24 * 8), 1, 0
-
 
 

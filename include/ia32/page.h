@@ -17,7 +17,7 @@
 void MmPageInit( void );
 
 
-typedef struct E820Result {
+typedef struct __attribute__((packed)) _E820Result {
 
     u32         BaseAddrLow;
     u32         BaseAddrHigh;
@@ -26,6 +26,6 @@ typedef struct E820Result {
     u32         RecType;
     u32         Attributes;
 
-} __attribute__ ((packed));
+} E820Result;
 
 
