@@ -17,6 +17,17 @@
 void MmPageInit( void );
 
 
+enum {
+
+	ADDRESS_RANGE_UNDEFINED,
+	ADDRESS_RANGE_MEMORY,
+	ADDRESS_RANGE_RESERVED,
+	ADDRESS_RANGE_ACPI,
+	ADDRESS_RANGE_NVS,
+	ADDRESS_RANGE_UNUSUABLE,
+};
+
+
 typedef struct __attribute__((packed)) _E820Result {
 
     u32         BaseAddrLow;

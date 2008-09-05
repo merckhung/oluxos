@@ -21,6 +21,30 @@ volatile u8 *e820_count = (volatile u8 *)E820_COUNT;
 volatile E820Result *e820_base = (volatile E820Result *)E820_BASE;
 
 
+s8 *AddrType[] = {
+
+	"Undefined",
+	"Memory",
+	"Reserved",
+	"ACPI",
+	"NVS",
+	"Unusable",
+};
+
+
+
+s8 *MmShowE820Type( u32 RecType ) {
+
+	if( RecType < ADDRESS_RANGE_MEMORY || RecType > ADDRESS_RANGE_NVS ) {
+	
+		return AddrType[ ADDRESS_RANGE_UNDEFINED ];
+	}
+
+	return AddrType[ RecType ];
+}
+
+
+
 //
 // MmPageInit
 //
@@ -43,12 +67,12 @@ void MmPageInit( void ) {
     TcPrint( "E820 Record = %d\n", *e820_count );
     for( i = 0 ; i < *e820_count ; i++ ) {
     
-        TcPrint( "E820: 0x%8.8X%8.8X - 0x%8.8X%8.8X <Type 0x%8.8X>\n",
+        TcPrint( "E820: 0x%8.8X%8.8X - 0x%8.8X%8.8X <%s>\n",
                  (e820_base + i)->BaseAddrHigh,
                  (e820_base + i)->BaseAddrLow,
                  (e820_base + i)->BaseAddrHigh + (e820_base + i)->LengthHigh,
                  (e820_base + i)->BaseAddrLow + (e820_base + i)->LengthLow,
-                 (e820_base + i)->RecType );
+                 MmShowE820Type( (e820_base + i)->RecType ) );
     }
 
 
