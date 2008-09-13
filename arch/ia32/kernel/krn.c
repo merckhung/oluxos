@@ -1,16 +1,16 @@
 /*
- * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
- *
- * krn.c -- OluxOS IA32 kernel entry point
+ * File: krn.c
+ * Description:
+ * 	OluxOS IA32 kernel entry point
  *
  */
 #include <version.h>
 #include <types.h>
 #include <clib.h>
+#include <ia32/platform.h>
 #include <ia32/page.h>
 #include <ia32/task.h>
 #include <ia32/interrupt.h>
@@ -100,7 +100,7 @@ void krn_entry( void ) {
 
 
     // Init timer
-    //TmInitTimer();
+    TmInitTimer();
 
 
     // Start task scheduler

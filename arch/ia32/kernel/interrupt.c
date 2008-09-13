@@ -10,6 +10,7 @@
  */
 #include <types.h>
 #include <clib.h>
+#include <ia32/platform.h>
 #include <ia32/interrupt.h>
 #include <ia32/io.h>
 #include <ia32/i8259.h>
@@ -40,7 +41,7 @@ extern void invalid_tss( void );
 extern void segment_not_present( void );
 extern void stack_fault( void );
 extern void general_protection_exception( void );
-extern void page_fault_exception( void );
+extern void PageFaultHandler( void );
 extern void x87_fpu_floating_point_error( void );
 extern void alignment_check_exception( void );
 extern void machine_check_exception( void );
@@ -93,7 +94,7 @@ void IntInitInterrupt( void ) {
     IntSetIDT( 11, segment_not_present, __KERNEL_CS, GATE_TRAP_FLAG );
     IntSetIDT( 12, stack_fault, __KERNEL_CS, GATE_TRAP_FLAG );
     IntSetIDT( 13, general_protection_exception, __KERNEL_CS, GATE_TRAP_FLAG );
-    IntSetIDT( 14, page_fault_exception, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 14, PageFaultHandler, __KERNEL_CS, GATE_TRAP_FLAG );
     IntSetIDT( 16, x87_fpu_floating_point_error, __KERNEL_CS, GATE_TRAP_FLAG );
     IntSetIDT( 17, alignment_check_exception, __KERNEL_CS, GATE_TRAP_FLAG );
     IntSetIDT( 18, machine_check_exception, __KERNEL_CS, GATE_TRAP_FLAG );
@@ -152,11 +153,10 @@ void IntLoadIDTRegister( IDTPtr *Ptr ) {
 void IntSetIDT( u32 Index, void *Handler, void *SegSel, u8 Flags ) {
 
 	u32 Offset = (u32)Handler;
-	u16 segsel = (u32)SegSel;
 
     IDTTable[ Index ].OffsetLSW = (u16)(Offset & 0xFFFF);
     IDTTable[ Index ].OffsetMSW = (u16)((Offset >> 16) & 0xFFFF);
-    IDTTable[ Index ].SegSelect = segsel;
+    IDTTable[ Index ].SegSelect = (u32)SegSel;
     IDTTable[ Index ].Flags		= Flags;
 }
 
@@ -198,6 +198,7 @@ void IntDisable( void ) {
 }
 
 
+
 //
 // IntEnable
 //
@@ -214,6 +215,7 @@ void IntEnable( void ) {
 
     __asm__ ( "sti" );
 }
+
 
 
 //
@@ -244,6 +246,9 @@ void IntRegInterrupt( u32 IrqNum, void *IrqHandler, void (*HwIntHandler)( u8 Irq
     IntSetIDT( IrqNum + HW_INT_START, (u32)IrqHandler, __KERNEL_CS, GATE_INT_FLAG );
 
 
+	IntShowIDTTable();
+
+
     // Install interrupt handler
     InterrupHandlertList[ IrqNum ].IrqHandler = HwIntHandler;
 
@@ -255,6 +260,7 @@ void IntRegInterrupt( u32 IrqNum, void *IrqHandler, void (*HwIntHandler)( u8 Irq
 	// Enable interrupt
 	IntEnable();
 }
+
 
 
 //
@@ -296,6 +302,8 @@ void IntUnregInterrupt( u32 IrqNum ) {
 }
 
 
+
+/*
 //
 // IntRegIRQ
 //
@@ -356,6 +364,8 @@ void IntUnregIRQ( u8 irqnum ) {
     // Delete interrupt gate
     IntDelIDT( irqnum + PIC_IRQ_BASE );
 }
+*/
+
 
 
 //
@@ -370,9 +380,8 @@ void IntUnregIRQ( u8 irqnum ) {
 // Description:
 //  IRQ handler
 //
-void IntHandleIRQ( u32 irqnum, struct SavedRegs_t regs ) {
+void IntHandleIRQ( u32 IrqNum, GeneralRegisters *Regs ) {
 
-    u8 irq = (u8)irqnum;
 
 #if 0
     __asm__ __volatile__ (
@@ -392,8 +401,10 @@ void IntHandleIRQ( u32 irqnum, struct SavedRegs_t regs ) {
     );
 #endif
 
-    InterrupHandlertList[ irq + PIC_IRQ_BASE ].IrqHandler( irq );
+
+    InterrupHandlertList[ IrqNum ].IrqHandler( IrqNum );
 }
+
 
 
 //
@@ -412,5 +423,21 @@ void IntIssueEOI( void ) {
 
     i8259IssueEOI();
 }
+
+
+
+void IntShowIDTTable( void ) {
+
+	u32 i;
+	s32 *p;
+
+	for( i = 0x20 ; i < 0x22 ; i++ ) {
+	
+		p = (s32 *)&IDTTable[ i ];
+		DbgPrint( "Interrupt Number: %d\n", i );
+		DbgPrint( "0x%8.8X%8.8X\n", *(p + 1), *p );
+	}
+}
+
 
 

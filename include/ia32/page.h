@@ -74,6 +74,12 @@
 #define		P_SUP_WT_RW_4M	(P_PRESENT | P_RDWR | P_SUPERVISOR | P_WTHROUGH | P_CACHE_DIS | P_NOACCESS | P_NODIRTY | P_PSIZE_4MB | P_GLO_NORMAL)
 
 
+// Page Fault Error Code
+#define		PF_PRESENT		0x01
+#define		PF_RW			0x02
+#define		PF_MODE			0x04
+#define		PF_RSVD			0x08
+
 
 //
 // Structures

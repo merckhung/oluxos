@@ -215,3 +215,58 @@ void MmDisablePSE( void ) {
 
 
 
+void MmPageFaultHandler( u32 ErrorCode, GeneralRegisters *Regs ) {
+
+
+	DbgPrint( "EIP: 0x%8.8X, CS: 0x%4.4X\n", Regs->eip, Regs->cs );
+
+
+	// Present or not present
+	if( ErrorCode & PF_PRESENT ) {
+	
+		DbgPrint( "Present: Yes\n" );
+	}
+	else {
+	
+		DbgPrint( "Present: No\n" );
+	}
+
+
+	// Read or write
+	if( ErrorCode & PF_RW ) {
+	
+		DbgPrint( "Access:  Write\n" );
+	}
+	else {
+	
+		DbgPrint( "Access:  Read\n" );
+	}
+
+
+	// Supervisor or user mode
+	if( ErrorCode & PF_MODE ) {
+	
+		DbgPrint( "Mode:    User\n" );
+	}
+	else {
+	
+		DbgPrint( "Mode:    Supervisor\n" );
+	}
+
+
+	// RSVD or not
+	if( ErrorCode & PF_RSVD ) {
+	
+		DbgPrint( "RSVD:    Yes\n" );
+	}
+	else {
+	
+		DbgPrint( "RSVD:    No\n" );
+	}
+
+
+	DbgStop();
+}
+
+
+

@@ -14,7 +14,7 @@
 .global divide_error, debug, nmi, breakpoint, overflow, bound_range_exceeded
 .global invalid_opcode, device_not_available, double_fault, coprocessor_segment_overrun
 .global invalid_tss, segment_not_present, stack_fault, general_protection_exception
-.global page_fault_exception, x87_fpu_floating_point_error, alignment_check_exception
+.global PageFaultHandler, x87_fpu_floating_point_error, alignment_check_exception
 .global machine_check_exception, simd_floating_point_exception
 
 
@@ -44,36 +44,21 @@
 
 .macro SaveAllRegsSecondStage
     popl    %ebx
-    movl    %ebx, SavedAllRegs+32
+    movl    %ebx, SavedAllRegs+32	// EIP
     popl    %ebx
-    movl    %ebx, SavedAllRegs+40
+    movl    %ebx, SavedAllRegs+40	// CS
     popl    %ebx
-    movl    %ebx, SavedAllRegs+36
+    movl    %ebx, SavedAllRegs+36	// EFLAGS
     movw    %ss, SavedAllRegs+44
     movl    %esp, SavedAllRegs+16
 .endm
 
 
-.macro SaveAllRegs
-    cld
-    pushl   %es
-    pushl   %ds
-    pushl   %fs
-    pushl   %gs
-    pushl   %eax
-    pushl   %ecx
-    pushl   %edx
-    pushl   %ebx
-    pushl   %ebp
-    pushl   %esi
-    pushl   %edi
-.endm
-
 
 //
 // Restore all register after interrupt handler
 //
-.macro RestoreAllRegsException
+.macro RestoreAllRegs
     movl    SavedAllRegs+16, %esp
     movw    SavedAllRegs+44, %ss
     movw    SavedAllRegs+60, %gs
@@ -87,28 +72,14 @@
     movl    SavedAllRegs+8, %edx
     movl    SavedAllRegs+4, %ecx
     movl    SavedAllRegs+36, %eax
-    pushl   %eax
+    pushl   %eax					// EFLAGS
     movl    SavedAllRegs+40, %eax
-    pushl   %eax
+    pushl   %eax					// CS
     movl    SavedAllRegs+32, %eax
-    pushl   %eax
+    pushl   %eax					// EIP
     movl    SavedAllRegs, %eax
 .endm
 
-
-.macro RestoreAllRegs
-    popl    %edi
-    popl    %esi
-    popl    %ebp
-    popl    %ebx
-    popl    %edx
-    popl    %ecx
-    popl    %eax
-    popl    %gs
-    popl    %fs
-    popl    %ds
-    popl    %es
-.endm
 
 
 //
@@ -159,7 +130,9 @@ InstallIrqHandler
 .align 4
 CommonIrqHandler:
 
-    SaveAllRegs
+    SaveAllRegsFirstStage
+	SaveAllRegsSecondStage
+
     subl    $4, %esp                // Get preload interrupt vector
     call    IntHandleIRQ
     addl    $4, %esp                // Discard vector
@@ -192,7 +165,7 @@ divide_error:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -216,7 +189,7 @@ debug:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -240,7 +213,7 @@ nmi:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -264,7 +237,7 @@ breakpoint:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -288,7 +261,7 @@ overflow:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -312,7 +285,7 @@ bound_range_exceeded:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -336,7 +309,7 @@ invalid_opcode:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -360,7 +333,7 @@ device_not_available:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -385,7 +358,7 @@ double_fault:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -409,7 +382,7 @@ coprocessor_segment_overrun:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -436,7 +409,7 @@ invalid_tss:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -463,7 +436,7 @@ segment_not_present:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -490,7 +463,7 @@ stack_fault:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -517,28 +490,33 @@ general_protection_exception:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
 //
-// Page-Fault Exception -- Handle exception 14 #PF
+// Page-Fault Exception #PF (14)
 //
-page_fault_exception:
+PageFaultHandler:
 
+
+	// Save all registers
     SaveAllRegsFirstStage
     SaveErrorCode
     SaveAllRegsSecondStage
 
 
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x0E
-    call    GdbExceptionHandler
+	// Setup interrupt stack
+	movl	$(InterruptStack + SZ_INT_STACK), %esp
+
+	
+	// Call Memory Management Code
+	pushl	$SavedAllRegs
+	pushl	SavedErrorCode
+	call	MmPageFaultHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn
 
 
@@ -558,7 +536,7 @@ x87_fpu_floating_point_error:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn 
 
 
@@ -579,7 +557,7 @@ alignment_check_exception:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn 
 
 
@@ -599,7 +577,7 @@ machine_check_exception:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn 
 
 
@@ -619,7 +597,7 @@ simd_floating_point_exception:
     call    GdbExceptionHandler
 
 
-    RestoreAllRegsException
+    RestoreAllRegs
     jmp     ExceptionReturn 
 
 
@@ -644,5 +622,13 @@ ExceptionHandler:
 	popl	%esi
 
     iret
+
+
+
+//
+// Interrupt Stack
+//
+.common		InterruptStack, SZ_INT_STACK
+
 
 

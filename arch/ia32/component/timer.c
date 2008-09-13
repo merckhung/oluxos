@@ -9,6 +9,7 @@
  *
  */
 #include <types.h>
+#include <ia32/platform.h>
 #include <ia32/interrupt.h>
 #include <ia32/timer.h>
 #include <ia32/io.h>
@@ -53,7 +54,7 @@ void TmInitTimer( void ) {
 //
 void TmIntHandler( u8 IrqNum ) {
 
-    u8 volatile *videomem = (u8 *)0xB84FE;
+    volatile u8 *videomem = (u8 *)0xB84FE;
 
     (*videomem)++;
     (*(videomem + 1))++;

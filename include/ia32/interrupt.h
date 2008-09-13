@@ -15,11 +15,10 @@
 #define     NR_VECTOR				256
 #define     SZ_INT_ENTRY			8
 #define		SZ_INT_TABLE			(NR_VECTOR * SZ_INT_ENTRY)
+#define		SZ_INT_STACK			4096
 
 #define     HW_INT_START			0x20
 #define		NR_HW_IRQ				(NR_VECTOR - HW_INT_START)
-
-#define     SZ_IRQ_STACK    		4096
 
 
 // IDT Gate Type
@@ -85,37 +84,6 @@ PACKED_STRUCT _IntHandlerLst {
 } IntHandlerLst;
 
 
-struct SavedRegs_t {
-
-    // Saved by Handler
-    u32   edi;
-    u32   esi;
-    u32   ebp;
-    u32   ebx;
-    u32   edx;
-    u32   ecx;
-    u32   eax;
-    u32   gs;
-    u32   fs;
-    u32   ds;
-    u32   ss;
-    u32   es;
-
-    // Saved by Processor
-    u32   eip;
-    u32   cs;
-    u32   eflags;
-
-} __attribute__ ((packed));
-
-
-struct IRQStack_t {
-
-    u32   esp;
-    s8    stack[ SZ_IRQ_STACK ];
-};
-
-
 
 //
 // Prototypes
@@ -132,9 +100,7 @@ void IntEnable( void );
 void IntRegInterrupt( u32 IntNum, void *IrqHandler, void (*HwIntHandler)( u8 IrqNum ) );
 void IntUnregInterrupt( u32 IntNum );
 
-void IntRegIRQ( u8 irqnum, u32 handler, void (*IRQHandler)( u8 ) );
-void IntUnregIRQ( u8 irqnum );
-
+void IntHandleIRQ( u32 IrqNum, GeneralRegisters *Regs );
 void IntIssueEOI( void );
 #endif
 

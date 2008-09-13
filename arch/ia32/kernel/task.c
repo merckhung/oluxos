@@ -9,10 +9,11 @@
  *
  */
 #include <types.h>
-#include <driver/console.h>
+#include <ia32/platform.h>
 #include <ia32/debug.h>
 #include <ia32/task.h>
 #include <ia32/interrupt.h>
+#include <driver/console.h>
 #include <clib.h>
 
 
@@ -342,7 +343,7 @@ void TskScheduler( void ) {
 }
 
 
-void TskReschedule( struct SavedRegs_t regs ) {
+void TskReschedule( void ) {
 
 
 #if 0

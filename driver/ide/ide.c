@@ -9,6 +9,7 @@
  *
  */
 #include <types.h>
+#include <ia32/platform.h>
 #include <ia32/interrupt.h>
 #include <ia32/io.h>
 #include <ia32/debug.h>
