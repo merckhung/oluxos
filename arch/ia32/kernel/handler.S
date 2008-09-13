@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
  * @OLUXORG_LICENSE_HEADER_START@
@@ -57,7 +57,6 @@
 .macro SaveAllRegs
     cld
     pushl   %es
-    pushl   %ss
     pushl   %ds
     pushl   %fs
     pushl   %gs
@@ -108,7 +107,6 @@
     popl    %gs
     popl    %fs
     popl    %ds
-    popl    %ss
     popl    %es
 .endm
 

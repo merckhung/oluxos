@@ -19,6 +19,13 @@
 
 
 #ifdef KERNEL_DEBUG
+#define DbgStop()	__asm__ __volatile__ ( "jmp		." )
+#else
+#define DbgStop()
+#endif
+
+
+#ifdef KERNEL_DEBUG
 typedef struct {
 
     u32 eax;

@@ -32,8 +32,9 @@ void i8259Init( void ) {
 
     DbgPrint( "Disable all IRQ for initial processes\n" );
     // Mask all HW interrupt for initialization
-    IoOutByte( 0xff, PIC_MASTER_IMR );    
-    IoOutByte( 0xff, PIC_SLAVE_IMR );
+    IoOutByte( 0xFF, PIC_MASTER_IMR );    
+    IoOutByte( 0xFF, PIC_SLAVE_IMR );
+
 
 
     DbgPrint( "Initialize Master PIC\n" );
@@ -42,8 +43,8 @@ void i8259Init( void ) {
     //
     // 1. Let maste and slave PIC go into initialize sequence
     //    D4 = 1, D0 = 1 : 0x11
-    // 2. Remap IRQ0 to IRQ32
-    // 3. Slave PIC connected at IRQ2
+    // 2. Remap IRQ0 to Interrupt 32
+    // 3. Slave PIC connected at IRQ2, Interrupt 33
     // 4. Set to microprocessor and normal EOI mode
     //
     IoOutByte( 0x11, PIC_MASTER_ICW1 );
@@ -59,14 +60,14 @@ void i8259Init( void ) {
     // Note: remap IRQ8 to IRQ40
     //
     IoOutByte( 0x11, PIC_SLAVE_ICW1 );
-    IoOutByte( PIC_IRQ_BASE + 8, PIC_SLAVE_ICW2 );
+    IoOutByte( PIC_IRQ_SLAVE, PIC_SLAVE_ICW2 );
     IoOutByte( 1U << PIC_CASCADE_IR, PIC_SLAVE_ICW3 );
     IoOutByte( 0x01, PIC_SLAVE_ICW4 );
 
 
     // Mask all HW interrupt again
-    IoOutByte( 0xff, PIC_MASTER_IMR );    
-    IoOutByte( 0xff, PIC_SLAVE_IMR );
+    IoOutByte( 0xFF, PIC_MASTER_IMR );    
+    IoOutByte( 0xFF, PIC_SLAVE_IMR );
 }
 
 

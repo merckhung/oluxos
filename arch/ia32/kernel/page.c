@@ -61,10 +61,10 @@ void MmPageInit( void ) {
 
     s32 i;
     u32 filladdr = 0;
+	u64 MemSize = 0;
 
 
     // Print E820 Information
-    TcPrint( "E820 Record = %d\n", *e820_count );
     for( i = 0 ; i < *e820_count ; i++ ) {
     
         TcPrint( "E820: 0x%8.8X%8.8X - 0x%8.8X%8.8X <%s>\n",
@@ -73,7 +73,17 @@ void MmPageInit( void ) {
                  (e820_base + i)->BaseAddrHigh + (e820_base + i)->LengthHigh,
                  (e820_base + i)->BaseAddrLow + (e820_base + i)->LengthLow,
                  MmShowE820Type( (e820_base + i)->RecType ) );
+
+		if( (e820_base + i)->RecType == ADDRESS_RANGE_MEMORY ) {
+
+			MemSize += (((u64)(e820_base + i)->LengthHigh) << 32ULL);
+			MemSize += ((u64)(e820_base + i)->LengthLow);
+		}
     }
+
+
+	// Print out total memory size available
+	TcPrint( "Total Memory Size: %d MB\n", (u32)(MemSize / 1024ULL / 1024ULL) );
 
 
     // Initialize Page Directory Entries

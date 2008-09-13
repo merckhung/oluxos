@@ -17,6 +17,7 @@
 
 static struct IntHandlerLst_t InterrupHandlertList[ NR_INTERRUPT ];
 static struct IDTEntry_t IDTTable[ SZ_INTENTRY ];
+
 extern void __KERNEL_CS( void );
 
 extern void ExceptionHandler( void );
@@ -56,9 +57,8 @@ extern void simd_floating_point_exception( void );
 //
 void IntInitInterrupt( void ) {
 
-
     s32 i;
-    struct IDTPtr_t IDTPtr;
+	struct IDTPtr_t IDTPtr;
 
 
     // Initialize
@@ -87,7 +87,6 @@ void IntInitInterrupt( void ) {
     IntSetIDT( 19, (u32)simd_floating_point_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
 
 
-
     // Setup exceptions handler
     for( i = 20 ; i <= TRAP_END ; i++ ) {
 
@@ -98,6 +97,9 @@ void IntInitInterrupt( void ) {
     // Setup IDT Pointer
     IDTPtr.Limit    = NR_INTERRUPT * SZ_INTENTRY - 1;
     IDTPtr.BaseAddr = (u32)IDTTable;
+
+
+	TcPrint( "IDTPtr = 0x%X, IDTTable = 0x%X\n", &IDTPtr, IDTTable );
 
 
     // Load IDTR 
