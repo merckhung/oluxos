@@ -74,35 +74,35 @@ void IntInitInterrupt( void ) {
     // Setup exceptions handler
     for( i = 0 ; i < HW_INT_START ; i++ ) {
 
-        IntSetIDT( i, ExceptionHandler, __KERNEL_CS, TRAP_GATE_FLAG );
+        IntSetIDT( i, ExceptionHandler, __KERNEL_CS, GATE_TRAP_FLAG );
     }
 
 
 	// Initialize IDT Entry for Exceptions
-    IntSetIDT( 0, divide_error, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 1, debug, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 2, nmi, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 3, breakpoint, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 4, overflow, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 5, bound_range_exceeded, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 6, invalid_opcode, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 7, device_not_available, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 8, double_fault, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 9, coprocessor_segment_overrun, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 10, invalid_tss, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 11, segment_not_present, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 12, stack_fault, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 13, general_protection_exception, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 14, page_fault_exception, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 16, x87_fpu_floating_point_error, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 17, alignment_check_exception, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 18, machine_check_exception, __KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 19, simd_floating_point_exception, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 0, divide_error, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 1, debug, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 2, nmi, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 3, breakpoint, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 4, overflow, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 5, bound_range_exceeded, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 6, invalid_opcode, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 7, device_not_available, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 8, double_fault, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 9, coprocessor_segment_overrun, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 10, invalid_tss, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 11, segment_not_present, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 12, stack_fault, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 13, general_protection_exception, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 14, page_fault_exception, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 16, x87_fpu_floating_point_error, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 17, alignment_check_exception, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 18, machine_check_exception, __KERNEL_CS, GATE_TRAP_FLAG );
+    IntSetIDT( 19, simd_floating_point_exception, __KERNEL_CS, GATE_TRAP_FLAG );
 
 
 
     // Setup IDT Pointer
-    IDTPointer.Limit    = (NR_VECTOR * sizeof( IDTEntry )) - 1;
+    IDTPointer.Limit    = (NR_VECTOR - 1) * sizeof( IDTEntry );
     IDTPointer.BaseAddr = (u32)IDTTable;
 	DbgPrint( "IDTPointer = 0x%X, IDTTable = 0x%X\n", &IDTPointer, IDTTable );
 
@@ -116,6 +116,7 @@ void IntInitInterrupt( void ) {
 
 
     // Enable interrupt
+	DbgPrint( "Enable Interrupt\n" );
     IntEnable();
 }
 
@@ -240,7 +241,7 @@ void IntRegInterrupt( u32 IrqNum, void *IrqHandler, void (*HwIntHandler)( u8 Irq
 
 
     // Add interrupt gate
-    IntSetIDT( IrqNum + HW_INT_START, (u32)IrqHandler, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( IrqNum + HW_INT_START, (u32)IrqHandler, __KERNEL_CS, GATE_INT_FLAG );
 
 
     // Install interrupt handler
@@ -315,7 +316,7 @@ void IntRegIRQ( u8 irqnum, u32 handler, void (*IRQHandler)( u8 irqnum ) ) {
 
 
     // Add interrupt gate
-    IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (u16)__KERNEL_CS, INT_GATE_FLAG );
+    IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (u16)__KERNEL_CS, GATE_INT_FLAG );
 
 
     // Install interrupt handler

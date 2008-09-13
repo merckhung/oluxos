@@ -1,34 +1,64 @@
 /*
- * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
+ * File: interrupt.h
+ * Description:
+ * 	None
  *
  */
 
 
+//
+// Definitions
+//
 #define     NR_VECTOR				256
 #define     SZ_INT_ENTRY			8
 #define		SZ_INT_TABLE			(NR_VECTOR * SZ_INT_ENTRY)
 
 #define     HW_INT_START			0x20
-
-#define     INT_GATE_FLAG   		0x8e
-#define     TRAP_GATE_FLAG  		0x8f
+#define		NR_HW_IRQ				(NR_VECTOR - HW_INT_START)
 
 #define     SZ_IRQ_STACK    		4096
+
+
+// IDT Gate Type
+#define		IDT_F_TASK				0x05
+#define		IDT_F_INT				0x06
+#define		IDT_F_TRAP				0x07
+
+// Size of gate
+#define		IDT_F_SZ_16				0x00
+#define		IDT_F_SZ_32				0x08
+
+// Privilege level
+#define		IDT_F_DPL_0				0x00
+#define		IDT_F_DPL_1				0x20
+#define		IDT_F_DPL_2				0x40
+#define		IDT_F_DPL_3				0x60
+
+// Segment present flag
+#define		IDT_F_NPRESENT			0x00
+#define		IDT_F_PRESENT			0x80
+
+#define     GATE_INT_FLAG   		(IDT_F_INT | IDT_F_SZ_32 | IDT_F_DPL_0 | IDT_F_PRESENT)
+#define     GATE_TRAP_FLAG  		(IDT_F_TRAP | IDT_F_SZ_32 | IDT_F_DPL_0 | IDT_F_PRESENT)
 
 
 #define     IRQHandler( IRQNUM )		IrqHandler_##IRQNUM
 #define		ExternIRQHandler( IRQNUM )	extern void IrqHandler_##IRQNUM( void )
 
 
+// Hardware IRQ Numbers
 #define		IRQ_TIMER				0x00
 #define		IRQ_KEYBOARD			0x01
 
 
+
 #ifndef __ASM__
+//
+// Structures
+//
 PACKED_STRUCT _IDTEntry {
 
     u16   OffsetLSW;
@@ -86,6 +116,10 @@ struct IRQStack_t {
 };
 
 
+
+//
+// Prototypes
+//
 void IntInitInterrupt( void );
 
 void IntLoadIDTRegister( IDTPtr *Ptr );
@@ -103,5 +137,6 @@ void IntUnregIRQ( u8 irqnum );
 
 void IntIssueEOI( void );
 #endif
+
 
 

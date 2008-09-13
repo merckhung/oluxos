@@ -166,12 +166,12 @@ void TskInit( void ) {
     UsrTSS.eflags       = tsks[ 0 ].eflags;
 
 
-    KrnTSS.cs           = (u16)__KERNEL_CS;
-    KrnTSS.ss           = (u16)__KERNEL_DS;
-    KrnTSS.ds           = (u16)__KERNEL_DS;
-    KrnTSS.es           = (u16)__KERNEL_DS;
-    KrnTSS.fs           = (u16)__KERNEL_DS;
-    KrnTSS.gs           = (u16)__KERNEL_DS;
+    KrnTSS.cs           = (u32)__KERNEL_CS;
+    KrnTSS.ss           = (u32)__KERNEL_DS;
+    KrnTSS.ds           = (u32)__KERNEL_DS;
+    KrnTSS.es           = (u32)__KERNEL_DS;
+    KrnTSS.fs           = (u32)__KERNEL_DS;
+    KrnTSS.gs           = (u32)__KERNEL_DS;
 
 
     tsks[ 1 ].eip       = (u32)TskUsr2;

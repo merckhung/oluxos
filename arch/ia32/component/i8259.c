@@ -38,7 +38,7 @@ void i8259Init( void ) {
 
 
 
-    DbgPrint( "Initialize Master PIC\n" );
+    DbgPrint( "Initialize Master i8259\n" );
     //
     // Initialize Master PIC
     //
@@ -54,7 +54,7 @@ void i8259Init( void ) {
     IoOutByte( 0x01, PIC_MASTER_ICW4 );
 
 
-    DbgPrint( "Initialize Slave PIC\n" );
+    DbgPrint( "Initialize Slave i8259\n" );
     //
     // Initialize Slave PIC
     //
@@ -69,6 +69,9 @@ void i8259Init( void ) {
     // Mask all HW interrupt again
     IoOutByte( 0xFF, PIC_MASTER_IMR );    
     IoOutByte( 0xFF, PIC_SLAVE_IMR );
+
+
+	DbgPrint( "i8259 initialized\n" );
 }
 
 
@@ -85,16 +88,25 @@ void i8259Init( void ) {
 // Description:
 //  Enable i8259A IRQ line
 //
-void i8259EnableIRQ( u8 irqnum ) {
+void i8259EnableIRQ( u8 IrqNum ) {
 
     u8 reg = PIC_MASTER_IMR;
+	u8 tmp;
 
-    if( irqnum & 0x8 ) {
+
+    if( IrqNum >= 8 ) {
     
         reg = PIC_SLAVE_IMR; 
-        irqnum &= 0x7;
+        IrqNum &= 0x7;
     }
-    IoOutByte( (IoInByte( reg ) & ~(1 << irqnum)), reg );
+
+
+	tmp = IoInByte( reg );
+	tmp &= ~(1 << IrqNum);
+
+
+	DbgPrint( "Enable IRQ %d, new IMR 0x%X\n", IrqNum, tmp );
+    IoOutByte( tmp, reg );
 }
 
 
@@ -110,16 +122,25 @@ void i8259EnableIRQ( u8 irqnum ) {
 // Description:
 //  Disable i8259A IRQ line
 //
-void i8259DisableIRQ( u8 irqnum ) {
+void i8259DisableIRQ( u8 IrqNum ) {
 
     u8 reg = PIC_MASTER_IMR;
+	u8 tmp;
 
-    if( irqnum & 0x8 ) {
+
+    if( IrqNum & 0x8 ) {
     
         reg = PIC_SLAVE_IMR;   
-        irqnum &= 0x7;
+        IrqNum &= 0x7;
     }
-    IoOutByte( (IoInByte( reg ) | (1 << irqnum)), reg );
+
+	
+	tmp = IoInByte( reg );
+	tmp |= (1 << IrqNum);
+
+
+	DbgPrint( "Enable IRQ %d, new IMR 0x%X\n", IrqNum, tmp );
+    IoOutByte( tmp, reg );
 }
 
 

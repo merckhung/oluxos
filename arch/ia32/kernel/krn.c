@@ -93,8 +93,8 @@ void krn_entry( void ) {
 
     // Initialize IDE Hard Disk
     //IDEInit();
+	
 
- 
     // Init keyboard
     KbdInitKeyboard();
 

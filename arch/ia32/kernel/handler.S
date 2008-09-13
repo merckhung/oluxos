@@ -146,9 +146,9 @@ SavedAllRegs:
 
 
 //
-// Install Interrupt Handler
+// Install IRQ Handlers
 //
-.rept NR_VECTOR
+.rept NR_HW_IRQ
 InstallIrqHandler
 .endr
 
