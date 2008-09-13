@@ -28,9 +28,6 @@
 
 
 
-//static struct IRQStack_t IRQStack;
-
-
 //
 // krn_entry
 //
@@ -56,18 +53,6 @@ void krn_entry( void ) {
     TcClear();
     TcPrint( COPYRIGHT_STR"\n" );
     TcPrint( PRODUCT_NAME" version "KRN_VER"\n\n" );
-
-
-    // Setup IRQ stack
-/*
-    CbMemSet( &IRQStack.stack, 0, SZ_IRQ_STACK );
-    IRQStack.esp = (u32)(IRQStack.stack + SZ_IRQ_STACK);
-    __asm__ __volatile__ (
-    
-        "movl   %0, %%esp\n"
-        :: "g" (IRQStack.esp)
-    );
-*/
 
 
     // Check SMBIOS

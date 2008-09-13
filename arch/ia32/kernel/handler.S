@@ -51,6 +51,9 @@
     movl    %ebx, SavedAllRegs+36	// EFLAGS
     movw    %ss, SavedAllRegs+44
     movl    %esp, SavedAllRegs+16
+
+	// Setup interrupt stack
+	movl	$(InterruptStack + SZ_INT_STACK), %esp
 .endm
 
 
@@ -91,8 +94,7 @@
     .global IrqHandler_\@
     .align 4
     IrqHandler_\@:
-    movl    $\@, -52(%esp)
-    lea     -52(%esp), %ebx
+	movl	$\@, IRQNumber
     jmp     CommonIrqHandler
 .endm
 
@@ -105,6 +107,8 @@
 .global SavedErrorCode
 SavedErrorCode:
 .long   0
+IRQNumber:
+.long	0
 
 
 .align 4
@@ -130,12 +134,19 @@ InstallIrqHandler
 .align 4
 CommonIrqHandler:
 
+
+	// Save all registers
     SaveAllRegsFirstStage
 	SaveAllRegsSecondStage
 
-    subl    $4, %esp                // Get preload interrupt vector
+
+	// Prepare input parameters
+	pushl   $SavedAllRegs
+	pushl	IRQNumber
     call    IntHandleIRQ
-    addl    $4, %esp                // Discard vector
+
+
+	// Return
     jmp     InterruptReturn
 
 InterruptReturn:
@@ -506,10 +517,6 @@ PageFaultHandler:
     SaveAllRegsSecondStage
 
 
-	// Setup interrupt stack
-	movl	$(InterruptStack + SZ_INT_STACK), %esp
-
-	
 	// Call Memory Management Code
 	pushl	$SavedAllRegs
 	pushl	SavedErrorCode
