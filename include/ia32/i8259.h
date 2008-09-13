@@ -33,7 +33,7 @@
 
 
 #define     PIC_CASCADE_IR      2
-#define     PIC_IRQ_BASE		0x20
+#define     PIC_IRQ_BASE		HW_INT_START
 #define		PIC_IRQ_SLAVE		PIC_IRQ_BASE + 8
 
 

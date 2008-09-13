@@ -16,7 +16,7 @@
 #include <ia32/debug.h>
 
 
-extern void PreliminaryInterruptHandler_0( void );
+ExternIRQHandler( 0 );
 
 
 //
@@ -34,7 +34,7 @@ extern void PreliminaryInterruptHandler_0( void );
 void TmInitTimer( void ) {
 
     IntDisable();
-    IntRegIRQ( 0, IRQHandler( 0 ), TmIntHandler );
+    IntRegInterrupt( IRQ_TIMER, IRQHandler( 0 ), TmIntHandler );
     IntEnable();
 }
 
@@ -51,7 +51,7 @@ void TmInitTimer( void ) {
 // Description:
 //  8253 timer interrupt handler
 //
-void TmIntHandler( u8 irqnum ) {
+void TmIntHandler( u8 IrqNum ) {
 
     u8 volatile *videomem = (u8 *)0xB84FE;
 

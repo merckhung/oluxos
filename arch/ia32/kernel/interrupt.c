@@ -15,12 +15,16 @@
 #include <ia32/i8259.h>
 #include <ia32/debug.h>
 
-static struct IntHandlerLst_t InterrupHandlertList[ NR_INTERRUPT ];
-static struct IDTEntry_t IDTTable[ SZ_INTENTRY ];
+
+IntHandlerLst InterrupHandlertList[ NR_VECTOR ];
+IDTEntry IDTTable[ NR_VECTOR ];
+IDTPtr IDTPointer;
+
 
 extern void __KERNEL_CS( void );
-
+extern void InterruptHandler( void );
 extern void ExceptionHandler( void );
+
 
 extern void divide_error( void );
 extern void debug( void );
@@ -37,7 +41,7 @@ extern void segment_not_present( void );
 extern void stack_fault( void );
 extern void general_protection_exception( void );
 extern void page_fault_exception( void );
-extern void x86_fpu_floating_point_error( void );
+extern void x87_fpu_floating_point_error( void );
 extern void alignment_check_exception( void );
 extern void machine_check_exception( void );
 extern void simd_floating_point_exception( void );
@@ -57,57 +61,54 @@ extern void simd_floating_point_exception( void );
 //
 void IntInitInterrupt( void ) {
 
-    s32 i;
-	struct IDTPtr_t IDTPtr;
+    u32 i;
 
 
-    // Initialize
-    CbMemSet( IDTTable, 0, SZ_INTENTRY );
+	DbgPrint( "IDT Entry Size: 0x%8.8X\n", sizeof( IDTEntry ) );
 
 
-    IntSetIDT( 0, (u32)divide_error, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 1, (u32)debug, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 2, (u32)nmi, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 3, (u32)breakpoint, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 4, (u32)overflow, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 5, (u32)bound_range_exceeded, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 6, (u32)invalid_opcode, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 7, (u32)device_not_available, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 8, (u32)double_fault, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 9, (u32)coprocessor_segment_overrun, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 10, (u32)invalid_tss, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 11, (u32)segment_not_present, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 12, (u32)stack_fault, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 13, (u32)general_protection_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 14, (u32)page_fault_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 15, (u32)ExceptionHandler, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 16, (u32)x86_fpu_floating_point_error, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 17, (u32)alignment_check_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 18, (u32)machine_check_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
-    IntSetIDT( 19, (u32)simd_floating_point_exception, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    // Initialize IDT Tables
+    CbMemSet( (s8 *)IDTTable, 0, sizeof( IDTEntry ) * NR_VECTOR );
 
 
     // Setup exceptions handler
-    for( i = 20 ; i <= TRAP_END ; i++ ) {
+    for( i = 0 ; i < HW_INT_START ; i++ ) {
 
-        IntSetIDT( i, (u32)ExceptionHandler, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+        IntSetIDT( i, ExceptionHandler, __KERNEL_CS, TRAP_GATE_FLAG );
     }
 
 
+	// Initialize IDT Entry for Exceptions
+    IntSetIDT( 0, divide_error, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 1, debug, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 2, nmi, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 3, breakpoint, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 4, overflow, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 5, bound_range_exceeded, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 6, invalid_opcode, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 7, device_not_available, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 8, double_fault, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 9, coprocessor_segment_overrun, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 10, invalid_tss, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 11, segment_not_present, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 12, stack_fault, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 13, general_protection_exception, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 14, page_fault_exception, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 16, x87_fpu_floating_point_error, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 17, alignment_check_exception, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 18, machine_check_exception, __KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( 19, simd_floating_point_exception, __KERNEL_CS, TRAP_GATE_FLAG );
+
+
+
     // Setup IDT Pointer
-    IDTPtr.Limit    = NR_INTERRUPT * SZ_INTENTRY - 1;
-    IDTPtr.BaseAddr = (u32)IDTTable;
+    IDTPointer.Limit    = (NR_VECTOR * sizeof( IDTEntry )) - 1;
+    IDTPointer.BaseAddr = (u32)IDTTable;
+	DbgPrint( "IDTPointer = 0x%X, IDTTable = 0x%X\n", &IDTPointer, IDTTable );
 
 
-	TcPrint( "IDTPtr = 0x%X, IDTTable = 0x%X\n", &IDTPtr, IDTTable );
-
-
-    // Load IDTR 
-    __asm__ __volatile__ (
-
-        "lidt   (%0)\n"
-        :: "g" (&IDTPtr)
-    );
+	//Load IDT Pointer
+	IntLoadIDTRegister( &IDTPointer );
 
 
     // Initialize i8259A PIC
@@ -119,6 +120,19 @@ void IntInitInterrupt( void ) {
 }
 
 
+
+void IntLoadIDTRegister( IDTPtr *Ptr ) {
+
+    // Load IDT Register
+    __asm__ __volatile__ (
+
+        "lidt   (%%eax)\n"
+		:: "a" (Ptr)
+    );
+}
+
+
+
 //
 // IntSetIDT
 //
@@ -126,7 +140,7 @@ void IntInitInterrupt( void ) {
 //  index   : Interrupt number
 //  offset  : Offset of interrupt handler from code segment
 //  seg     : Segment descriptor offset
-//  flag    : Flag of gate
+//  flag    : Flags of Gate
 //
 // Return:
 //  None
@@ -134,13 +148,17 @@ void IntInitInterrupt( void ) {
 // Description:
 //  Setup IDT entry for specified interrupt/exception number
 //
-void IntSetIDT( u8 index, u32 offset, u16 seg, u8 flag ) {
+void IntSetIDT( u32 Index, void *Handler, void *SegSel, u8 Flags ) {
 
-    IDTTable[ index ].OffsetLSW = (u16)(offset & 0xffff);
-    IDTTable[ index ].OffsetMSW = (u16)((offset >> 16) & 0xffff);
-    IDTTable[ index ].SegSelect = seg;
-    IDTTable[ index ].Flag      = flag;
+	u32 Offset = (u32)Handler;
+	u16 segsel = (u32)SegSel;
+
+    IDTTable[ Index ].OffsetLSW = (u16)(Offset & 0xFFFF);
+    IDTTable[ Index ].OffsetMSW = (u16)((Offset >> 16) & 0xFFFF);
+    IDTTable[ Index ].SegSelect = segsel;
+    IDTTable[ Index ].Flags		= Flags;
 }
+
 
 
 //
@@ -155,9 +173,9 @@ void IntSetIDT( u8 index, u32 offset, u16 seg, u8 flag ) {
 // Description:
 //  Delete IDT entry for specified interrupt/exception number
 //
-void IntDelIDT( u8 index ) {
+void IntDelIDT( u32 Index ) {
 
-    CbMemSet( IDTTable + (index * 8), 0, SZ_INTENTRY );
+    CbMemSet( (s8 *)(&IDTTable[ Index ]), 0, sizeof( IDTEntry ) );
 }
 
 
@@ -211,15 +229,30 @@ void IntEnable( void ) {
 // Description:
 //  Public routine for CPU interrupt register
 //
-void IntRegInterrupt( u8 intnum, u32 handler, void (*IntHandler)( u8 intnum ) ) {
+void IntRegInterrupt( u32 IrqNum, void *IrqHandler, void (*HwIntHandler)( u8 IrqNum ) ) {
 
-    DbgPrint( "IntRegInterrupt: index 0x%x, handler 0x%x\n", intnum, handler );
+
+    DbgPrint( "IntRegInterrupt: IRQ 0x%x, Comm 0x%x, Hw 0x%x\n", IrqNum, (u32)IrqHandler, (u32)HwIntHandler );
+
+
+	// Disable interrupt
+	IntDisable();
+
 
     // Add interrupt gate
-    IntSetIDT( intnum, handler, (u16)__KERNEL_CS, TRAP_GATE_FLAG );
+    IntSetIDT( IrqNum + HW_INT_START, (u32)IrqHandler, __KERNEL_CS, TRAP_GATE_FLAG );
+
 
     // Install interrupt handler
-    InterrupHandlertList[ intnum ].Handler = IntHandler;
+    InterrupHandlertList[ IrqNum ].IrqHandler = HwIntHandler;
+
+
+    // Enable 8259A IRQ line
+    i8259EnableIRQ( IrqNum );
+
+
+	// Enable interrupt
+	IntEnable();
 }
 
 
@@ -235,15 +268,30 @@ void IntRegInterrupt( u8 intnum, u32 handler, void (*IntHandler)( u8 intnum ) ) 
 // Description:
 //  Public routine for CPU interrupt register
 //
-void IntUnregInterrupt( u8 intnum ) {
+void IntUnregInterrupt( u32 IrqNum ) {
 
-    DbgPrint( "IntUnregInterrupt: index 0x%x\n", intnum );
+
+    DbgPrint( "IntUnregInterrupt: Index 0x%x\n", IrqNum );
+
+
+	// Disable interrupt
+	IntDisable();
+
+
+    // Disable 8259A IRQ line
+    i8259DisableIRQ( IrqNum );
+
 
     // Uninstall interrupt handler
-    InterrupHandlertList[ intnum ].Handler = 0;
+    InterrupHandlertList[ IrqNum ].IrqHandler = 0;
+
 
     // Delete interrupt gate
-    IntDelIDT( intnum );
+    IntDelIDT( IrqNum + HW_INT_START );
+
+
+	// Enable interrupt
+	IntEnable();
 }
 
 
@@ -265,11 +313,14 @@ void IntRegIRQ( u8 irqnum, u32 handler, void (*IRQHandler)( u8 irqnum ) ) {
 
     DbgPrint( "IntRegIRQ: index 0x%x, handler 0x%x\n", irqnum + PIC_IRQ_BASE, handler );
 
+
     // Add interrupt gate
     IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (u16)__KERNEL_CS, INT_GATE_FLAG );
 
+
     // Install interrupt handler
-    InterrupHandlertList[ irqnum + PIC_IRQ_BASE ].Handler = IRQHandler;
+    InterrupHandlertList[ irqnum + PIC_IRQ_BASE ].IrqHandler = IRQHandler;
+
 
     // Enable 8259A IRQ line
     i8259EnableIRQ( irqnum );
@@ -292,11 +343,14 @@ void IntUnregIRQ( u8 irqnum ) {
 
     DbgPrint( "IntUnregIRQ: index 0x%x\n", irqnum + PIC_IRQ_BASE );
 
+
     // Disable 8259A IRQ line
     i8259DisableIRQ( irqnum );
 
+
     // Uninstall interrupt handler
-    InterrupHandlertList[ irqnum + PIC_IRQ_BASE ].Handler = 0;
+    InterrupHandlertList[ irqnum + PIC_IRQ_BASE ].IrqHandler = 0;
+
 
     // Delete interrupt gate
     IntDelIDT( irqnum + PIC_IRQ_BASE );
@@ -337,7 +391,7 @@ void IntHandleIRQ( u32 irqnum, struct SavedRegs_t regs ) {
     );
 #endif
 
-    InterrupHandlertList[ irq + PIC_IRQ_BASE ].Handler( irq );
+    InterrupHandlertList[ irq + PIC_IRQ_BASE ].IrqHandler( irq );
 }
 
 

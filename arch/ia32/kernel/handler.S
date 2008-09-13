@@ -14,7 +14,7 @@
 .global divide_error, debug, nmi, breakpoint, overflow, bound_range_exceeded
 .global invalid_opcode, device_not_available, double_fault, coprocessor_segment_overrun
 .global invalid_tss, segment_not_present, stack_fault, general_protection_exception
-.global page_fault_exception, x86_fpu_floating_point_error, alignment_check_exception
+.global page_fault_exception, x87_fpu_floating_point_error, alignment_check_exception
 .global machine_check_exception, simd_floating_point_exception
 
 
@@ -116,13 +116,13 @@
 // Preliminary Interrupt Handler
 // Preload interrupt vector into stack and then jump to common handler
 //
-.macro InstallInterruptHandler
-    .global PreliminaryInterruptHandler_\@
+.macro InstallIrqHandler
+    .global IrqHandler_\@
     .align 4
-    PreliminaryInterruptHandler_\@:
+    IrqHandler_\@:
     movl    $\@, -52(%esp)
     lea     -52(%esp), %ebx
-    jmp     InterruptHandler
+    jmp     CommonIrqHandler
 .endm
 
 
@@ -148,16 +148,16 @@ SavedAllRegs:
 //
 // Install Interrupt Handler
 //
-.rept NR_INTERRUPT
-InstallInterruptHandler
+.rept NR_VECTOR
+InstallIrqHandler
 .endr
 
 
 //
-// InterruptHandler -- Common entry for interrupt
+// CommonIrqHandler -- Common entry for HW IRQ interrupt
 //
 .align 4
-InterruptHandler:
+CommonIrqHandler:
 
     SaveAllRegs
     subl    $4, %esp                // Get preload interrupt vector
@@ -545,7 +545,7 @@ page_fault_exception:
 //
 // x87 FPU Floating-Point Error (#MF) -- Handle exception 16 #MF
 //
-x86_fpu_floating_point_error:
+x87_fpu_floating_point_error:
 
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
@@ -636,10 +636,13 @@ ExceptionReturn:
 .align 4
 ExceptionHandler:
 
+	pushl	%esi
     movl    $0xb83bc, %esi
     incb    (%esi)
     movl    $0xb83bd, %esi
     incb    (%esi)
+	popl	%esi
+
     iret
 
 

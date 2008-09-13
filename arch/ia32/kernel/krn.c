@@ -28,7 +28,7 @@
 
 
 
-static struct IRQStack_t IRQStack;
+//static struct IRQStack_t IRQStack;
 
 
 //
@@ -59,6 +59,7 @@ void krn_entry( void ) {
 
 
     // Setup IRQ stack
+/*
     CbMemSet( &IRQStack.stack, 0, SZ_IRQ_STACK );
     IRQStack.esp = (u32)(IRQStack.stack + SZ_IRQ_STACK);
     __asm__ __volatile__ (
@@ -66,6 +67,7 @@ void krn_entry( void ) {
         "movl   %0, %%esp\n"
         :: "g" (IRQStack.esp)
     );
+*/
 
 
     // Check SMBIOS
@@ -90,7 +92,7 @@ void krn_entry( void ) {
 
 
     // Initialize IDE Hard Disk
-    IDEInit();
+    //IDEInit();
 
  
     // Init keyboard
@@ -98,17 +100,7 @@ void krn_entry( void ) {
 
 
     // Init timer
-    TmInitTimer();
-
-
-#if 0
-    __asm__ __volatile__ (
-
-        "movl   $0x56, %eax\n"
-        "xorl   %ebx, %ebx\n"
-        "div    %bl\n"
-    );
-#endif
+    //TmInitTimer();
 
 
     // Start task scheduler

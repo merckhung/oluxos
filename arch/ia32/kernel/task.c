@@ -34,7 +34,7 @@ extern void __USER_CS( void );
 extern void __USER_DS( void );
 extern void __ldt_seg( void );
 
-extern volatile u32  *usermem;
+//extern volatile u32  *usermem;
 
 void TskTest1( void ) {
 
@@ -113,8 +113,8 @@ void TskInit( void ) {
     u->flag         = 0xe9;
 
 
-    DbgPrint( "usermem = 0x%8X, value = 0x%8X\n", usermem, *usermem );
-    CbMemCpy( (void *)usermem, TskUsr1, 512 );
+    //DbgPrint( "usermem = 0x%8X, value = 0x%8X\n", usermem, *usermem );
+    //CbMemCpy( (void *)usermem, TskUsr1, 512 );
 
 
     //

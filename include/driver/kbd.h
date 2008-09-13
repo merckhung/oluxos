@@ -11,6 +11,7 @@
 //
 // Controller
 //
+#define		KBD_IRQ			0x01
 #define     KBCNT_PORT      0x60
 #define     KB8042_PORT     0x64
 

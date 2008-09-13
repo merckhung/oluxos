@@ -16,7 +16,9 @@
 #include <driver/console.h>
 
 
-extern void PreliminaryInterruptHandler_1( void );
+ExternIRQHandler( 1 );
+
+
 static u8 CapsLock = 0;
 static u8 NumLock = 0;
 static u8 ScrollLock = 0;
@@ -169,7 +171,7 @@ static struct KbdAsciiPair_t kap[] = {
 void KbdInitKeyboard( void ) {
 
     IntDisable();
-    IntRegIRQ( 1, IRQHandler( 1 ), KbdIntHandler );
+    IntRegInterrupt( IRQ_KEYBOARD, IRQHandler( 1 ), KbdIntHandler );
     IntEnable();
 }
 
@@ -186,7 +188,7 @@ void KbdInitKeyboard( void ) {
 // Description:
 //  Keyboard interrupt handler
 //
-void KbdIntHandler( u8 irqnum ) {
+void KbdIntHandler( u8 IrqNum ) {
 
     u16 i;
     u8 keycode;

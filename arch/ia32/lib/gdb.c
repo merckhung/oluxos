@@ -2,10 +2,9 @@
  * Copyright (C) 2006 -  2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
- *
- * gdb.c -- OluxOS IA32 Remote GDB Routines
+ * File: gdb.c
+ * Description:
+ * 	OluxOS IA32 Remote GDB Routines
  *
  */
 #include <types.h>
@@ -24,11 +23,36 @@ extern u32 SavedAllRegs[ GDB_NUM_REGS ];
 extern u32 SavedErrorCode;
 
 
+static s8 *ExcStr[] = {
+
+	"Divide Error",						// 0
+	"Debug Error",						// 1
+	"NMI",								// 2
+	"Breakpoint",						// 3
+	"Overflow",							// 4
+	"Bound Range Exceeded",				// 5
+	"Invalid Opcode",					// 6
+	"Device Not Available",				// 7
+	"Double Fault",						// 8
+	"Coprocessor Segment Overrun",		// 9
+	"Invalid TSS",						// 10
+	"Segment Not Present",				// 11
+	"Stack Fault",						// 12
+	"General Protection Fault",			// 13
+	"Page Fault",						// 14
+	"N/A",								// 15
+	"x87 FPU Floating Point Error",		// 16
+	"Alignment Check Exception",		// 17
+	"Machine Check Exception",			// 18
+	"SIMD Floating-Point Exception",	// 19
+};
+
+
 static u32 ExcTranTbl[][ 2 ] = {
 
     { 0,    8   },
     { 1,    5   },
-    { 1,    5   },
+    { 2,    5   },
     { 3,    5   },
     { 4,    16  },
     { 5,    16  },
@@ -238,10 +262,16 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
 
 
     DbgPrint( "Catched Exception No: %d\n", ExceptionVector );
+	if( ExceptionVector < 20 ) {
+	
+		DbgPrint( "%s\n", ExcStr[ ExceptionVector ] );
+	}
+	DbgPrint( "Error Code: 0x%8.8X\n", SavedErrorCode );
 
 
     // Translate Exception to Signal
     sigval = TranslateException( ExceptionVector );
+	DbgPrint( "sigval : %d\n", sigval );
 
 
     // Signal

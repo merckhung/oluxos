@@ -2,10 +2,9 @@
  * Copyright (C) 2006 - 2007 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
- *
- * page.c -- OluxOS IA32 paging routines
+ * File: page.c
+ * Description:
+ * 	OluxOS IA32 paging routines
  *
  */
 #include <types.h>
@@ -14,14 +13,15 @@
 #include <ia32/debug.h>
 
 
-static volatile u32 *PDEPtr;
-static volatile u32 *PTEPtr;
-volatile u32 *usermem;
+volatile u32 *PDEPtr = (volatile u32 *)PDE_ADDR;
+volatile u32 *PTEPtr = (volatile u32 *)PTE_ADDR;
+
+
 volatile u8 *e820_count = (volatile u8 *)E820_COUNT;
 volatile E820Result *e820_base = (volatile E820Result *)E820_BASE;
 
 
-s8 *AddrType[] = {
+static s8 *AddrType[] = {
 
 	"Undefined",
 	"Memory",
@@ -30,18 +30,6 @@ s8 *AddrType[] = {
 	"NVS",
 	"Unusable",
 };
-
-
-
-s8 *MmShowE820Type( u32 RecType ) {
-
-	if( RecType < ADDRESS_RANGE_MEMORY || RecType > ADDRESS_RANGE_NVS ) {
-	
-		return AddrType[ ADDRESS_RANGE_UNDEFINED ];
-	}
-
-	return AddrType[ RecType ];
-}
 
 
 
@@ -84,15 +72,16 @@ void MmPageInit( void ) {
 
 	// Print out total memory size available
 	TcPrint( "Total Memory Size: %d MB\n", (u32)(MemSize / 1024ULL / 1024ULL) );
+	DbgPrint( "PDE Start Addr: 0x%8.8X\n", (u32)PDEPtr );
+	DbgPrint( "PTE Start Addr: 0x%8.8X\n", (u32)PTEPtr );
 
 
     // Initialize Page Directory Entries
-    PDEPtr = (u32 *)PAGEADDR;
-    PTEPtr = (u32 *)((u32)PDEPtr + 0x1000);
-    for( i = 0 ; i < PDENUM ; i++ ) {
+    for( i = 0 ; i < NR_PDE ; i++ ) {
     
-        *(PDEPtr + i) = ((u32)PTEPtr + i * 0x1000) | 0x00000003;
+        *(PDEPtr + i) = (PTE_ADDR + (i * PAGE_SIZE)) | P_SUP_WT_RW_4K;
 
+		/*
         if( (i + 1) == PDENUM ) {
         
             //
@@ -100,16 +89,20 @@ void MmPageInit( void ) {
             //
             *(PDEPtr + i) |= 0x00000004;
         }
+		*/
 
-        //DbgPrint( "PDE value = 0x%8X\n", *(PDEPtr + i) );
+        DbgPrint( "PDE Addr = 0x%8.8X, Value = 0x%8.8X\n", (u32)(PDEPtr + i), *(PDEPtr + i) );
     }
 
 
     // Initialize Page Table Entries
-    for( i = 0 ; i < PTENUM ; i++ ) {
+    for( i = 0 ; i < NR_PTE ; i++ ) {
 
-        *(PTEPtr + i) = (u32)(filladdr + i * 0x1000) | 0x00000003;
 
+        *(PTEPtr + i) = (u32)(filladdr + i * PAGE_SIZE) | P_SUP_WT_RW_4K;
+
+
+		/*
         if( i >= (PTENUM - 1024) ) {
 
 
@@ -125,26 +118,99 @@ void MmPageInit( void ) {
                 usermem = PTEPtr + i;
             }
          }
-
-        //DbgPrint( "PTE value = 0x%8X\n", *(PTEPtr + i) );
+		 */
     }
 
 
-    // Setup CR3 and enable Page
+    // Setup PDE pointer and enable paging
+	MmEnablePaging( PDEPtr );
+}
+
+
+
+s8 *MmShowE820Type( E820Type RecType ) {
+
+	if( RecType < ADDRESS_RANGE_MEMORY || RecType > ADDRESS_RANGE_NVS ) {
+	
+		return AddrType[ ADDRESS_RANGE_UNDEFINED ];
+	}
+
+	return AddrType[ RecType ];
+}
+
+
+
+void MmEnablePaging( volatile u32 *Ptr ) {
+
+	u32 PtrAddr = (u32)Ptr;
+
+
+	DbgPrint( "Kernel PDE Pointer Addr = 0x%8.8X\n", PtrAddr );
+
+
+    // Setup Page Directory Entry Pointer (CR3)
+	// Enable Paging (CR0)
+	// Flush TLB
     __asm__ __volatile__ (
-        "movl   %0, %%eax\n"
+
+		"movl	%0, %%eax\n"
         "movl   %%eax, %%cr3\n"
         "movl   %%cr0, %%eax\n"
         "orl    $0x80000000, %%eax\n"
         "movl   %%eax, %%cr0\n"
-        "jmp    _FlushTLBs\n"
-        "_FlushTLBs:\n"
-        :
-        : "g" (PDEPtr)
+		"jmp	_FlushTLB\n"
+		"_FlushTLB:\n"
+        :: "m" (PtrAddr)
         : "eax"
     );
+}
 
 
+
+void MmDisablePaging( void ) {
+
+
+	// Disable Paging (CR0)
+	// Flush TLB
+	__asm__ __volatile__ (
+
+		"movl	%%cr0, %%eax\n"
+		"andl	$0x7FFFFFFF, %%eax\n"
+		"movl	%%eax, %%cr0\n"
+		"xorl	%%eax, %%eax\n"
+		"movl	%%eax, %%cr3\n"
+		::: "eax"
+	);
+}
+
+
+
+void MmEnablePSE( void ) {
+
+
+	// Enable Bit 4 of CR4
+	__asm__ __volatile__ (
+	
+		"movl	%%cr4, %%eax\n"
+		"orl	$0x10, %%eax\n"
+		"movl	%%eax, %%cr4\n"
+		::: "eax"
+	);
+}
+
+
+
+void MmDisablePSE( void ) {
+
+
+	// Disable Bit 4 of CR4
+	__asm__ __volatile__ (
+	
+		"movl   %%cr4, %%eax\n"
+		"andl	$0xFFFFFFEF, %%eax\n"
+		"movl   %%eax, %%cr4\n"
+		::: "eax"
+	);
 }
 
 

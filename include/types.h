@@ -30,11 +30,14 @@ typedef     s32                   	int32;
 typedef     s64                   	int64;
 
 typedef     u8                      bool;
+typedef		volatile void			*PhysicalMemory;
 
 
 #define     FALSE                   0
 #define     TRUE                    1
 #define		NULL					0
+
+
 #define		PACKED_STRUCT			typedef struct __attribute__((packed))
 
 
