@@ -34,9 +34,8 @@ ExternIRQHandler( 0 );
 //
 void TmInitTimer( void ) {
 
-    IntDisable();
+	// Register interrupt handler
     IntRegInterrupt( IRQ_TIMER, IRQHandler( 0 ), TmIntHandler );
-    IntEnable();
 }
 
 
@@ -58,8 +57,6 @@ void TmIntHandler( u8 IrqNum ) {
 
     (*videomem)++;
     (*(videomem + 1))++;
-
-    IntIssueEOI();
 }
 
 

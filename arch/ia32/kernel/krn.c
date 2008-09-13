@@ -80,12 +80,16 @@ void krn_entry( void ) {
     //IDEInit();
 	
 
+	// Init timer
+	TmInitTimer();
+	
+
     // Init keyboard
     KbdInitKeyboard();
 
 
-    // Init timer
-    TmInitTimer();
+	// Enable serial interrupt
+	SrInitInterrupt();
 
 
     // Start task scheduler

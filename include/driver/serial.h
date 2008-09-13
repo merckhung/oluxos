@@ -2,8 +2,9 @@
  * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
+ * File: serial.h
+ * Description:
+ * 	None
  *
  */
 
@@ -14,6 +15,8 @@
 
 
 void SrInit( void );
+void SrInitInterrupt( void );
+void SrIntHandler( u8 IrqNum );
 void SrPutChar( s8 c );
 s8 SrGetChar( void );
 

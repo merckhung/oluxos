@@ -32,7 +32,6 @@
 void i8259Init( void ) {
 
 
-    DbgPrint( "Disable all IRQ for initial processes\n" );
     // Mask all HW interrupt for initialization
     IoOutByte( 0xFF, PIC_MASTER_IMR );    
     IoOutByte( 0xFF, PIC_SLAVE_IMR );
@@ -70,9 +69,6 @@ void i8259Init( void ) {
     // Mask all HW interrupt again
     IoOutByte( 0xFF, PIC_MASTER_IMR );    
     IoOutByte( 0xFF, PIC_SLAVE_IMR );
-
-
-	DbgPrint( "i8259 initialized\n" );
 }
 
 
@@ -92,7 +88,6 @@ void i8259Init( void ) {
 void i8259EnableIRQ( u8 IrqNum ) {
 
     u8 reg = PIC_MASTER_IMR;
-	u8 tmp;
 
 
     if( IrqNum >= 8 ) {
@@ -102,12 +97,7 @@ void i8259EnableIRQ( u8 IrqNum ) {
     }
 
 
-	tmp = IoInByte( reg );
-	tmp &= ~(1 << IrqNum);
-
-
-	DbgPrint( "Enable IRQ %d, new IMR 0x%X\n", IrqNum, tmp );
-    IoOutByte( tmp, reg );
+    IoOutByte( IoInByte( reg ) & ~(1 << IrqNum), reg );
 }
 
 
@@ -126,7 +116,6 @@ void i8259EnableIRQ( u8 IrqNum ) {
 void i8259DisableIRQ( u8 IrqNum ) {
 
     u8 reg = PIC_MASTER_IMR;
-	u8 tmp;
 
 
     if( IrqNum & 0x8 ) {
@@ -136,12 +125,7 @@ void i8259DisableIRQ( u8 IrqNum ) {
     }
 
 	
-	tmp = IoInByte( reg );
-	tmp |= (1 << IrqNum);
-
-
-	DbgPrint( "Enable IRQ %d, new IMR 0x%X\n", IrqNum, tmp );
-    IoOutByte( tmp, reg );
+    IoOutByte( IoInByte( reg ) | (1 << IrqNum), reg );
 }
 
 

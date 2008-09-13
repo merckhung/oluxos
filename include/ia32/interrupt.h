@@ -51,6 +51,7 @@
 // Hardware IRQ Numbers
 #define		IRQ_TIMER				0x00
 #define		IRQ_KEYBOARD			0x01
+#define		IRQ_SERIAL0				0x04
 
 
 
@@ -102,6 +103,8 @@ void IntUnregInterrupt( u32 IntNum );
 
 void IntHandleIRQ( u32 IrqNum, GeneralRegisters *Regs );
 void IntIssueEOI( void );
+
+void IntShowIDTTable( void );
 #endif
 
 

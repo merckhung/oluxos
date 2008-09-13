@@ -218,7 +218,7 @@ void MmDisablePSE( void ) {
 void MmPageFaultHandler( u32 ErrorCode, GeneralRegisters *Regs ) {
 
 
-	DbgPrint( "EIP: 0x%8.8X, CS: 0x%4.4X\n", Regs->eip, Regs->cs );
+	DbgPrint( "Page Fault (14)\nEIP: 0x%8.8X, CS: 0x%4.4X\n", Regs->eip, Regs->cs );
 
 
 	// Present or not present
@@ -263,9 +263,6 @@ void MmPageFaultHandler( u32 ErrorCode, GeneralRegisters *Regs ) {
 	
 		DbgPrint( "RSVD:    No\n" );
 	}
-
-
-	DbgStop();
 }
 
 

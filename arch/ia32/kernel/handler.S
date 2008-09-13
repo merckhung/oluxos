@@ -94,7 +94,7 @@
     .global IrqHandler_\@
     .align 4
     IrqHandler_\@:
-	movl	$\@, IRQNumber
+	movl	$\@, SavedIRQNumber
     jmp     CommonIrqHandler
 .endm
 
@@ -104,15 +104,11 @@
 // Save All Registers
 //
 .align 4
-.global SavedErrorCode
+.global SavedAllRegs, SavedErrorCode
 SavedErrorCode:
 .long   0
-IRQNumber:
+SavedIRQNumber:
 .long	0
-
-
-.align 4
-.global SavedAllRegs
 SavedAllRegs:
 .rept 16
 .long   0
@@ -142,12 +138,13 @@ CommonIrqHandler:
 
 	// Prepare input parameters
 	pushl   $SavedAllRegs
-	pushl	IRQNumber
+	pushl	SavedIRQNumber
     call    IntHandleIRQ
 
 
 	// Return
     jmp     InterruptReturn
+
 
 InterruptReturn:
     RestoreAllRegs

@@ -246,9 +246,6 @@ void IntRegInterrupt( u32 IrqNum, void *IrqHandler, void (*HwIntHandler)( u8 Irq
     IntSetIDT( IrqNum + HW_INT_START, (u32)IrqHandler, __KERNEL_CS, GATE_INT_FLAG );
 
 
-	IntShowIDTTable();
-
-
     // Install interrupt handler
     InterrupHandlertList[ IrqNum ].IrqHandler = HwIntHandler;
 
@@ -303,71 +300,6 @@ void IntUnregInterrupt( u32 IrqNum ) {
 
 
 
-/*
-//
-// IntRegIRQ
-//
-// Intput:
-//  irqnum      : IRQ number
-//  handler     : offset address of interrupt handler
-//
-// Return:
-//  0  -- success
-//  -1 -- failed
-//
-// Description:
-//  Public routine for HW IRQ register
-//
-void IntRegIRQ( u8 irqnum, u32 handler, void (*IRQHandler)( u8 irqnum ) ) {
-
-    DbgPrint( "IntRegIRQ: index 0x%x, handler 0x%x\n", irqnum + PIC_IRQ_BASE, handler );
-
-
-    // Add interrupt gate
-    IntSetIDT( irqnum + PIC_IRQ_BASE, handler, (u16)__KERNEL_CS, GATE_INT_FLAG );
-
-
-    // Install interrupt handler
-    InterrupHandlertList[ irqnum + PIC_IRQ_BASE ].IrqHandler = IRQHandler;
-
-
-    // Enable 8259A IRQ line
-    i8259EnableIRQ( irqnum );
-}
-
-
-//
-// IntUnregIRQ
-//
-// Input:
-//  irqnum      : IRQ number
-//
-// Return:
-//  None
-//
-// Description:
-//  Public routine for HW IRQ unregister
-//
-void IntUnregIRQ( u8 irqnum ) {
-
-    DbgPrint( "IntUnregIRQ: index 0x%x\n", irqnum + PIC_IRQ_BASE );
-
-
-    // Disable 8259A IRQ line
-    i8259DisableIRQ( irqnum );
-
-
-    // Uninstall interrupt handler
-    InterrupHandlertList[ irqnum + PIC_IRQ_BASE ].IrqHandler = 0;
-
-
-    // Delete interrupt gate
-    IntDelIDT( irqnum + PIC_IRQ_BASE );
-}
-*/
-
-
-
 //
 // IntHandleIRQ
 //
@@ -383,26 +315,20 @@ void IntUnregIRQ( u8 irqnum ) {
 void IntHandleIRQ( u32 IrqNum, GeneralRegisters *Regs ) {
 
 
-#if 0
-    __asm__ __volatile__ (
-    
-        "movl   %0, %%eax\n"
-        "movl   %%esp, %%ebx\n"
-        "movl   %1, %%esp\n"
-        "pushl  %%eax\n"
-        "movl   %2, %%eax\n"
-        "call   *(%%eax)\n"
-        "addl   $4, %%esp\n"
-        "jmp    .\n"
-        :: "g" (irqnum),
-           "g" (IRQStack.esp),
-           "g" (InterrupHandlertList[ irq + PIC_IRQ_BASE ].Handler)
-        : "eax"
-    );
-#endif
+	// Disable interrupt
+	IntDisable();
 
 
+	// Relinquish to hardware interrupt handler
     InterrupHandlertList[ IrqNum ].IrqHandler( IrqNum );
+
+
+	// Enable interrupt
+	IntEnable();
+
+
+	// Issue End Of Interrupt (EOI)
+	IntIssueEOI();
 }
 
 
@@ -431,7 +357,7 @@ void IntShowIDTTable( void ) {
 	u32 i;
 	s32 *p;
 
-	for( i = 0x20 ; i < 0x22 ; i++ ) {
+	for( i = 0x20 ; i < 0x2F ; i++ ) {
 	
 		p = (s32 *)&IDTTable[ i ];
 		DbgPrint( "Interrupt Number: %d\n", i );

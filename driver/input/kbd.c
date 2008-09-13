@@ -171,9 +171,8 @@ static struct KbdAsciiPair_t kap[] = {
 //
 void KbdInitKeyboard( void ) {
 
-    IntDisable();
+	// Register interrupt handler
     IntRegInterrupt( IRQ_KEYBOARD, IRQHandler( 1 ), KbdIntHandler );
-    IntEnable();
 }
 
 
@@ -195,37 +194,39 @@ void KbdIntHandler( u8 IrqNum ) {
     u8 keycode;
 
 
-    // Disable interrupt
-    IntDisable();
-
-
     // Read key code
     keycode = IoInByte( 0x60 );
     if( keycode & 0x80 ) {
     
-        goto KbdIntHandler_Done;         
+		return;
     }
 
 
     switch( keycode ) {
     
+
         case KEY_CAPSLOCK:
+
             KbdSendCmd( 0xed );
             KbdSendCmd( 0x04 );
             CapsLock = ~(CapsLock & 0x01);
-            goto KbdIntHandler_Done;
+            return;
+
 
         case KEY_NUMLOCK:
+
             KbdSendCmd( 0xed );
             KbdSendCmd( 0x02 );
             NumLock = ~(NumLock & 0x01 );
-            goto KbdIntHandler_Done;
+            return;
+
 
         case KEY_SCRLOCK:
+
             KbdSendCmd( 0xed );
             KbdSendCmd( 0x01 );
             ScrollLock = ~(ScrollLock & 0x01 );
-            goto KbdIntHandler_Done;
+            return;
     }
 
 
@@ -240,12 +241,6 @@ void KbdIntHandler( u8 IrqNum ) {
             break;
         }
     }
-
-
-KbdIntHandler_Done:
-
-    IntIssueEOI();
-    IntEnable();
 }
 
 
