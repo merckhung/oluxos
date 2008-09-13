@@ -8,13 +8,13 @@
  */
 
 
-void IoOutByte( const __u8 value, const __u16 port );
-__u8 IoInByte( const __u16 port );
+void IoOutByte( const u8 value, const u16 port );
+u8 IoInByte( const u16 port );
 
-void IoOutWord( const __u16 value, const __u16 port );
-__u16 IoInWord( const __u16 port );
+void IoOutWord( const u16 value, const u16 port );
+u16 IoInWord( const u16 port );
 
-void IoOutDWord( const __u32 value, const __u16 port );
-__u32 IoInDWord( const __u16 port );
+void IoOutDWord( const u32 value, const u16 port );
+u32 IoInDWord( const u16 port );
 
 

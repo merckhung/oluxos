@@ -15,9 +15,9 @@
 #include <driver/ide.h>
 
 
-void ReadData( __s8 *buf ) {
+void ReadData( s8 *buf ) {
 
-    __s16 i, j, k, tmp;
+    s16 i, j, k, tmp;
 
     for( i = 0, j = 0, k = 0 ; i < 256 ; i++, j++, k+=2 ) {
 
@@ -28,7 +28,7 @@ void ReadData( __s8 *buf ) {
 }
 
 
-void ReadSector( __u32 sector ) {
+void ReadSector( u32 sector ) {
 
     IoOutByte( 0x01, IDE_NSECTOR );
     IoOutByte( (sector & 0x000000ff), IDE_SECTOR );
@@ -39,9 +39,9 @@ void ReadSector( __u32 sector ) {
 }
 
 
-void WriteSector( __u32 sector, __s8 *buf ) {
+void WriteSector( u32 sector, s8 *buf ) {
 
-    __s32 i;
+    s32 i;
 
     IoOutByte( 0x01, IDE_NSECTOR );
     IoOutByte( (sector & 0x000000ff), IDE_SECTOR );
@@ -66,9 +66,9 @@ void GetIdentify( void ) {
 
 void IDEInit( void ) {
 
-    __s32 i, j, k;
-    __s8 buf[ 512 ];
-    __s8 read[ 512 ];
+    s32 i, j, k;
+    s8 buf[ 512 ];
+    s8 read[ 512 ];
 
 
     for( i = 0 ; i < 512 ; i++ ) {

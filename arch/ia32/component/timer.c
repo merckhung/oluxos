@@ -51,9 +51,9 @@ void TmInitTimer( void ) {
 // Description:
 //  8253 timer interrupt handler
 //
-void TmIntHandler( __u8 irqnum ) {
+void TmIntHandler( u8 irqnum ) {
 
-    __u8 volatile *videomem = (__u8 *)0xB84FE;
+    u8 volatile *videomem = (u8 *)0xB84FE;
 
     (*videomem)++;
     (*(videomem + 1))++;

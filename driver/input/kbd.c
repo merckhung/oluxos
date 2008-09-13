@@ -17,9 +17,9 @@
 
 
 extern void PreliminaryInterruptHandler_1( void );
-static __u8 CapsLock = 0;
-static __u8 NumLock = 0;
-static __u8 ScrollLock = 0;
+static u8 CapsLock = 0;
+static u8 NumLock = 0;
+static u8 ScrollLock = 0;
 
 
 static struct KbdAsciiPair_t kap[] = {
@@ -186,10 +186,10 @@ void KbdInitKeyboard( void ) {
 // Description:
 //  Keyboard interrupt handler
 //
-void KbdIntHandler( __u8 irqnum ) {
+void KbdIntHandler( u8 irqnum ) {
 
-    __u16 i;
-    __u8 keycode;
+    u16 i;
+    u8 keycode;
 
 
     // Disable interrupt
@@ -258,7 +258,7 @@ KbdIntHandler_Done:
 // Description:
 //  Send command to onboard 8042 controller
 //
-void Kbd8042SendCmd( __u8 cmd ) {
+void Kbd8042SendCmd( u8 cmd ) {
 
     // Wait for input buffer empty
     while( IoInByte( KB8042_PORT ) & 0x02 );
@@ -282,7 +282,7 @@ void Kbd8042SendCmd( __u8 cmd ) {
 // Description:
 //  Send command to keyboard controller
 //
-void KbdSendCmd( __u8 cmd ) {
+void KbdSendCmd( u8 cmd ) {
 
     // Disable keyboard
     Kbd8042SendCmd( 0xad );

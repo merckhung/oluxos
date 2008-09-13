@@ -26,7 +26,7 @@ extern void __utask_seg( void );
 extern void KrnTSSD( void );
 extern void UsrTSSD( void );
 
-static __u32 current = -1;
+static u32 current = -1;
 
 extern void __KERNEL_CS( void );
 extern void __KERNEL_DS( void );
@@ -34,11 +34,11 @@ extern void __USER_CS( void );
 extern void __USER_DS( void );
 extern void __ldt_seg( void );
 
-extern volatile __u32  *usermem;
+extern volatile u32  *usermem;
 
 void TskTest1( void ) {
 
-    __u32 i, j;
+    u32 i, j;
 
     for( i = 0, j = 0 ; ; i++ ) {
     
@@ -53,7 +53,7 @@ void TskTest1( void ) {
 
 void TskTest2( void ) {
 
-    __u32 i, j;
+    u32 i, j;
 
     for( i = 0, j = 0 ; ; i++ ) {
     
@@ -99,17 +99,17 @@ void TskInit( void ) {
     //
     p->limit0       = (0x0000ffff & sizeof( TSS_t ));
     p->limit1       = (0x000f0000 & sizeof( TSS_t )) >> 16;
-    p->baseaddr0    = (0x0000ffff & (__u32)&KrnTSS);
-    p->baseaddr1    = (0x00ff0000 & (__u32)&KrnTSS) >> 16;
-    p->baseaddr2    = (0xff000000 & (__u32)&KrnTSS) >> 24;
+    p->baseaddr0    = (0x0000ffff & (u32)&KrnTSS);
+    p->baseaddr1    = (0x00ff0000 & (u32)&KrnTSS) >> 16;
+    p->baseaddr2    = (0xff000000 & (u32)&KrnTSS) >> 24;
     p->flag         = 0x89;
 
 
     u->limit0       = (0x0000ffff & sizeof( TSS_t ));
     u->limit1       = (0x000f0000 & sizeof( TSS_t )) >> 16;
-    u->baseaddr0    = (0x0000ffff & (__u32)&UsrTSS);
-    u->baseaddr1    = (0x00ff0000 & (__u32)&UsrTSS) >> 16;
-    u->baseaddr2    = (0xff000000 & (__u32)&UsrTSS) >> 24;
+    u->baseaddr0    = (0x0000ffff & (u32)&UsrTSS);
+    u->baseaddr1    = (0x00ff0000 & (u32)&UsrTSS) >> 16;
+    u->baseaddr2    = (0xff000000 & (u32)&UsrTSS) >> 24;
     u->flag         = 0xe9;
 
 
@@ -144,14 +144,14 @@ void TskInit( void ) {
     //
     // Fill up Task descriptors
     //
-    tsks[ 0 ].eip       = (__u32)TskUsr1;
-    tsks[ 0 ].cs        = (__u32)__USER_CS | 0x03;
-    tsks[ 0 ].ss        = (__u32)__USER_DS | 0x03;
-    tsks[ 0 ].ds        = (__u32)__USER_DS | 0x03;
-    tsks[ 0 ].es        = (__u32)__USER_DS | 0x03;
-    tsks[ 0 ].fs        = (__u32)__USER_DS | 0x03;
-    tsks[ 0 ].gs        = (__u32)__USER_DS | 0x03;
-    tsks[ 0 ].esp       = (__u32)stack_buf[ 0 ] + 1024;
+    tsks[ 0 ].eip       = (u32)TskUsr1;
+    tsks[ 0 ].cs        = (u32)__USER_CS | 0x03;
+    tsks[ 0 ].ss        = (u32)__USER_DS | 0x03;
+    tsks[ 0 ].ds        = (u32)__USER_DS | 0x03;
+    tsks[ 0 ].es        = (u32)__USER_DS | 0x03;
+    tsks[ 0 ].fs        = (u32)__USER_DS | 0x03;
+    tsks[ 0 ].gs        = (u32)__USER_DS | 0x03;
+    tsks[ 0 ].esp       = (u32)stack_buf[ 0 ] + 1024;
     tsks[ 0 ].eflags    = 0x3000;
 
 
@@ -166,29 +166,29 @@ void TskInit( void ) {
     UsrTSS.eflags       = tsks[ 0 ].eflags;
 
 
-    KrnTSS.cs           = (__u16)__KERNEL_CS;
-    KrnTSS.ss           = (__u16)__KERNEL_DS;
-    KrnTSS.ds           = (__u16)__KERNEL_DS;
-    KrnTSS.es           = (__u16)__KERNEL_DS;
-    KrnTSS.fs           = (__u16)__KERNEL_DS;
-    KrnTSS.gs           = (__u16)__KERNEL_DS;
+    KrnTSS.cs           = (u16)__KERNEL_CS;
+    KrnTSS.ss           = (u16)__KERNEL_DS;
+    KrnTSS.ds           = (u16)__KERNEL_DS;
+    KrnTSS.es           = (u16)__KERNEL_DS;
+    KrnTSS.fs           = (u16)__KERNEL_DS;
+    KrnTSS.gs           = (u16)__KERNEL_DS;
 
 
-    tsks[ 1 ].eip       = (__u32)TskUsr2;
-    tsks[ 1 ].cs        = (__u32)__USER_CS | 0x03;
-    tsks[ 1 ].ss        = (__u32)__USER_DS | 0x03;
-    tsks[ 1 ].ds        = (__u32)__USER_DS | 0x03;
-    tsks[ 1 ].es        = (__u32)__USER_DS | 0x03;
-    tsks[ 1 ].fs        = (__u32)__USER_DS | 0x03;
-    tsks[ 1 ].gs        = (__u32)__USER_DS | 0x03;
-    tsks[ 1 ].esp       = (__u32)stack_buf[ 1 ] + 1024;
+    tsks[ 1 ].eip       = (u32)TskUsr2;
+    tsks[ 1 ].cs        = (u32)__USER_CS | 0x03;
+    tsks[ 1 ].ss        = (u32)__USER_DS | 0x03;
+    tsks[ 1 ].ds        = (u32)__USER_DS | 0x03;
+    tsks[ 1 ].es        = (u32)__USER_DS | 0x03;
+    tsks[ 1 ].fs        = (u32)__USER_DS | 0x03;
+    tsks[ 1 ].gs        = (u32)__USER_DS | 0x03;
+    tsks[ 1 ].esp       = (u32)stack_buf[ 1 ] + 1024;
     tsks[ 1 ].eflags    = 0x3000;
 }
 
 
 void TskStart( void ) {
 
-    __u16   uts = ((__u16)__utask_seg) | 0x03;
+    u16   uts = ((u16)__utask_seg) | 0x03;
 
 
     //
@@ -259,7 +259,7 @@ void TskStart( void ) {
 }
 
 
-void TskSwitch( __u32 origtsk, __u32 newtsk ) {
+void TskSwitch( u32 origtsk, u32 newtsk ) {
 
 
     if( origtsk >= 0 ) {
@@ -320,7 +320,7 @@ void TskSwitch( __u32 origtsk, __u32 newtsk ) {
 void TskScheduler( void ) {
 
 
-    __u32 now;
+    u32 now;
 
     now = current;
     do {

@@ -14,25 +14,25 @@
 
 struct smbios_entry {
 
-    __u32   AnchorStr;
-    __u8    Checksum;
-    __u8    Length;
-    __u8    MajorVer;
-    __u8    MinorVer;
-    __u16   MaxSize;
-    __u8    Revision;
-    __u8    FormattedArea[ 5 ];
-    __u8    ImdAnchorStr[ 5 ];
-    __u8    ImdChecksum[ 5 ];
-    __u16   STblLength;
-    __u32   STblAddr;
-    __u16   NRStruct;
-    __u8    BCDRev;
+    u32   AnchorStr;
+    u8    Checksum;
+    u8    Length;
+    u8    MajorVer;
+    u8    MinorVer;
+    u16   MaxSize;
+    u8    Revision;
+    u8    FormattedArea[ 5 ];
+    u8    ImdAnchorStr[ 5 ];
+    u8    ImdChecksum[ 5 ];
+    u16   STblLength;
+    u32   STblAddr;
+    u16   NRStruct;
+    u8    BCDRev;
 };
 
 
-__s8 ChkCpuidSup( void );
-__s8 ChkMSRSup( void );
-__u8 ChkSMBIOSSup( void );
+s8 ChkCpuidSup( void );
+s8 ChkMSRSup( void );
+u8 ChkSMBIOSSup( void );
 
 

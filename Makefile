@@ -1,4 +1,14 @@
-include make.tmpl
+################################################################################
+#
+# Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
+# Authors: Merck Hung <merck@olux.org>
+#
+# File: Makefile
+# Description:
+#   None
+#
+################################################################################
+include scripts/make.tmpl
 
 
 MAJOR_VERSION		=	0

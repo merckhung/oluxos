@@ -137,16 +137,16 @@
 
 struct KbdAsciiPair_t {
 
-    __u8    ShiftKey;
-    __u8    ScanCode;
-    __u8    AsciiCode;
+    u8    ShiftKey;
+    u8    ScanCode;
+    u8    AsciiCode;
 };
 
 
 void KbdInitKeyboard( void );
-void KbdIntHandler( __u8 irqnum );
+void KbdIntHandler( u8 irqnum );
 
-void Kbd8042SendCmd( __u8 cmd );
-void KbdSendCmd( __u8 cmd );
+void Kbd8042SendCmd( u8 cmd );
+void KbdSendCmd( u8 cmd );
 
 

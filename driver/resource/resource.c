@@ -14,7 +14,7 @@
 #include <driver/resource.h>
 
 
-__u32 pentium_msr_list[] = {
+u32 pentium_msr_list[] = {
 
     0x00,           // P5_MC_ADDR
     0x01,           // P5_MC_TYPE
@@ -25,7 +25,7 @@ __u32 pentium_msr_list[] = {
 };
 
 
-__u32 p6_msr_list[] = {
+u32 p6_msr_list[] = {
 
     0x00,           // P5_MC_ADDR
     0x01,           // P5_MC_TYPE
@@ -113,7 +113,7 @@ __u32 p6_msr_list[] = {
 };
 
 
-__u32 pentiumm_msr_list[] = {
+u32 pentiumm_msr_list[] = {
 
     0x00,           // P5_MC_ADDR
     0x01,           // P5_MC_TYPE
@@ -163,7 +163,7 @@ __u32 pentiumm_msr_list[] = {
 };
 
 
-__u32 core_msr_list[] = {
+u32 core_msr_list[] = {
 
     0x00,           // P5_MC_ADDR
     0x01,           // P5_MC_TYPE
@@ -281,7 +281,7 @@ __u32 core_msr_list[] = {
 //  True  = 0
 //  False = -1
 //
-__s8 ChkCpuidSup( void ) {
+s8 ChkCpuidSup( void ) {
 
 
     return 0;
@@ -298,7 +298,7 @@ __s8 ChkCpuidSup( void ) {
 //  True  = 0
 //  False = -1
 //
-__s8 ChkMSRSup( void ) {
+s8 ChkMSRSup( void ) {
 
 
     return 0;
@@ -315,16 +315,16 @@ __s8 ChkMSRSup( void ) {
 //  True  = 0
 //  False = -1
 //
-__u8 ChkSMBIOSSup( void ) {
+u8 ChkSMBIOSSup( void ) {
 
-    __u32 i;
-    volatile __u8 *memptr = (__u8 *)SMBIOS_BASE;
-    __u8 smbios = 0;
+    u32 i;
+    volatile u8 *memptr = (u8 *)SMBIOS_BASE;
+    u8 smbios = 0;
 
     // Search 64kb
     for( i = 0 ; i < 0x10000 ; i++ ) {
     
-        if( !CbStrCmp( (__s8 *)(memptr + i), SMBIOS_ANCH, 4 ) ) {
+        if( !CbStrCmp( (s8 *)(memptr + i), SMBIOS_ANCH, 4 ) ) {
         
             smbios = 1;
             break;

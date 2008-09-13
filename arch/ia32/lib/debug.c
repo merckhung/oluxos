@@ -138,12 +138,12 @@ void DbgDumpRegs( void ) {
                     , DbgRegs.gs
                     , DbgRegs.ss
                     , DbgRegs.efl
-                    , (__u32)((DbgRegs.gdt >> 16) & 0xffffffff)
-                    , (__u32)(DbgRegs.gdt & 0xffff)
-                    , (__u32)((DbgRegs.ldt >> 16) & 0xffffffff)
-                    , (__u16)(DbgRegs.ldt & 0xffff)
-                    , (__u32)((DbgRegs.idt >> 16) & 0xffffffff)
-                    , (__u16)(DbgRegs.idt & 0xffff) );
+                    , (u32)((DbgRegs.gdt >> 16) & 0xffffffff)
+                    , (u32)(DbgRegs.gdt & 0xffff)
+                    , (u32)((DbgRegs.ldt >> 16) & 0xffffffff)
+                    , (u16)(DbgRegs.ldt & 0xffff)
+                    , (u32)((DbgRegs.idt >> 16) & 0xffffffff)
+                    , (u16)(DbgRegs.idt & 0xffff) );
 
 }
 #endif

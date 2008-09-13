@@ -27,9 +27,9 @@
 #define     IDE_DRVADDR         IDE_PORT_ADDR + 0x0f
 
 
-void ReadData( __s8 *buf );
-void ReadSector( __u32 sector );
-void WriteSector( __u32 sector, __s8 *buf );
+void ReadData( s8 *buf );
+void ReadSector( u32 sector );
+void WriteSector( u32 sector, s8 *buf );
 void GetIdentify( void );
 void IDEInit( void );
 

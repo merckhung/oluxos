@@ -17,19 +17,19 @@
 #define     PCI_PORT_DATA       0x0cfc
 
 
-__u8 PciReadConfigByte( __u32 address, __u8 offset );
-void PciWriteConfigByte( __u32 address, __u8 offset, __u8 value );
+u8 PciReadConfigByte( u32 address, u8 offset );
+void PciWriteConfigByte( u32 address, u8 offset, u8 value );
 
 
-__u16 PciReadConfigWord( __u32 address, __u8 offset );
-void PciWriteConfigWord( __u32 address, __u8 offset, __u16 value );
+u16 PciReadConfigWord( u32 address, u8 offset );
+void PciWriteConfigWord( u32 address, u8 offset, u16 value );
 
 
-__u32 PciReadConfigDWord( __u32 address, __u8 offset );
-void PciWriteConfigDWord( __u32 address, __u8 offset, __u32 value );
+u32 PciReadConfigDWord( u32 address, u8 offset );
+void PciWriteConfigDWord( u32 address, u8 offset, u32 value );
 
 
-__u32 PciCalBaseAddr( __u8 bus, __u8 dev, __u8 func );
+u32 PciCalBaseAddr( u8 bus, u8 dev, u8 func );
 
 
 void PciDetectDevice( void );

@@ -15,12 +15,12 @@
 #include <driver/console.h>
 
 
-static volatile __u8 *ScnPtr = (__u8 *)0xb8000;
+static volatile u8 *ScnPtr = (u8 *)0xb8000;
 
 
 void MenuBackground( void ) {
 
-    __s32 i;
+    s32 i;
 
     for( i = 0 ; i < COLUMN * LINE * 2 ; i++ ) {
     
@@ -38,8 +38,8 @@ void MenuBackground( void ) {
 
 void MenuTitle( void ) {
 
-    __s8 *title = "OluxOS Setup Utility";
-    __s32 i;
+    s8 *title = "OluxOS Setup Utility";
+    s32 i;
 
     for( i = 0 ; i < CbStrLen( title ) ; i++ ) {
     
@@ -50,8 +50,8 @@ void MenuTitle( void ) {
 
 void MenuItem( void ) {
 
-    __s8 *item = "     Main     Advanced     Security     Power     Boot     Exit                 ";
-    __s32 i, j, k;
+    s8 *item = "     Main     Advanced     Security     Power     Boot     Exit                 ";
+    s32 i, j, k;
 
     i = COLUMN * 2 * 1;
     j = CbStrLen( item ) * 2 + i;
@@ -73,9 +73,9 @@ void MenuItem( void ) {
 
 void MenuHelp( void ) {
 
-    __s8 *help = "  F1   Help   ||  Select Item   -/+    Change Values       F9   Setup Defaults  " \
+    s8 *help = "  F1   Help   ||  Select Item   -/+    Change Values       F9   Setup Defaults  " \
                  "  Esc  Exit   <>  Select Menu   Enter  Select > Sub-Menu   F10  Save and Exit   ";
-    __s32 i, j, k;
+    s32 i, j, k;
 
     i = COLUMN * 2 * 23;
     j = CbStrLen( help ) * 2 + i;
@@ -93,8 +93,8 @@ void MenuHelp( void ) {
 
 void MenuCentral( void ) {
 
-    __s32 i = COLUMN  * 2;
-    __s32 j = COLUMN  * 23;
+    s32 i = COLUMN  * 2;
+    s32 j = COLUMN  * 23;
 
     for( ; i < j ; i++ ) {
     
