@@ -15,63 +15,113 @@
 #include <driver/serial.h>
 
 
+
 ExternIRQHandler( 4 );
+
 
 
 void SrInit( void ) {
 
+
     // Turn off Interrupt
-    IoOutByte( 0x00, COMIO + 1 );
+    IoOutByte( 0x00, UART_DEF_IER );
+
 
     // DLAB ON
-    IoOutByte( 0x80, COMIO + 3 );
+    IoOutByte( UART_DLAB, UART_DEF_LCR );
+
 
     // Baudrate = 115200
     // Divisor Low Byte
-    IoOutByte( 0x01, COMIO );
+    IoOutByte( UART_BAUD_115200, UART_DEF_DLL );
+
 
     // Divisor High Byte
-    IoOutByte( 0x00, COMIO + 1 );
+    IoOutByte( 0x00, UART_DEF_DLH );
+
 
     // DLAB = OFF, 8 Bits, No Parity, 1 Stop Bit
-    IoOutByte( 0x03, COMIO + 3 );
+    IoOutByte( (UART_WLS8 | UART_STB_1), UART_DEF_LCR );
+
+
+	// FIFO off
+	IoOutByte( 0x00, UART_DEF_FCR );
+
 
     // FIFO control
-    IoOutByte( 0xc7, COMIO + 2 );
+	//IoOutByte( (UART_ITL14 | UART_RESETTF | UART_RESETRF | UART_TRFIFOE), UART_DEF_FCR );
 
-    // Turn on DTR, RTS, and OUT2
-    IoOutByte( 0x0b, COMIO + 4 );
+
+    // Turn off flow control
+    IoOutByte( 0x00, UART_DEF_MCR );
 }
 
 
 
 void SrInitInterrupt( void ) {
 
+
 	// Register interrupt handler
 	IntRegInterrupt( IRQ_SERIAL0, IRQHandler( 4 ), SrIntHandler );
+
+
+	// Enable interrupt
+	IntDisable();
+
+
+	// Enable UART interrupt
+	IoOutByte( (UART_RAVIE | UART_TIE | UART_RLSE | UART_MIE), UART_DEF_IER );
+
+
+	// Disable interrupt
+	IntEnable();
 }
 
 
 
 void SrIntHandler( u8 IrqNum ) {
 
-	DbgPrint( "Serial Interrupt Handler\n" );
+	u8 tmp;
+
+
+	// Identify interrupt
+	tmp = IoInByte( UART_DEF_IIR );
+	//DbgPrint( "IIR = 0x%2.2X ", tmp );
+
+
+	tmp = IoInByte( UART_DEF_LCR );
+	//DbgPrint( "LCR = 0x%2.2X ", tmp );
+
+
+	tmp = IoInByte( UART_DEF_MSR );
+	//DbgPrint( "MSR = 0x%2.2X ", tmp );
+
+
+	tmp = IoInByte( UART_DEF_LSR );
+	//DbgPrint( "LSR = 0x%2.2X\n", tmp );
+
+
+	if( tmp & UART_DR ) {
+	
+		tmp = IoInByte( UART_DEF_RBR );
+		TcPrint( "%c", tmp );
+	}
 }
 
 
 
 void SrPutChar( s8 c ) {
 
-    IoOutByte( c, COMIO ); 
+    IoOutByte( c, UART_DEF_THR ); 
 }
 
 
 
 s8 SrGetChar( void ) {
 
-    if( IoInByte( COMIO + 5 ) & 0x01 ) {
+    if( IoInByte( UART_DEF_LSR ) & UART_DR ) {
     
-        return (IoInByte( COMIO ) & 0xff);   
+        return (IoInByte( UART_DEF_RBR ) & 0xFF);   
     }
 
     return 0;
