@@ -72,8 +72,8 @@ void MmPageInit( void ) {
 
 	// Print out total memory size available
 	TcPrint( "Total Memory Size: %d MB\n", (u32)(MemSize / 1024ULL / 1024ULL) );
-	DbgPrint( "PDE Start Addr: 0x%8.8X\n", (u32)PDEPtr );
-	DbgPrint( "PTE Start Addr: 0x%8.8X\n", (u32)PTEPtr );
+	//DbgPrint( "PDE Start Addr: 0x%8.8X\n", (u32)PDEPtr );
+	//DbgPrint( "PTE Start Addr: 0x%8.8X\n", (u32)PTEPtr );
 
 
     // Initialize Page Directory Entries

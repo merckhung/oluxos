@@ -65,7 +65,7 @@ void IntInitInterrupt( void ) {
     u32 i;
 
 
-	DbgPrint( "IDT Entry Size: 0x%8.8X\n", sizeof( IDTEntry ) );
+	//DbgPrint( "IDT Entry Size: 0x%8.8X\n", sizeof( IDTEntry ) );
 
 
     // Initialize IDT Tables
@@ -105,7 +105,7 @@ void IntInitInterrupt( void ) {
     // Setup IDT Pointer
     IDTPointer.Limit    = (NR_VECTOR - 1) * sizeof( IDTEntry );
     IDTPointer.BaseAddr = (u32)IDTTable;
-	DbgPrint( "IDTPointer = 0x%X, IDTTable = 0x%X\n", &IDTPointer, IDTTable );
+	//DbgPrint( "IDTPointer = 0x%X, IDTTable = 0x%X\n", &IDTPointer, IDTTable );
 
 
 	//Load IDT Pointer
@@ -117,7 +117,7 @@ void IntInitInterrupt( void ) {
 
 
     // Enable interrupt
-	DbgPrint( "Enable Interrupt\n" );
+	//DbgPrint( "Enable Interrupt\n" );
     IntEnable();
 }
 
