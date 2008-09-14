@@ -91,7 +91,7 @@ void MmPageInit( void ) {
         }
 		*/
 
-        DbgPrint( "PDE Addr = 0x%8.8X, Value = 0x%8.8X\n", (u32)(PDEPtr + i), *(PDEPtr + i) );
+        //DbgPrint( "PDE Addr = 0x%8.8X, Value = 0x%8.8X\n", (u32)(PDEPtr + i), *(PDEPtr + i) );
     }
 
 

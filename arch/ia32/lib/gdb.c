@@ -9,15 +9,20 @@
  */
 #include <types.h>
 #include <clib.h>
+#include <ia32/platform.h>
+#include <ia32/interrupt.h>
 #include <ia32/io.h>
 #include <ia32/gdb.h>
 #include <ia32/debug.h>
 #include <driver/serial.h>
 
 
+
+ExternIRQHandler( 4 );
+
+
 static s8 GdbInBuf[ GDB_BUF_LEN ];
 static s8 GdbOutBuf[ GDB_BUF_LEN ];
-
 
 extern u32 SavedAllRegs[ GDB_NUM_REGS ];
 extern u32 SavedErrorCode;
@@ -72,7 +77,22 @@ static u32 ExcTranTbl[][ 2 ] = {
 
 void GdbInit( void ) {
 
+
+	// Initialize serial port and enable interrupt
     SrInit();
+	SrInitInterrupt();
+
+
+	// Disable interrupt
+	IntDisable();
+
+
+	// Setup GDB interrupt handler
+	IntRegInterrupt( IRQ_SERIAL0, IRQHandler( 4 ), GdbSerialIntHandler );
+
+
+	// Enable interrupt
+	IntEnable();
 }
 
 
@@ -412,5 +432,14 @@ void GdbExceptionHandler( u32 ExceptionVector ) {
         GdbSendPacket( GdbOutBuf );
     }
 }
+
+
+
+void GdbSerialIntHandler( u8 IrqNum ) {
+
+	DbgPrint( "GDB Serial Int Handler\n" );
+	GdbExceptionHandler( 0x03 );
+}
+
 
 

@@ -48,6 +48,7 @@ s8 *GdbGetPacket( s8 *buf );
 void GdbSendPacket( s8 *buf );
 u8 TranslateException( u32 ExceptionVector );
 void GdbExceptionHandler( u32 ExceptionVector );
+void GdbSerialIntHandler( u8 IrqNum );
 
 
 

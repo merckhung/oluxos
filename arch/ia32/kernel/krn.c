@@ -102,9 +102,14 @@ void krn_entry( void ) {
 
     // FAT file system
     //FsFatInit();
+	
+
+	// Initialize GDB
+	GdbInit();
 
 
     for(;;);
 }
+
 
 
