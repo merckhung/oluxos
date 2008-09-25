@@ -10,7 +10,7 @@
 ################################################################################
 include scripts/rules.mk
 include krn_config
-#include $(call FindAllSubMakefiles)
+$(call IncAllMakefiles)
 
 
 MAJOR_VERSION		:=	0
@@ -23,20 +23,11 @@ CFLAGS              =   -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nost
 LDFLAGS             =	-cref -M -s -N
 MAKEFLAGS			+=	--no-print-directory --no-builtin-rules --no-builtin-variables --quiet
 
+
 ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
+BOOTOBJS			:=	arch/$(ARCH)/boot/boot.o arch/$(ARCH)/boot/info.o arch/$(ARCH)/boot/pm.o
+KRNOBJS				:=	$(kobjs-o)
 
-#VPATH				:=	$(call FindAllSubDirectories)
-VPATH				:=	arch/$(ARCH)/boot:arch/$(ARCH)/kernel:arch/$(ARCH)/component:arch/$(ARCH)/lib:arch/$(ARCH)/mm
-VPATH				+=	:lib:driver/console:driver/framebuffer:driver/input:driver/pci:driver/resource:driver/ide:fs
-VPATH				+=	:driver/serial
-
-BOOTOBJS			=	boot.o info.o pm.o
-
-OBJECTS				=	setup.o krn.o clib.o console.o interrupt.o handler.o debug.o io.o kbd.o pci.o page.o
-OBJECTS				+=	timer.o i8259.o task.o resource.o ide.o menu.o fat.o gdb.o serial.o sercon.o crc.o
-
-OBJECTLIST			=	.krnobj.lst
-BOOTOBJLIST			=	.bootobj.lst
 
 IMGSIZE				=	1474560
 SYSIMG				=	OluxOS.img
@@ -46,19 +37,10 @@ BOOTSECT			=	bootsect
 UTILS				=	utils
 
 
-$(call IncAllMakefiles)
-
-
 .PHONY:	$(UTILS)
 
 
 all: $(BOOTSECT) $(KRNMAIN) $(KRNNAME)
-	@echo $(kobjs-y)
-	@echo "1"
-	@echo $(kobjs-d)
-	@echo "2"
-	@echo $(kobjs-o)
-	@echo "3"
 
 
 $(KRNNAME):
@@ -66,7 +48,7 @@ $(KRNNAME):
 	$(UTILS)/krnimg -b $(BOOTSECT) -k $(KRNMAIN) -o $(KRNNAME)
 
 
-$(KRNMAIN): $(OBJECTS)
+$(KRNMAIN): $(KRNOBJS)
 	$(ECHO) '   $($(QUIET)CMD_LD)'
 	$(CMD_LD) -T arch/$(ARCH)/kernel.lds
 
@@ -74,15 +56,11 @@ $(KRNMAIN): $(OBJECTS)
 $(BOOTSECT): $(BOOTOBJS)
 	$(ECHO) '   $($(QUIET)CMD_LD)'
 	$(CMD_LD) -T arch/$(ARCH)/boot/boot.lds
-	$(MV) -f $(OBJECTLIST) $(BOOTOBJLIST)
 
 
 clean:
 	$(MAKE) -C $(UTILS) clean
-	$(RM) -f $(shell cat $(OBJECTLIST) 2> /dev/null)
-	$(RM) -f $(shell cat $(BOOTOBJLIST) 2> /dev/null)
-	$(RM) -f $(OBJECTLIST) $(BOOTOBJLIST)
-	$(RM) $(BOOTSECT) $(KRNMAIN) $(KRNNAME) $(SYSIMG) *.map *.lst
+	$(RM) $(BOOTOBJS) $(KRNOBJS) $(BOOTSECT) $(KRNMAIN) $(KRNNAME) $(SYSIMG) *.map *.lst
 
 
 emu:

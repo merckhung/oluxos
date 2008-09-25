@@ -41,14 +41,13 @@ kobjs-o				:=
 QUIET               ?=  QUIET_
 
 QUIET_CMD_AS        ?=  AS      $@
-      CMD_AS        ?=  $(CC) $(ASFLAGS) $(CFLAGS) -c -o $(<D)/$@ $<
+      CMD_AS        ?=  $(CC) $(ASFLAGS) $(CFLAGS) -c -o $@ $<
 
 QUIET_CMD_CC        ?=  CC      $@
-      CMD_CC        ?=  $(CC) $(CFLAGS) -c -o $(<D)/$@ $<
+      CMD_CC        ?=  $(CC) $(CFLAGS) -c -o $@ $<
 
 QUIET_CMD_LD        ?=  LD      $@
-      CMD_LD        ?=  $(LD) $(LDFLAGS) -o $@ $(shell cat $(OBJECTLIST)) > $@.map
-
+      CMD_LD        ?=  $(LD) $(LDFLAGS) -o $@ $^ > $@.map
 
 
 #
@@ -57,13 +56,11 @@ QUIET_CMD_LD        ?=  LD      $@
 %.o: %.S
 	$(ECHO) '   $($(QUIET)CMD_AS)'
 	$(CMD_AS)
-	$(ECHO) -n '$(<D)/$@ ' >> $(OBJECTLIST)
 
 
 %.o: %.c
 	$(ECHO) '   $($(QUIET)CMD_CC)'
 	$(CMD_CC)
-	$(ECHO) -n '$(<D)/$@ ' >> $(OBJECTLIST)
 
 
 
@@ -71,17 +68,17 @@ QUIET_CMD_LD        ?=  LD      $@
 # Definitions
 #
 define FindAllSubDirectories
-$(foreach _sdir, $(BASE_SRCDIRS), $(shell find $(_sdir) -type d | grep -v "\.svn" | grep -v "CVS" | grep -v ".git"))
+$(foreach _sdir, $(1), $(shell find $(_sdir) -type d | grep -v "\.svn" | grep -v "CVS" | grep -v ".git"))
 endef
 
 
 define FindAllSubDirectoriesSlash
-$(addsuffix /, $(call FindAllSubDirectories))
+$(addsuffix /, $(call FindAllSubDirectories), $(1))
 endef
 
 
 define FindAllSubMakefiles
-$(foreach _smak, $(call FindAllSubDirectories), $(wildcard $(_smak)/Makefile))
+$(foreach _smak, $(call FindAllSubDirectories, $(1)), $(wildcard $(_smak)/Makefile))
 endef
 
 
@@ -91,7 +88,50 @@ endef
 
 
 define FindSubMakefiles
-$(foreach _sdir, $(BASE_SRCDIRS), $(wildcard $(_sdir)/Makefile))
+$(foreach _sdir, $(1), $(wildcard $(_sdir)/Makefile))
+endef
+
+
+define IncLowerLayerMakefile2
+$(eval \
+	$(eval kobjs-d := )
+	$(eval kobjs-y := )
+	$(eval tmp := $(foreach _smak, $(1), $(wildcard $(_smak)Makefile)))
+	$(foreach _smak, $(tmp), \
+		$(eval \
+			$(eval _tmp_kobjs-y := $(kobjs-y))
+			$(eval kobjs-y := )
+			$(eval include $(_smak))
+			$(eval kobjs-y := $(sort $(addprefix $(call FindLocation), $(kobjs-y)) $(_tmp_kobjs-y)))
+		)
+	)
+	$(foreach _dchk, $(kobjs-y), \
+		$(if $(findstring $(_dchk), $(alldirs)), $(eval kobjs-d += $(_dchk)), \
+			$(if $(findstring $(_dchk), $(alldirs_s)), $(eval kobjs-d += $(_dchk)), $(eval kobjs-o += $(_dchk)) ) )
+	)
+)
+endef
+
+
+define IncLowerLayerMakefile
+$(eval \
+	$(eval kobjs-d := )
+	$(eval kobjs-y := )
+	$(eval tmp := $(foreach _smak, $(1), $(wildcard $(_smak)Makefile)))
+	$(foreach _smak, $(tmp), \
+		$(eval \
+			$(eval _tmp_kobjs-y := $(kobjs-y))
+			$(eval kobjs-y := )
+			$(eval include $(_smak))
+			$(eval kobjs-y := $(sort $(addprefix $(call FindLocation), $(kobjs-y)) $(_tmp_kobjs-y)))
+		)
+	)
+	$(foreach _dchk, $(kobjs-y), \
+		$(if $(findstring $(_dchk), $(alldirs)), $(eval kobjs-d += $(_dchk)), \
+			$(if $(findstring $(_dchk), $(alldirs_s)), $(eval kobjs-d += $(_dchk)), $(eval kobjs-o += $(_dchk)) ) )
+	)
+	$(call IncLowerLayerMakefile2, $(kobjs-d), $(2), $(3))
+)
 endef
 
 
@@ -99,22 +139,22 @@ endef
 # 2) Separate Directories(kobjs-d) and Files(kobjs-o)
 define IncAllMakefiles
 $(eval \
-	$(eval alldirs := $(call FindAllSubDirectories)) \
-	$(eval alldirs_s := $(addsuffix /, $(alldirs))) \
-	$(foreach _smak, $(call FindSubMakefiles), \
+	$(eval alldirs := $(call FindAllSubDirectories, $(BASE_SRCDIRS)))
+	$(eval alldirs_s := $(addsuffix /, $(alldirs)))
+	$(foreach _smak, $(call FindSubMakefiles, $(BASE_SRCDIRS)), \
 		$(eval \
 			$(eval _tmp_kobjs-y := $(kobjs-y))
 			$(eval kobjs-y := )
 			$(eval include $(_smak))
 			$(eval kobjs-y := $(sort $(addprefix $(call FindLocation), $(kobjs-y)) $(_tmp_kobjs-y)))
 		)
-	) \
-	$(foreach _dchk, $(kobjs-y), \
-		$(if $(findstring $(_dchk), $(alldirs)), kobjs-d += $(_dchk), \
-			$(if $(findstring $(_dchk), $(alldirs_s)), kobjs-d += $(_dchk), kobjs-o += $(_dchk) ) )
 	)
+	$(foreach _dchk, $(kobjs-y), \
+		$(if $(findstring $(_dchk), $(alldirs)), $(eval kobjs-d += $(_dchk)), \
+			$(if $(findstring $(_dchk), $(alldirs_s)), $(eval kobjs-d += $(_dchk)), $(eval kobjs-o += $(_dchk)) ) )
+	)
+	$(call IncLowerLayerMakefile, $(kobjs-d), $(alldirs), $(alldirs_s))
 )
 endef
-
 
 
