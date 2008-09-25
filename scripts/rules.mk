@@ -32,7 +32,7 @@ DD                  :=	@dd
 CROSS_COMPILE       ?=
 
 
-BASE_SRCDIRS		:=	arch driver fs krn lib
+BASE_SRCDIRS		:=	arch/ driver/ fs/ krn/ lib/
 kobjs-y				:=
 kobjs-d				:=
 kobjs-o				:=
@@ -87,18 +87,17 @@ $(foreach _sdir, $(1), $(wildcard $(_sdir)/Makefile))
 endef
 
 
+# 1) Find out all path of files
+# 2) Separate Directories(kobjs-d) and Files(kobjs-o)
 define IncLowerLayerMakefile
 $(eval \
 	$(eval kobjs-d := )
 	$(eval kobjs-y := )
-	$(eval tmp := $(foreach _smak, $(1), $(wildcard $(_smak)Makefile)))
-	$(foreach _smak, $(tmp), \
-		$(eval \
-			$(eval _tmp_kobjs-y := $(kobjs-y))
-			$(eval kobjs-y := )
-			$(eval include $(_smak))
-			$(eval kobjs-y := $(sort $(addprefix $(call FindLocation), $(kobjs-y)) $(_tmp_kobjs-y)))
-		)
+	$(foreach _smak, $(foreach __smak, $(1), $(wildcard $(patsubst %/,%/Makefile, $(__smak)))), \
+		$(eval _tmp_kobjs-y := $(kobjs-y))
+		$(eval kobjs-y := )
+		$(eval include $(_smak))
+		$(eval kobjs-y := $(sort $(addprefix $(call FindLocation), $(kobjs-y)) $(_tmp_kobjs-y)))
 	)
 	$(foreach _dchk, $(kobjs-y), \
 		$(if $(findstring $(_dchk), $(alldirs)), $(eval kobjs-d += $(_dchk)), \
@@ -109,25 +108,11 @@ $(eval \
 endef
 
 
-# 1) Find out all path of files
-# 2) Separate Directories(kobjs-d) and Files(kobjs-o)
 define IncAllMakefiles
 $(eval \
 	$(eval alldirs := $(call FindAllSubDirectories, $(BASE_SRCDIRS)))
 	$(eval alldirs_s := $(addsuffix /, $(alldirs)))
-	$(foreach _smak, $(call FindSubMakefiles, $(BASE_SRCDIRS)), \
-		$(eval \
-			$(eval _tmp_kobjs-y := $(kobjs-y))
-			$(eval kobjs-y := )
-			$(eval include $(_smak))
-			$(eval kobjs-y := $(sort $(addprefix $(call FindLocation), $(kobjs-y)) $(_tmp_kobjs-y)))
-		)
-	)
-	$(foreach _dchk, $(kobjs-y), \
-		$(if $(findstring $(_dchk), $(alldirs)), $(eval kobjs-d += $(_dchk)), \
-			$(if $(findstring $(_dchk), $(alldirs_s)), $(eval kobjs-d += $(_dchk)), $(eval kobjs-o += $(_dchk)) ) )
-	)
-	$(call IncLowerLayerMakefile, $(kobjs-d), $(alldirs), $(alldirs_s))
+	$(call IncLowerLayerMakefile, $(BASE_SRCDIRS), $(alldirs), $(alldirs_s))
 )
 endef
 
