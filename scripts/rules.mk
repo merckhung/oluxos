@@ -77,11 +77,6 @@ $(addsuffix /, $(call FindAllSubDirectories), $(1))
 endef
 
 
-define FindAllSubMakefiles
-$(foreach _smak, $(call FindAllSubDirectories, $(1)), $(wildcard $(_smak)/Makefile))
-endef
-
-
 define FindLocation
 $(dir $(lastword $(MAKEFILE_LIST)))
 endef
@@ -89,27 +84,6 @@ endef
 
 define FindSubMakefiles
 $(foreach _sdir, $(1), $(wildcard $(_sdir)/Makefile))
-endef
-
-
-define IncLowerLayerMakefile2
-$(eval \
-	$(eval kobjs-d := )
-	$(eval kobjs-y := )
-	$(eval tmp := $(foreach _smak, $(1), $(wildcard $(_smak)Makefile)))
-	$(foreach _smak, $(tmp), \
-		$(eval \
-			$(eval _tmp_kobjs-y := $(kobjs-y))
-			$(eval kobjs-y := )
-			$(eval include $(_smak))
-			$(eval kobjs-y := $(sort $(addprefix $(call FindLocation), $(kobjs-y)) $(_tmp_kobjs-y)))
-		)
-	)
-	$(foreach _dchk, $(kobjs-y), \
-		$(if $(findstring $(_dchk), $(alldirs)), $(eval kobjs-d += $(_dchk)), \
-			$(if $(findstring $(_dchk), $(alldirs_s)), $(eval kobjs-d += $(_dchk)), $(eval kobjs-o += $(_dchk)) ) )
-	)
-)
 endef
 
 
@@ -130,7 +104,7 @@ $(eval \
 		$(if $(findstring $(_dchk), $(alldirs)), $(eval kobjs-d += $(_dchk)), \
 			$(if $(findstring $(_dchk), $(alldirs_s)), $(eval kobjs-d += $(_dchk)), $(eval kobjs-o += $(_dchk)) ) )
 	)
-	$(call IncLowerLayerMakefile2, $(kobjs-d), $(2), $(3))
+	$(if $(kobjs-d), $(call IncLowerLayerMakefile, $(kobjs-d), $(2), $(3)))
 )
 endef
 
