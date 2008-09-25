@@ -9,7 +9,7 @@
 #
 ################################################################################
 include scripts/rules.mk
-include krn_config
+include .config
 $(call IncAllMakefiles)
 
 
