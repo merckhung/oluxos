@@ -8,18 +8,14 @@
 #   None
 #
 ################################################################################
-include ../scripts/rules.mk
-
-TARGET				=	krnimg
-CFLAGS				=	-O2 -Wall -I../include
-LDFLAGS				=
 
 
-all:
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(TARGET).c
-
-
-clean:
-	rm -f *.o $(TARGET)
+kobjs-$(CONFIG_ARCH_IA32)	+=	console
+kobjs-$(CONFIG_ARCH_IA32)	+=	framebuffer
+kobjs-$(CONFIG_ARCH_IA32)	+=	ide
+kobjs-$(CONFIG_ARCH_IA32)	+=	input
+kobjs-$(CONFIG_ARCH_IA32)	+=	pci
+kobjs-$(CONFIG_ARCH_IA32)	+=	resource
+kobjs-$(CONFIG_ARCH_IA32)	+=	serial
 
 

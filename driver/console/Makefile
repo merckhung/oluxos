@@ -8,18 +8,10 @@
 #   None
 #
 ################################################################################
-include ../scripts/rules.mk
-
-TARGET				=	krnimg
-CFLAGS				=	-O2 -Wall -I../include
-LDFLAGS				=
 
 
-all:
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(TARGET).c
-
-
-clean:
-	rm -f *.o $(TARGET)
+kobjs-$(CONFIG_ARCH_IA32)	+=	console.o
+kobjs-$(CONFIG_ARCH_IA32)	+=	menu.o
+kobjs-$(CONFIG_ARCH_IA32)	+=	sercon.o
 
 

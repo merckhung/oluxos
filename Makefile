@@ -8,15 +8,14 @@
 #   None
 #
 ################################################################################
-include scripts/make.tmpl
+include scripts/rules.mk
+include krn_config
+include $(call FindAllSubMakefiles)
 
 
-MAJOR_VERSION		=	0
-MINOR_VERSION 		=	1
-EXTRA_VERSION		=
-
-
-CROSS_COMPILE       =
+MAJOR_VERSION		:=	0
+MINOR_VERSION 		:=	1
+EXTRA_VERSION		:=
 
 
 ASFLAGS				=	-D__ASM__
@@ -24,22 +23,10 @@ CFLAGS              =   -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nost
 LDFLAGS             =	-cref -M -s -N
 MAKEFLAGS			+=	--no-print-directory --no-builtin-rules --no-builtin-variables --quiet
 
-
-QUIET				?=	QUIET_
-
-QUIET_CMD_AS		?=	AS		$@
-	  CMD_AS		?=	$(CC) $(ASFLAGS) $(CFLAGS) -c -o $(<D)/$@ $<
-
-QUIET_CMD_CC		?=	CC		$@
-	  CMD_CC		?=	$(CC) $(CFLAGS) -c -o $(<D)/$@ $<
-
-QUIET_CMD_LD		?=	LD		$@
-	  CMD_LD		?=	$(LD) $(LDFLAGS) -o $@ $(shell cat $(OBJECTLIST)) > $@.map
-
-
 ARCH				:=	$(shell uname -m | sed -e s/i.86/ia32/)
 
-VPATH				=	arch/$(ARCH)/boot:arch/$(ARCH)/kernel:arch/$(ARCH)/component:arch/$(ARCH)/lib:arch/$(ARCH)/mm
+#VPATH				:=	$(call FindAllSubDirectories)
+VPATH				:=	arch/$(ARCH)/boot:arch/$(ARCH)/kernel:arch/$(ARCH)/component:arch/$(ARCH)/lib:arch/$(ARCH)/mm
 VPATH				+=	:lib:driver/console:driver/framebuffer:driver/input:driver/pci:driver/resource:driver/ide:fs
 VPATH				+=	:driver/serial
 
@@ -79,18 +66,6 @@ $(BOOTSECT): $(BOOTOBJS)
 	$(ECHO) '   $($(QUIET)CMD_LD)'
 	$(CMD_LD) -T arch/$(ARCH)/boot/boot.lds
 	$(MV) -f $(OBJECTLIST) $(BOOTOBJLIST)
-
-
-%.o: %.S
-	$(ECHO) '   $($(QUIET)CMD_AS)'
-	$(CMD_AS)
-	$(ECHO) -n '$(<D)/$@ ' >> $(OBJECTLIST)
-
-
-%.o: %.c
-	$(ECHO) '   $($(QUIET)CMD_CC)'
-	$(CMD_CC)
-	$(ECHO) -n '$(<D)/$@ ' >> $(OBJECTLIST)
 
 
 clean:

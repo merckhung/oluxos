@@ -8,18 +8,13 @@
 #   None
 #
 ################################################################################
-include ../scripts/rules.mk
-
-TARGET				=	krnimg
-CFLAGS				=	-O2 -Wall -I../include
-LDFLAGS				=
 
 
-all:
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(TARGET).c
-
-
-clean:
-	rm -f *.o $(TARGET)
+kobjs-$(CONFIG_ARCH_IA32)	+=	handler.o
+kobjs-$(CONFIG_ARCH_IA32)	+=	interrupt.o
+kobjs-$(CONFIG_ARCH_IA32)	+=	krn.o
+kobjs-$(CONFIG_ARCH_IA32)	+=	page.o
+kobjs-$(CONFIG_ARCH_IA32)	+=	setup.o
+kobjs-$(CONFIG_ARCH_IA32)	+=	task.o
 
 
