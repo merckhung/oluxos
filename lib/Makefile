@@ -11,6 +11,6 @@
 
 
 kobjs-$(CONFIG_ARCH_IA32)	+=	clib.o
-kobjs-$(CONFIG_ARCH_ARM)	+=	crc.o
+kobjs-$(CONFIG_ARCH_IA32)	+=	crc.o
 
 

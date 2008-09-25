@@ -10,12 +10,12 @@
 ################################################################################
 
 
-kobjs-$(CONFIG_ARCH_IA32)	+=	console
-kobjs-$(CONFIG_ARCH_IA32)	+=	framebuffer
-kobjs-$(CONFIG_ARCH_IA32)	+=	ide
-kobjs-$(CONFIG_ARCH_IA32)	+=	input
-kobjs-$(CONFIG_ARCH_IA32)	+=	pci
-kobjs-$(CONFIG_ARCH_IA32)	+=	resource
-kobjs-$(CONFIG_ARCH_IA32)	+=	serial
+kobjs-$(CONFIG_ARCH_IA32)	+=	console/
+kobjs-$(CONFIG_ARCH_IA32)	+=	framebuffer/
+kobjs-$(CONFIG_ARCH_IA32)	+=	ide/
+kobjs-$(CONFIG_ARCH_IA32)	+=	input/
+kobjs-$(CONFIG_ARCH_IA32)	+=	pci/
+kobjs-$(CONFIG_ARCH_IA32)	+=	resource/
+kobjs-$(CONFIG_ARCH_IA32)	+=	serial/
 
 

@@ -10,7 +10,7 @@
 ################################################################################
 include scripts/rules.mk
 include krn_config
-include $(call FindAllSubMakefiles)
+#include $(call FindAllSubMakefiles)
 
 
 MAJOR_VERSION		:=	0
@@ -46,10 +46,19 @@ BOOTSECT			=	bootsect
 UTILS				=	utils
 
 
+$(call IncAllMakefiles)
+
+
 .PHONY:	$(UTILS)
 
 
 all: $(BOOTSECT) $(KRNMAIN) $(KRNNAME)
+	@echo $(kobjs-y)
+	@echo "1"
+	@echo $(kobjs-d)
+	@echo "2"
+	@echo $(kobjs-o)
+	@echo "3"
 
 
 $(KRNNAME):

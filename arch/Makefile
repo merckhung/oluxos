@@ -10,7 +10,7 @@
 ################################################################################
 
 
-kobjs-$(CONFIG_ARCH_IA32)	+=	ia32
-kobjs-$(CONFIG_ARCH_ARM)	+=	arm
+kobjs-$(CONFIG_ARCH_IA32)	+=	ia32/
+kobjs-$(CONFIG_ARCH_ARM)	+=	arm/
 
 

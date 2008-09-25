@@ -34,6 +34,8 @@ CROSS_COMPILE       ?=
 
 BASE_SRCDIRS		:=	arch driver fs krn lib
 kobjs-y				:=
+kobjs-d				:=
+kobjs-o				:=
 
 
 QUIET               ?=  QUIET_
@@ -69,7 +71,12 @@ QUIET_CMD_LD        ?=  LD      $@
 # Definitions
 #
 define FindAllSubDirectories
-$(foreach _sdir, $(BASE_SRCDIRS), $(shell find $(_sdir) -type d))
+$(foreach _sdir, $(BASE_SRCDIRS), $(shell find $(_sdir) -type d | grep -v "\.svn" | grep -v "CVS" | grep -v ".git"))
+endef
+
+
+define FindAllSubDirectoriesSlash
+$(addsuffix /, $(call FindAllSubDirectories))
 endef
 
 
@@ -78,18 +85,36 @@ $(foreach _smak, $(call FindAllSubDirectories), $(wildcard $(_smak)/Makefile))
 endef
 
 
-define FindAllSubMakefiles2
+define FindLocation
+$(dir $(lastword $(MAKEFILE_LIST)))
+endef
+
+
+define FindSubMakefiles
 $(foreach _sdir, $(BASE_SRCDIRS), $(wildcard $(_sdir)/Makefile))
 endef
 
 
-define FindLocation
-$(dir $(lastword $(KEFILE_LIST)))
-endef
-
-
+# 1) Find out all path of files
+# 2) Separate Directories(kobjs-d) and Files(kobjs-o)
 define IncAllMakefiles
-	include $(call FindAllSubMakefiles2)
+$(eval \
+	$(eval alldirs := $(call FindAllSubDirectories)) \
+	$(eval alldirs_s := $(addsuffix /, $(alldirs))) \
+	$(foreach _smak, $(call FindSubMakefiles), \
+		$(eval \
+			$(eval _tmp_kobjs-y := $(kobjs-y))
+			$(eval kobjs-y := )
+			$(eval include $(_smak))
+			$(eval kobjs-y := $(sort $(addprefix $(call FindLocation), $(kobjs-y)) $(_tmp_kobjs-y)))
+		)
+	) \
+	$(foreach _dchk, $(kobjs-y), \
+		$(if $(findstring $(_dchk), $(alldirs)), kobjs-d += $(_dchk), \
+			$(if $(findstring $(_dchk), $(alldirs_s)), kobjs-d += $(_dchk), kobjs-o += $(_dchk) ) )
+	)
+)
 endef
+
 
 
