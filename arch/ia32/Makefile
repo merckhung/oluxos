@@ -10,8 +10,8 @@
 ################################################################################
 
 
-kobjs-$(CONFIG_ARCH_IA32)	+=	component/
 kobjs-$(CONFIG_ARCH_IA32)	+=	kernel/
+kobjs-$(CONFIG_ARCH_IA32)	+=	component/
 kobjs-$(CONFIG_ARCH_IA32)	+=	lib/
 
 

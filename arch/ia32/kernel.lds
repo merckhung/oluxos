@@ -6,6 +6,7 @@ SECTIONS {
 
     .text (0x00100000) : {
 
+		arch/ia32/kernel/setup.o(.text)
         *(.text)
     }
 
