@@ -59,7 +59,7 @@
 //
 // Structures
 //
-PACKED_STRUCT _IDTEntry {
+typedef struct PACKED _IDTEntry {
 
     u16   OffsetLSW;
     u16   SegSelect;
@@ -70,7 +70,7 @@ PACKED_STRUCT _IDTEntry {
 } IDTEntry;
 
 
-PACKED_STRUCT _IDTPtr {
+typedef struct PACKED _IDTPtr {
 
     u16   Limit;
     u32   BaseAddr;
@@ -78,7 +78,7 @@ PACKED_STRUCT _IDTPtr {
 } IDTPtr;
 
 
-PACKED_STRUCT _IntHandlerLst {
+typedef struct PACKED _IntHandlerLst {
 
 	void (*IrqHandler)( u8 IrqNum );
 

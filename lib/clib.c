@@ -2,10 +2,9 @@
  * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
- *
- * clib.c -- OluxOS General C Routines
+ * File: clib.h
+ * Description:
+ *  Kernel C library
  *
  */
 #include <types.h>
@@ -120,6 +119,55 @@ s8 *CbStrCpy( s8 *dest, const s8 *src, u32 sz ) {
 
 
 //
+// CbStrCat -- Concatenate a string
+//
+// Input:
+//  *dest   -- Destination string
+//  *src    -- Source string
+//  sz      -- Length of string
+//
+// Return:
+//  Destination string
+//
+s8 *CbStrCat( s8 *dest, const s8 *src, s32 sz ) {
+
+	s32 slen, dlen, i, rest;
+
+
+	dlen = CbStrLen( dest ) + 1;
+	rest = sz - dlen;
+	if( rest < 1 ) {
+
+		return dest;
+	}
+
+
+    slen = CbStrLen( src );
+	if( slen > rest ) {
+
+		slen = rest;
+	}
+
+
+    for( i = 0 ; i < slen ; i++ ) {
+    
+        if( i < slen ) {
+        
+            *(dest + dlen + i) = *(src + i);
+        }
+        else {
+        
+            *(dest + dlen + i) = 0;
+            break;
+        }
+    }
+
+
+    return dest;
+}
+
+
+//
 // CbStrCmp -- Compare two strings
 //
 // Input:
@@ -144,6 +192,44 @@ s32 CbStrCmp( const s8 *dest, const s8 *src, u32 sz ) {
 
 
     for( i = 0 ; i < len ; i++ ) {
+    
+        sum += (dest[ i ] - src[ i ]);
+        if( sum ) {
+            
+            break;
+        }
+    }
+
+
+    return sum;
+}
+
+
+//
+// CbStrCmpL -- Legacy Compare two strings
+//
+// Input:
+//  *dest   -- Destination string
+//  *src    -- Source string
+//
+// Return:
+//  Less than: -1, Equal to: 0, More than: 1
+//
+s32 CbStrCmpL( const s8 *dest, const s8 *src ) {
+
+    s32 sum = 0;
+	u32 slen, dlen, i;
+
+
+    slen = CbStrLen( src );
+	dlen = CbStrLen( dest );
+    if( dlen < slen ) {
+    
+        dlen = slen;
+    }
+
+
+    for( i = 0 ; i < dlen ; i++ ) {
     
         sum += (dest[ i ] - src[ i ]);
         if( sum ) {

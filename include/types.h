@@ -38,6 +38,7 @@ typedef		volatile void			*PhysicalMemory;
 #define		NULL					0
 
 
-#define		PACKED_STRUCT			typedef struct __attribute__((packed))
+#define     PACKED                  __attribute__((packed))
+
 
 

@@ -29,7 +29,7 @@
 //
 // Structures
 //
-PACKED_STRUCT _GeneralRegisters {
+typedef struct PACKED _GeneralRegisters {
 
 	u32		eax;		// 0
 	u32		ecx;		// 4

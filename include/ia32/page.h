@@ -95,7 +95,7 @@ typedef enum {
 } E820Type;
 
 
-PACKED_STRUCT _E820Result {
+typedef struct PACKED _E820Result {
 
     u32         BaseAddrLow;
     u32         BaseAddrHigh;

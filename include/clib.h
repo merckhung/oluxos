@@ -2,8 +2,9 @@
  * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
+ * File: clib.h
+ * Description:
+ *  Kernel C library header file
  *
  */
 
@@ -33,6 +34,8 @@ void *CbMemCpy( void *dest, const void *src, u32 sz );
 u32 CbStrLen( const s8 *str );
 s8 *CbStrCpy( s8 *dest, const s8 *src, u32 sz );
 s32 CbStrCmp( const s8 *dest, const s8 *src, u32 sz );
+s32 CbStrCmpL( const s8 *dest, const s8 *src );
+s8 *CbStrCat( s8 *dest, const s8 *src, s32 sz );
 s8 *CbIndex( const s8 *buf, const s8 ch );
 
 
