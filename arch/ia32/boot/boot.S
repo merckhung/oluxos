@@ -51,6 +51,10 @@ _SystemBoot:
     .word   0
 
 
+__krnsecs:
+    .byte   0
+
+
 _bpb:
 
     // Setup Buffer after MBR
@@ -72,9 +76,6 @@ _bpb:
 
 
 .fill   467, 1, 0
-
-__krnsecs:
-    .byte   0
 
 .word   0xaa55
 

@@ -25,7 +25,7 @@
 #define BLKSZ   4096
 #define HDDBLK  512
 #define LENNAME 80
-#define OFFBLK  0x1fd
+#define OFFBLK  0x12
 
 
 
