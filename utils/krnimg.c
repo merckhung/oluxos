@@ -16,6 +16,8 @@
 #include <fcntl.h>
 #include <version.h>
 
+#include <otypes.h>
+#include <olux.h>
 
 
 #define VERSION "krnimg version 0.1 (C) "COPYRIGHT_YEAR" "COMPANY_NAME
@@ -42,18 +44,15 @@ static void usage( void ) {
 }
 
 
-int main( int argc, char **argv ) {
+s32 main( s32 argc, s8 **argv ) {
 
-    int kfd, bfd, ifd;
-    char krn_name[ LENNAME ], boot_name[ LENNAME ], img_name[ LENNAME ];
-    int krn_sz, boot_sz;
-    int set = 0, err = 1;
-    char buf[ BLKSZ ];
-    int i;
-    char c;
-
-    extern char *optarg;
-    extern int optind;
+    s32 kfd, bfd, ifd;
+    s8 krn_name[ LENNAME ], boot_name[ LENNAME ], img_name[ LENNAME ];
+    s32 krn_sz, boot_sz;
+    s32 set = 0, err = 1;
+    s8 buf[ BLKSZ ];
+    s32 i;
+    s8 c;
 
 
     //

@@ -35,6 +35,7 @@ KRNNAME				=	OluxOS.krn
 KRNMAIN				=	kernel
 BOOTSECT			=	bootsect
 UTILS				=	utils
+TESTHDD				=	/dev/sdb
 
 
 .PHONY:	$(UTILS)
@@ -70,5 +71,13 @@ emu:
 
 
 over: clean all emu
+
+
+usb:
+	utils/instkrn -v -r -d $(TESTHDD) -k $(KRNNAME)
+
+
+usbemu:
+	qemu -hda $(TESTHDD) -m 256 -no-kqemu -s -serial /dev/tty3
 
 

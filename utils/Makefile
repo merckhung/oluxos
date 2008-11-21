@@ -10,13 +10,20 @@
 ################################################################################
 include ../scripts/rules.mk
 
-TARGET				=	krnimg
-CFLAGS				=	-O2 -Wall -I../include
+TARGET				=	krnimg instkrn
+CFLAGS				=	-O2 -Wall -Iinclude -I../include
 LDFLAGS				=
 
 
-all:
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(TARGET).c
+all: $(TARGET)
+
+
+krnimg: krnimg.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+
+
+instkrn: instkrn.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $< libcomm.c
 
 
 clean:
