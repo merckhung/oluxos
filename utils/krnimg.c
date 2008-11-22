@@ -109,6 +109,14 @@ s32 main( s32 argc, s8 **argv ) {
 
 
 
+	if( set != 0x07 ) {
+
+		usage();
+		return 1;
+	}
+
+
+
     //
     // Open bootsector binary
     //

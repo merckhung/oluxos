@@ -182,6 +182,8 @@ u32 KshParseCmd( s8 *CmdBuf, s8 **Param ) {
 
 void KshExecCmd( s32 CmdCode, s8 *Param ) {
 
+	u32 lba;
+
 
     switch( CmdCode ) {
 
@@ -202,8 +204,9 @@ void KshExecCmd( s32 CmdCode, s8 *Param ) {
 
 				IDEReadSector( lba, SectorBuf );
 			}
-#endif
+#else
 			IDEReadSector( 0, SectorBuf );
+#endif
 			break;
 
 
