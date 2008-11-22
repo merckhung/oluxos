@@ -26,11 +26,7 @@ static u8 NumLock = 0;
 static u8 ScrollLock = 0;
 
 
-s8 InputBuf[ LEN_CMDBUF ];
-u32 InputIndex;
-
-
-static struct KbdAsciiPair_t kap[] = {
+KbdAsciiPair kap[] = {
 
     { NO_SHIFT      , KEY_ESC           , NO_ASCII      },
     { SHIFT_FREE    , KEY_ONE           , '1'           },
@@ -176,16 +172,8 @@ static struct KbdAsciiPair_t kap[] = {
 //
 void KbdInitKeyboard( void ) {
 
-	// Initializing
-    InputIndex = 0;
-    CbMemSet( InputBuf, 0, LEN_CMDBUF );
-
-
 	// Register interrupt handler
     IntRegInterrupt( IRQ_KEYBOARD, IRQHandler( 1 ), KbdIntHandler );
-
-
-	TcPrint( "\n"KSH_PROMPT );
 }
 
 
@@ -248,19 +236,7 @@ void KbdIntHandler( u8 IrqNum ) {
     
         if( kap[ i ].ScanCode == keycode ) {
 
-
-			if( keycode != KEY_ENTER ) {
-
-				// Get character
-				InputBuf[ InputIndex ] = kap[ i ].AsciiCode;
-				InputIndex++;
-				TcPrint( "%c", kap[ i ].AsciiCode );
-			}
-			else {
-
-				TcPrint( "\n" );
-				KshHandleCmd();
-			}
+			KshInsertCharacter( &(kap[ i ]) );
             break;
         }
     }

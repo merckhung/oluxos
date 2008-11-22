@@ -23,8 +23,8 @@
 #include <driver/ksh.h>
 
 
-extern s8 InputBuf[ LEN_CMDBUF ];
-extern u32 InputIndex;
+static s8 InputBuf[ LEN_CMDBUF ];
+static u32 InputIndex;
 static s8 *Param = NULL;
 
 
@@ -52,6 +52,37 @@ static CmdPair Cmds[] = {
     { "help",			OLUX_CMD_HELP },
     { "",				OLUX_CMD_UNKNOWN },
 };
+
+
+
+void KshStart( void ) {
+
+	// Initializing
+    InputIndex = 0;
+    CbMemSet( InputBuf, 0, LEN_CMDBUF );
+	TcPrint( "\n"KSH_PROMPT );
+
+	for(;;);
+}
+
+
+
+void KshInsertCharacter( KbdAsciiPair *in ) {
+
+
+	if( in->ScanCode != KEY_ENTER ) {
+
+		// Get character
+		InputBuf[ InputIndex ] = in->AsciiCode;
+		InputIndex++;
+		TcPrint( "%c", in->AsciiCode );
+	}
+	else {
+
+		TcPrint( "\n" );
+		KshHandleCmd();
+	}
+}
 
 
 

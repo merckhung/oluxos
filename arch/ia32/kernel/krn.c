@@ -23,6 +23,7 @@
 #include <driver/ide.h>
 #include <driver/serial.h>
 #include <driver/sercon.h>
+#include <driver/ksh.h>
 #include <fs/fat.h>
 #include <ia32/gdb.h>
 
@@ -98,7 +99,7 @@ void krn_entry( void ) {
 	//GdbInit();
 
 
-    for(;;);
+    KshStart();
 }
 
 

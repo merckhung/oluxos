@@ -31,6 +31,8 @@ typedef struct _CmdPair {
 //
 // Prototypes
 //
+void KshStart( void );
+void KshInsertCharacter( KbdAsciiPair *in );
 void KshHandleCmd( void );
 u32 KshParseCmd( s8 *CmdBuf, s8 **Param );
 void KshExecCmd( s32 CmdCode, s8 *Param );

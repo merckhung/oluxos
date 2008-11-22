@@ -138,12 +138,13 @@
 #define     NO_ASCII        0x00
 
 
-struct KbdAsciiPair_t {
+typedef struct _KbdAsciiPair {
 
     u8    ShiftKey;
     u8    ScanCode;
     u8    AsciiCode;
-};
+
+} KbdAsciiPair;
 
 
 void KbdInitKeyboard( void );
