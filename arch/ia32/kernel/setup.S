@@ -24,7 +24,7 @@
 
 _setup_start:
 
-
+	
     // Setup our Global Segment Descriptors
     mov     $(__gdt - _setup_start + KRN_LOAD_ADDR), %eax
     mov     %eax, (__gdtptr - _setup_start + KRN_LOAD_ADDR + 2)

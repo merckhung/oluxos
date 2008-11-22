@@ -141,23 +141,12 @@ _32bit_mode_start:
 
     // Calculate the Length of Kernel Code
     xorl    %ebx, %ebx
-    movb    __KrnImgNrSecs, %bl
-    movl    $KRN_BLOCK_SZ, %eax
-    mull    %ebx
+	xorl	%eax, %eax
+
+    movb    __KrnCodeNrSecs, %bl
+    movw    $KRN_BLOCK_SZ, %ax
+    mulw    %bx
     movl    %eax, %ecx
-
-    movl    $__krnimg_start, %eax
-    movw    $KRN_BOOT_ADDR, %bx
-    subw    %bx, %ax     
-    
-
-    // Get the length we need to know
-    subl    %eax, %ecx
-
-
-    // Align 4 bytes
-    addl    $4, %ecx
-    andb    $0xfc, %cl
 
 
     //
@@ -177,15 +166,7 @@ _32bit_mode_start:
     // EDI = Linear address of KRN_LOAD_ADDR (1MB)
     // ECX = Rest of length of kernel code in byte
     //
-    movl    $__krnimg_start, %eax
-    testb   $0x0f, %al
-    jz      aldy_align
-
-    andb    $0xf0, %al
-    addl    $0x10, %eax
-aldy_align:
-    
-    movl    %eax, %esi
+    movl    $__KrnCodeStart, %esi
     movl    $KRN_LOAD_ADDR, %edi
     rep     movsl
 
@@ -199,7 +180,8 @@ aldy_align:
     .word   0xaa55
 
 
-__krnimg_start:
+.align 16
+__KrnCodeStart:
 
 
 

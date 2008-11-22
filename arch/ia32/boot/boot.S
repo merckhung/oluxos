@@ -21,7 +21,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 .text
 .code16
-.global _SystemBoot, __KrnImgNrSecs
+.global _SystemBoot, __KrnImgNrSecs, __KrnCodeNrSecs
 
 
 _SystemBoot:
@@ -30,6 +30,8 @@ _SystemBoot:
 
 __KrnImgNrSecs:
     .byte   0
+__KrnCodeNrSecs:
+	.byte	0
 
 
 _SkipParams:
@@ -55,7 +57,7 @@ _SkipParams:
     jmp     _SystemInfo
 
 
-.fill   483, 1, 0
+.fill   482, 1, 0
 
 .word   0xaa55
 

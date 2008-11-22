@@ -13,7 +13,7 @@
 #include <driver/console.h>
 
 
-static volatile u8 *VideoRamPtr = (u8 *)VIDEO_TEXT_ADDR;
+static volatile u8 *VideoRamPtr = (volatile u8 *)VIDEO_TEXT_ADDR;
 static s8 buf[ CONSOLE_BUF_LEN ];
 static u8 xPos = 0;
 static u8 yPos = 0;

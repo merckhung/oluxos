@@ -20,14 +20,14 @@
 #include <olux.h>
 
 
-#define VERSION "krnimg version 0.1 (C) "COPYRIGHT_YEAR" "COMPANY_NAME
-#define DEFKRN  "kernel"
-#define DEFBOOT "bootsect"
-#define DEFIMG  "OluxOS.krn"
-#define BLKSZ   4096
-#define HDDBLK  512
-#define LENNAME 80
-#define OFFBLK  2
+#define VERSION 			"krnimg version 0.1 (C) "COPYRIGHT_YEAR" "COMPANY_NAME
+#define DEFKRN  			"kernel"
+#define DEFBOOT 			"bootsect"
+#define DEFIMG  			"OluxOS.krn"
+#define HDDBLK  			512
+#define LENNAME 			80
+#define KRN_IMG_NR_SECS		2
+#define	KRN_CODE_NR_SECS	3
 
 
 
@@ -44,15 +44,29 @@ static void usage( void ) {
 }
 
 
+
+u32 CalNrSectors( u32 bufsz ) {
+
+	if( bufsz % HDDBLK ) {
+
+		return (bufsz / HDDBLK) + 1;
+	}
+	else {
+
+		return bufsz / HDDBLK;
+	}
+}
+
+
+
 s32 main( s32 argc, s8 **argv ) {
 
     s32 kfd, bfd, ifd;
     s8 krn_name[ LENNAME ], boot_name[ LENNAME ], img_name[ LENNAME ];
     s32 krn_sz, boot_sz;
     s32 set = 0, err = 1;
-    s8 buf[ BLKSZ ];
     s32 i;
-    s8 c;
+    s8 c, *kbuf, *bbuf;
 
 
     //
@@ -106,6 +120,7 @@ s32 main( s32 argc, s8 **argv ) {
     }
 
 
+
     //
     // Open kernel binary
     //
@@ -117,6 +132,47 @@ s32 main( s32 argc, s8 **argv ) {
     }
 
 
+	//
+	// Get image sizes
+	//
+	boot_sz = lseek( bfd, 0, SEEK_END );	
+	krn_sz = lseek( kfd, 0, SEEK_END );
+	if( (boot_sz < 1) || (krn_sz < 1) ) {
+
+		fprintf( stderr, "Kernel or Boot code size < 1\n" );
+		goto close_kfd;
+	}
+	lseek( bfd, 0, SEEK_SET );
+	lseek( kfd, 0, SEEK_SET );
+
+
+	// Align the size of boot code
+	if( boot_sz % 16 ) {
+
+		boot_sz = ((boot_sz + 16) / 16) * 16;
+	}
+
+
+	// Allocate memory
+	bbuf = malloc( boot_sz );
+	if( !bbuf ) {
+
+		fprintf( stderr, "Cannot allocate memory for the buffer of boot code\n" );
+		goto close_kfd;
+	}
+	memset( bbuf, 0, boot_sz );
+
+
+	kbuf = malloc( krn_sz );
+	if( !kbuf ) {
+
+		fprintf( stderr, "Cannot allocate memory for the buffer of kernel code\n" );
+		goto free_bbuf;
+	}
+	memset( kbuf, 0, krn_sz );
+
+
+
     //
     // Create Kenrel Image
     //
@@ -124,94 +180,99 @@ s32 main( s32 argc, s8 **argv ) {
     if( ifd < 0 ) {
     
         fprintf( stderr, "Cannot create file of kernel image %s\n", img_name );
-        goto close_kfd;
+        goto free_kbuf;
     }
 
 
-    //
-    // Write Boot Sector
-    //
-    for( boot_sz = 0 ; ; boot_sz += i ) {
-    
-        i = read( bfd, buf, BLKSZ );
-        if( !i ) {
-        
-            break;
-        }
-
-        if( i != write( ifd, buf, i ) ) {
-        
-            fprintf( stderr, "Cannot Write Boot Sector\n" );
-            goto close_ifd;
-        }
-    }
-
 
     //
-    // Align 16 bytes
+    // Write Boot code
     //
-    if( boot_sz % 16 ) {
+	i = read( bfd, bbuf, boot_sz );
+	if( i < 1 ) {
 
-        boot_sz = (((boot_sz + 16) / 16) * 16);
-        if( lseek( ifd, boot_sz, SEEK_SET ) < 0 ) {
-        
-            fprintf( stderr, "Cannot align 16 bytes\n" );
-            goto close_ifd;
-        }
-    }
+		fprintf( stderr, "Error occurred while reading boot code\n" );
+		goto close_ifd;
+	}
+	i = write( ifd, bbuf, boot_sz );
+	if( i != boot_sz ) {
+
+		fprintf( stderr, "Error occurred while writing boot code\n" );
+		goto close_ifd;
+	}
+
 
 
     //
     // Write Main Kernel
     //
-    for( krn_sz = 0 ; ; krn_sz += i ) {
-    
-        i = read( kfd, buf, BLKSZ );
-        if( !i ) {
-        
-            break;
-        }
-    
-        if( i != write( ifd, buf, i ) ) {
+	i = read( kfd, kbuf, krn_sz );
+	if( i < 1 ) {
 
-            fprintf( stderr, "Cannot Write Main Kernel\n" );
-            goto close_ifd;
-        }
-    }
+		fprintf( stderr, "Error occurred while reading kernel code\n" );
+		goto close_ifd;
+	}
+	i = write( ifd, kbuf, krn_sz );
+	if( i != krn_sz ) {
+
+		fprintf( stderr, "Error occurred while writing kernel code\n" );
+		goto close_ifd;
+	}
 
 
     //
-    // Write Block Number
+    // Write the number of sectors of kernel image
     //
-    if( lseek( ifd, OFFBLK, SEEK_SET ) < 0 ) {
+    if( lseek( ifd, KRN_IMG_NR_SECS, SEEK_SET ) != KRN_IMG_NR_SECS ) {
     
-        fprintf( stderr, "Cannot go to Block Variable at offset %d\n", OFFBLK );
+        fprintf( stderr, "Cannot go to offset %d\n", KRN_IMG_NR_SECS );
         goto close_ifd;
     }
-
-
-    c = (boot_sz + krn_sz + HDDBLK) / HDDBLK;
+	c = CalNrSectors( boot_sz + krn_sz );
     if( write( ifd, &c, 1 ) != 1 ) {
     
-        fprintf( stderr, "Cannot write new Block Variable\n" );
+        fprintf( stderr, "Cannot write the number of sectors of kernel image\n" );
         goto close_ifd;
     }
+
+
+    //
+    // Write the number of sectors of kernel code
+    //
+    if( lseek( ifd, KRN_CODE_NR_SECS, SEEK_SET ) != KRN_CODE_NR_SECS ) {
     
+        fprintf( stderr, "Cannot go to offset %d\n", KRN_CODE_NR_SECS );
+        goto close_ifd;
+    }
+	c = CalNrSectors( krn_sz );
+    if( write( ifd, &c, 1 ) != 1 ) {
+    
+        fprintf( stderr, "Cannot write the number of sectors of kernel code\n" );
+        goto close_ifd;
+    }
 
 
     //
     // Write Done
     //
     printf( "Created Kernel Image %s successfully\n", img_name );
-    printf( "Boot Sector: %d bytes\n", boot_sz );
-    printf( "Kernel Code: %d bytes (Offset: 0x%8.8X)\n", krn_sz, boot_sz );
-    printf( "Kernel Image Size: %d bytes, %d sectors\n", boot_sz + krn_sz, c );
+    printf( "Boot Code Size    : 0x%8.8X (%6d) bytes, 0x%2.2X (%4d) sectors\n", boot_sz, boot_sz, CalNrSectors( boot_sz ), CalNrSectors( boot_sz ) );
+    printf( "Kernel Code Size  : 0x%8.8X (%6d) bytes, 0x%2.2X (%4d) sectors\n", krn_sz, krn_sz, CalNrSectors( krn_sz ), CalNrSectors( krn_sz ) );
+    printf( "Kernel Image Size : 0x%8.8X (%6d) bytes, 0x%2.2X (%4d) sectors\n", boot_sz + krn_sz, boot_sz + krn_sz, c, c );
+
 
 
     err = 0;
 
+
 close_ifd:
-    close( ifd );
+	close( ifd );
+
+free_kbuf:
+	free( kbuf);
+
+free_bbuf:
+	free( bbuf );
 
 close_kfd:
     close( kfd );
