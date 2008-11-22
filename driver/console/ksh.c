@@ -32,6 +32,7 @@ enum {
 
 	OLUX_CMD_UNKNOWN = 0,
 	OLUX_CMD_HELP,
+	OLUX_CMD_REBOOT,
 	OLUX_CMD_LSPCI,
 	OLUX_CMD_IDE,
 	OLUX_CMD_MENU,
@@ -49,6 +50,7 @@ static CmdPair Cmds[] = {
 	{ "menu",           OLUX_CMD_MENU },
 	{ "ide",			OLUX_CMD_IDE },
 	{ "lspci",			OLUX_CMD_LSPCI },
+	{ "reboot",			OLUX_CMD_REBOOT },
     { "help",			OLUX_CMD_HELP },
     { "",				OLUX_CMD_UNKNOWN },
 };
@@ -204,6 +206,14 @@ void KshExecCmd( s32 CmdCode, s8 *Param ) {
 			break;
 
 
+		case OLUX_CMD_REBOOT:
+
+			// Hard reboot by PCI reset
+			//TcPrint( "Reboot the system......\n" );
+			IoOutByte( 0x06, 0xCF9 );
+			break;
+
+
         case OLUX_CMD_HELP:
 
 			// Print usage
@@ -234,6 +244,7 @@ void KshUsage( void ) {
 	TcPrint( "  mem <ADDR/LEN> - Dump memory\n" );
 
 	TcPrint( "  clrscr         - Clear screen\n" );
+	TcPrint( "  reboot         - Reboot\n");
 	TcPrint( "  help           - Display this message\n\n" );
 }
 
