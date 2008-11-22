@@ -53,10 +53,10 @@ void TmInitTimer( void ) {
 //
 void TmIntHandler( u8 IrqNum ) {
 
-    volatile u8 *videomem = (u8 *)0xB84FE;
+    //volatile u8 *videomem = (u8 *)0xB84FE;
 
-    (*videomem)++;
-    (*(videomem + 1))++;
+    //(*videomem)++;
+    //(*(videomem + 1))++;
 }
 
 

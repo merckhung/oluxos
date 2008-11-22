@@ -88,6 +88,29 @@ void KshInsertCharacter( KbdAsciiPair *in ) {
 
 
 
+bool KshParseOneParameter( s8 *buf, u32 *first ) {
+
+
+    // Check length
+    if( CbStrLen( buf ) > 10 ) {
+
+        return FALSE;
+    }
+
+
+    // Check hex digits
+    if( !((*buf == '0') && (*(buf + 1) == 'x')) ) {
+
+        return FALSE;
+    }
+
+
+    *first = CbAsciiBufToBin( buf + 2 );
+    return TRUE;
+}
+
+
+
 //
 // KshHandleCmd
 //
@@ -159,6 +182,8 @@ u32 KshParseCmd( s8 *CmdBuf, s8 **Param ) {
 
 void KshExecCmd( s32 CmdCode, s8 *Param ) {
 
+	u32 lba;
+
 
     switch( CmdCode ) {
 
@@ -173,8 +198,13 @@ void KshExecCmd( s32 CmdCode, s8 *Param ) {
 
 		case OLUX_CMD_IDE:
 
+			// Read a sector
+#if 0
+			if( KshParseOneParameter( Param, &lba ) == FALSE ) {
 
-			// Show IDE
+				IDEReadSector( lba, SectorBuf );
+			}
+#endif
 			IDEReadSector( 0, SectorBuf );
 			break;
 

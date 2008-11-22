@@ -98,6 +98,9 @@ void MmPageInit( void ) {
         *(PTEPtr + i) = (u32)(filladdr + i * PAGE_SIZE) | P_SUP_WT_RW_4K;
 
 
+		//DbgPrint( "PTE Addr = 0x%8.8X, Value = 0x%8.8X\n", (u32)(PTEPtr + i), *(PTEPtr + i) );
+
+
 		/*
         if( i >= (PTENUM - 1024) ) {
 
