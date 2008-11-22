@@ -136,7 +136,7 @@ void MmShowE820Info( void ) {
     // Print E820 Information
     for( i = 0 ; i < *e820_count ; i++ ) {
     
-        TcPrint( "E820: 0x%8.8X%8.8X - 0x%8.8X%8.8X <%s>\n",
+        TcPrint( "E820: 0x%8.8X_%8.8X - 0x%8.8X_%8.8X <%s>\n",
                  (e820_base + i)->BaseAddrHigh,
                  (e820_base + i)->BaseAddrLow,
                  (e820_base + i)->BaseAddrHigh + (e820_base + i)->LengthHigh,
