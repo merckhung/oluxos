@@ -2,15 +2,15 @@
  * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
- *
- * info.S -- OluxOS code for getting BIOS information
+ * File: info.S
+ * Description:
+ *	OluxOS code for getting BIOS information
  *
  */
 
 
 #include <ia32/platform.h>
+#include <ia32/bios.h>
 
 
 .file       "info.S"
@@ -22,10 +22,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 .text
 .code16
-.global     _info_start, __e820_count, __e820_data
+.global     _SystemInfo, __e820_count, __e820_data
 
 
-_info_start:
+_SystemInfo:
 
 
     // Query E820 System Address Map
@@ -47,9 +47,9 @@ _next_record:
     // EAX = E820
     // ECX = Length of buffer
     // EDX = 'SMAP'
-    movl    $0xe820, %eax
-    movl    $24, %ecx
-    movl    $0x534d4150, %edx
+    movl    $E820_FUNC, %eax
+    movl    $E820_SZ_RECORD, %ecx
+    movl    $E820_MAGIC, %edx
 
 
     // Do query e820

@@ -20,15 +20,11 @@
 #define KRN_STACK_SZ    4096
 
 
-#define E820_COUNT      0x9000
-#define E820_BASE       0x9004
 
-
-
-#ifndef __ASM__
 //
 // Structures
 //
+#ifndef __ASM__
 typedef struct PACKED _GeneralRegisters {
 
 	u32		eax;		// 0
@@ -58,12 +54,6 @@ typedef struct PACKED _GeneralRegisters {
 	u16		rvsd5;
 
 } GeneralRegisters;
-
-
-
-//
-// Prototypes
-//
 #endif
 
 

@@ -2,10 +2,9 @@
  * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
- *
- * pm.S -- OluxOS setup code of protected mode
+ * File: pm.S
+ * Description:
+ *	OluxOS setup code of protected mode
  *
  */
 
@@ -142,7 +141,7 @@ _32bit_mode_start:
 
     // Calculate the Length of Kernel Code
     xorl    %ebx, %ebx
-    movb    __krnsecs, %bl
+    movb    __KrnImgNrSecs, %bl
     movl    $KRN_BLOCK_SZ, %eax
     mull    %ebx
     movl    %eax, %ecx

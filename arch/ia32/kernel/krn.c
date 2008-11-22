@@ -89,7 +89,7 @@ void krn_entry( void ) {
 
 
 	// Enable serial interrupt
-	SrInitInterrupt();
+	//SrInitInterrupt();
 
 
     // Start task scheduler
@@ -105,7 +105,7 @@ void krn_entry( void ) {
 	
 
 	// Initialize GDB
-	GdbInit();
+	//GdbInit();
 
 
     for(;;);

@@ -9,6 +9,7 @@
  */
 #include <types.h>
 #include <ia32/platform.h>
+#include <ia32/bios.h>
 #include <ia32/page.h>
 #include <ia32/debug.h>
 
