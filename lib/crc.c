@@ -2,10 +2,9 @@
  * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
- *
- * crc.c -- OluxOS CRC Routines
+ * File: crc.c
+ * Description:
+ *  Kernel CRC library
  *
  */
 #include <types.h>

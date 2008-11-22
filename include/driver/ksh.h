@@ -15,16 +15,6 @@
 #define KSH_PROMPT				"OluxOS > "
 
 
-enum {
-
-    OLUX_CMD_UNKNOWN = 0,
-    OLUX_CMD_HELP,
-    OLUX_CMD_LSPCI,
-    OLUX_CMD_IDE,
-	OLUX_CMD_MENU,
-};
-
-
 
 //
 // Structures
@@ -44,6 +34,7 @@ typedef struct _CmdPair {
 void KshHandleCmd( void );
 u32 KshParseCmd( s8 *CmdBuf, s8 **Param );
 void KshExecCmd( s32 CmdCode, s8 *Param );
-
+void KshUsage( void );
+void KshDumpMemory( u8 *Data, u32 Length, u32 BaseAddr );
 
 

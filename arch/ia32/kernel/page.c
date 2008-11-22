@@ -20,6 +20,7 @@ volatile u32 *PTEPtr = (volatile u32 *)PTE_ADDR;
 
 volatile u8 *e820_count = (volatile u8 *)E820_COUNT;
 volatile E820Result *e820_base = (volatile E820Result *)E820_BASE;
+static u64 MemSize = 0;
 
 
 static s8 *AddrType[] = {
@@ -50,19 +51,11 @@ void MmPageInit( void ) {
 
     s32 i;
     u32 filladdr = 0;
-	u64 MemSize = 0;
 
 
     // Print E820 Information
     for( i = 0 ; i < *e820_count ; i++ ) {
     
-        TcPrint( "E820: 0x%8.8X%8.8X - 0x%8.8X%8.8X <%s>\n",
-                 (e820_base + i)->BaseAddrHigh,
-                 (e820_base + i)->BaseAddrLow,
-                 (e820_base + i)->BaseAddrHigh + (e820_base + i)->LengthHigh,
-                 (e820_base + i)->BaseAddrLow + (e820_base + i)->LengthLow,
-                 MmShowE820Type( (e820_base + i)->RecType ) );
-
 		if( (e820_base + i)->RecType == ADDRESS_RANGE_MEMORY ) {
 
 			MemSize += (((u64)(e820_base + i)->LengthHigh) << 32ULL);
@@ -71,8 +64,10 @@ void MmPageInit( void ) {
     }
 
 
-	// Print out total memory size available
+	// Display total memory size
 	TcPrint( "Total Memory Size: %d MB\n", (u32)(MemSize / 1024ULL / 1024ULL) );
+
+
 	//DbgPrint( "PDE Start Addr: 0x%8.8X\n", (u32)PDEPtr );
 	//DbgPrint( "PTE Start Addr: 0x%8.8X\n", (u32)PTEPtr );
 
@@ -125,6 +120,29 @@ void MmPageInit( void ) {
 
     // Setup PDE pointer and enable paging
 	MmEnablePaging( PDEPtr );
+}
+
+
+
+void MmShowE820Info( void ) {
+
+	s32 i;
+
+
+	// Display total memory size
+	TcPrint( "Total Memory Size: %d MB\n", (u32)(MemSize / 1024ULL / 1024ULL) );
+
+
+    // Print E820 Information
+    for( i = 0 ; i < *e820_count ; i++ ) {
+    
+        TcPrint( "E820: 0x%8.8X%8.8X - 0x%8.8X%8.8X <%s>\n",
+                 (e820_base + i)->BaseAddrHigh,
+                 (e820_base + i)->BaseAddrLow,
+                 (e820_base + i)->BaseAddrHigh + (e820_base + i)->LengthHigh,
+                 (e820_base + i)->BaseAddrLow + (e820_base + i)->LengthLow,
+                 MmShowE820Type( (e820_base + i)->RecType ) );
+    }
 }
 
 

@@ -80,8 +80,6 @@ void IDEInit( void ) {
 
     for( i = 0 ; i < 662 ; i++ ) {
 
-        TcClear();
-        //WriteSector( i, buf );
         ReadSector( i );
         ReadData( read );
 

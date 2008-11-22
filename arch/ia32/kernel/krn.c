@@ -44,9 +44,9 @@ void krn_entry( void ) {
 
 
     // Initialize Serial Port
-    SrInit();
-    ScPrint( COPYRIGHT_STR"\n" );
-    ScPrint( PRODUCT_NAME" version "KRN_VER"\n\n" );
+    //SrInit();
+    //ScPrint( COPYRIGHT_STR"\n" );
+    //ScPrint( PRODUCT_NAME" version "KRN_VER"\n\n" );
 
 
     // Clear screen and print welcome message
