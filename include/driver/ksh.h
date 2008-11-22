@@ -13,6 +13,7 @@
 // Definitions
 //
 #define KSH_PROMPT				"OluxOS > "
+#define LEN_CMDBUF				256
 
 
 
