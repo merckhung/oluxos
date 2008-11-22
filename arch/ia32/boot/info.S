@@ -22,7 +22,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 .text
 .code16
-.global     _SystemInfo, __e820_count, __e820_data
+.global     _SystemInfo
 
 
 _SystemInfo:
@@ -58,7 +58,7 @@ _next_record:
 
 
     // Move to next record
-    addw    $24, %di
+    addw    $E820_SZ_RECORD, %di
     incb    (E820_COUNT)
     cmp     $0, %ebx
     jne     _next_record

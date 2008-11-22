@@ -10,9 +10,9 @@
 ################################################################################
 
 
-kobjs-$(CONFIG_ARCH_IA32)	+=	console.o
-kobjs-$(CONFIG_ARCH_IA32)	+=	menu.o
-kobjs-$(CONFIG_ARCH_IA32)	+=	sercon.o
-kobjs-$(CONFIG_ARCH_IA32)	+=	ksh.o
+kobjs-$(CONFIG_ARCH_IA32)		+=	console.o
+kobjs-$(CONFIG_MENU)			+=	menu.o
+kobjs-$(CONFIG_SERIAL_CONSOLE)	+=	sercon.o
+kobjs-$(CONFIG_ARCH_IA32)		+=	ksh.o
 
 

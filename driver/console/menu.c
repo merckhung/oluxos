@@ -105,7 +105,6 @@ void MenuCentral( void ) {
 
 void MenuInit( void ) {
 
-
     MenuBackground();
     MenuTitle();
     MenuItem();

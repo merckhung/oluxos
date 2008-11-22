@@ -65,7 +65,7 @@ void MmPageInit( void ) {
 
 
 	// Display total memory size
-	TcPrint( "Total Memory Size: %d MB\n", (u32)(MemSize / 1024ULL / 1024ULL) );
+	MmShowE820Info();
 
 
 	//DbgPrint( "PDE Start Addr: 0x%8.8X\n", (u32)PDEPtr );
@@ -140,7 +140,7 @@ void MmShowE820Info( void ) {
                  (e820_base + i)->BaseAddrHigh,
                  (e820_base + i)->BaseAddrLow,
                  (e820_base + i)->BaseAddrHigh + (e820_base + i)->LengthHigh,
-                 (e820_base + i)->BaseAddrLow + (e820_base + i)->LengthLow,
+                 (e820_base + i)->BaseAddrLow + (e820_base + i)->LengthLow - 1,
                  MmShowE820Type( (e820_base + i)->RecType ) );
     }
 }

@@ -78,9 +78,11 @@ static u32 ExcTranTbl[][ 2 ] = {
 void GdbInit( void ) {
 
 
+#ifdef CONFIG_SERIAL
 	// Initialize serial port and enable interrupt
     SrInit();
 	SrInitInterrupt();
+#endif
 
 
 	// Disable interrupt
@@ -98,13 +100,19 @@ void GdbInit( void ) {
 
 void GdbPutChar( s8 c ) {
 
+#ifdef CONFIG_SERIAL
     SrPutChar( c );
+#endif
 }
 
 
 s8 GdbGetChar( void ) {
 
+#ifdef CONFIG_SERIAL
     return SrGetChar();
+#else
+	return NULL;
+#endif
 }
 
 

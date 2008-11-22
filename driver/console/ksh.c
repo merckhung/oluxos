@@ -143,11 +143,13 @@ void KshExecCmd( s32 CmdCode, s8 *Param ) {
 			break;
 
 
+#ifdef CONFIG_MENU
 		case OLUX_CMD_MENU:
 
 			// BIOS like menu
 			MenuInit();
 			break;
+#endif
 
 
 		case OLUX_CMD_CLRSCR:
@@ -180,6 +182,7 @@ void KshExecCmd( s32 CmdCode, s8 *Param ) {
 
         default:
 
+			KshUsage();
             break;
     }
 }
@@ -193,7 +196,9 @@ void KshUsage( void ) {
 
 	TcPrint( "  lspci          - Show all PCI devices\n");
 	TcPrint( "  ide <LBA>      - Read a sector from IDE disk\n" );
+#ifdef CONFIG_MENU
 	TcPrint( "  menu           - BIOS like menu\n" );
+#endif
 	TcPrint( "  e820           - Show E820 memory population\n" );
 	TcPrint( "  mem <ADDR/LEN> - Dump memory\n" );
 

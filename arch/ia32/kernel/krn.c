@@ -43,10 +43,12 @@
 void krn_entry( void ) {
 
 
+#ifdef CONFIG_SERIAL
     // Initialize Serial Port
     //SrInit();
     //ScPrint( COPYRIGHT_STR"\n" );
     //ScPrint( PRODUCT_NAME" version "KRN_VER"\n\n" );
+#endif
 
 
     // Clear screen and print welcome message

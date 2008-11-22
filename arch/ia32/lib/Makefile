@@ -11,7 +11,7 @@
 
 
 kobjs-$(CONFIG_ARCH_IA32)	+=	debug.o
-kobjs-$(CONFIG_ARCH_IA32)	+=	gdb.o
+kobjs-$(CONFIG_KERNEL_GDB)	+=	gdb.o
 kobjs-$(CONFIG_ARCH_IA32)	+=	io.o
 
 
