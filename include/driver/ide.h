@@ -27,11 +27,13 @@
 #define     IDE_ALTSTATUS       IDE_PORT_ADDR + 0x0e
 #define     IDE_DRVADDR         IDE_PORT_ADDR + 0x0f
 
+#define	IDE_SZ_SECTOR			512
 
-void ReadData( s8 *buf );
-void ReadSector( u32 sector );
-void WriteSector( u32 sector, s8 *buf );
-void GetIdentify( void );
+
+void IDEReadData( s8 *buf );
+void IDEReadSector( u32 sector, s8 *buf );
+void IDEWriteSector( u32 sector, s8 *buf );
+void IDEGetIdentify( void );
 void IDEInit( void );
 
 

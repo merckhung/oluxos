@@ -16,7 +16,8 @@
 #include <driver/ide.h>
 
 
-void ReadData( s8 *buf ) {
+
+void IDEReadData( s8 *buf ) {
 
     s16 i, j, k, tmp;
 
@@ -29,7 +30,12 @@ void ReadData( s8 *buf ) {
 }
 
 
-void ReadSector( u32 sector ) {
+
+void IDEReadSector( u32 sector, s8 *buf ) {
+
+
+	DbgPrint( "IDE Read LBA %d\n", sector );
+
 
     IoOutByte( 0x01, IDE_NSECTOR );
     IoOutByte( (sector & 0x000000ff), IDE_SECTOR );
@@ -37,10 +43,13 @@ void ReadSector( u32 sector ) {
     IoOutByte( (sector & 0x00ff0000) >> 16, IDE_HIGHCYL );
     IoOutByte( ((sector & 0x0f000000) >> 24) | 0xe0, IDE_SELECT );
     IoOutByte( 0x20, IDE_COMMAND );
+
+	IDEReadData( buf );
 }
 
 
-void WriteSector( u32 sector, s8 *buf ) {
+
+void IDEWriteSector( u32 sector, s8 *buf ) {
 
     s32 i;
 
@@ -59,35 +68,17 @@ void WriteSector( u32 sector, s8 *buf ) {
 }
 
 
-void GetIdentify( void ) {
+
+void IDEGetIdentify( void ) {
 
     IoOutByte( 0xec, IDE_COMMAND );
 }
 
 
+
 void IDEInit( void ) {
 
-    s32 i, j, k;
-    s8 buf[ 512 ];
-    s8 read[ 512 ];
-
-
-    for( i = 0 ; i < 512 ; i++ ) {
-    
-        buf[ i ] = i;
-    }
-
-
-    for( i = 0 ; i < 662 ; i++ ) {
-
-        ReadSector( i );
-        ReadData( read );
-
-        for( j = 0 ; j < 0xffff ; j++ ) {
-        
-            for( k = 0 ; k < -1 ; k++ );
-        }
-    }
 }
+
 
 

@@ -21,8 +21,7 @@ void FsFatInit( void ) {
     FsFatBPB_t *p;
 
 
-    ReadSector( 0 );
-    ReadData( buf );
+    IDEReadSector( 0, buf );
     p = (FsFatBPB_t *)buf;
 
 
@@ -89,8 +88,7 @@ void FsFatInit( void ) {
             DbgPrint( "RootDirSectors = %X\n", RootDirSectors );
 
             //ReadSector( RootDirSectors );
-            ReadSector( 1 );
-            ReadData( buf1 );
+            IDEReadSector( 1, buf1 );
 
 
 #if 1

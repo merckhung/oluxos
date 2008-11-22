@@ -26,6 +26,7 @@
 static s8 InputBuf[ LEN_CMDBUF ];
 static u32 InputIndex;
 static s8 *Param = NULL;
+static s8 SectorBuf[ IDE_SZ_SECTOR ];
 
 
 enum {
@@ -61,7 +62,6 @@ void KshStart( void ) {
 
 	// Initializing
     InputIndex = 0;
-    CbMemSet( InputBuf, 0, LEN_CMDBUF );
 	TcPrint( "\n"KSH_PROMPT );
 
 	for(;;);
@@ -105,6 +105,10 @@ void KshHandleCmd( void ) {
 	u32 CmdCode;
 
 
+	// Terminate string
+	InputBuf[ InputIndex ] = 0;
+
+
 	// Parse command string
 	CmdCode = KshParseCmd( InputBuf, &Param );
 
@@ -115,7 +119,6 @@ void KshHandleCmd( void ) {
 
 	// Clear buffer
     InputIndex = 0;
-    CbMemSet( InputBuf, 0, LEN_CMDBUF );
 
 
 	TcPrint( KSH_PROMPT );
@@ -172,7 +175,7 @@ void KshExecCmd( s32 CmdCode, s8 *Param ) {
 
 
 			// Show IDE
-			IDEInit();
+			IDEReadSector( 0, SectorBuf );
 			break;
 
 
