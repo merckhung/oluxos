@@ -14,6 +14,7 @@
 #define		KBD_IRQ			0x01
 #define     KBCNT_PORT      0x60
 #define     KB8042_PORT     0x64
+#define		LEN_CMDBUF		1024
 
 
 //
@@ -146,6 +147,9 @@ struct KbdAsciiPair_t {
 
 void KbdInitKeyboard( void );
 void KbdIntHandler( u8 irqnum );
+void KbdHandleCmd( void );
+u8 KbdGetChar( void );
+u8 KbdGetASCII( void );
 
 void Kbd8042SendCmd( u8 cmd );
 void KbdSendCmd( u8 cmd );
