@@ -13,5 +13,6 @@
 kobjs-$(CONFIG_ARCH_IA32)	+=	console.o
 kobjs-$(CONFIG_ARCH_IA32)	+=	menu.o
 kobjs-$(CONFIG_ARCH_IA32)	+=	sercon.o
+kobjs-$(CONFIG_ARCH_IA32)	+=	ksh.o
 
 

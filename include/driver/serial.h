@@ -4,10 +4,9 @@
  *
  * File: serial.h
  * Description:
- * 	None
+ *  OluxOS serial port driver header file
  *
  */
-
 
 
 //

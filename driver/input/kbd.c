@@ -15,6 +15,7 @@
 #include <ia32/debug.h>
 #include <driver/kbd.h>
 #include <driver/console.h>
+#include <driver/ksh.h>
 
 
 ExternIRQHandler( 1 );
@@ -25,8 +26,8 @@ static u8 NumLock = 0;
 static u8 ScrollLock = 0;
 
 
-static u8 InputBuf[ LEN_CMDBUF ];
-static u32 InputIndex;
+s8 InputBuf[ LEN_CMDBUF ];
+u32 InputIndex;
 
 
 static struct KbdAsciiPair_t kap[] = {
@@ -184,7 +185,7 @@ void KbdInitKeyboard( void ) {
     IntRegInterrupt( IRQ_KEYBOARD, IRQHandler( 1 ), KbdIntHandler );
 
 
-	TcPrint( "\nOluxOS > " );
+	TcPrint( "\n"KSH_PROMPT );
 }
 
 
@@ -258,98 +259,12 @@ void KbdIntHandler( u8 IrqNum ) {
 			else {
 
 				TcPrint( "\n" );
-				KbdHandleCmd();
+				KshHandleCmd();
 			}
-
-
-#if 0
-			// Print ASCII input
-            if( kap[ i ].AsciiCode != NO_ASCII ) {
-
-                DbgPrint( "HasNewInput = %d, CHECK: %c\n", HasNewInput, kap[ i ].AsciiCode );
-            }
-#endif
             break;
         }
     }
 }
-
-
-
-//
-// KbdHandleCmd
-//
-// Input:
-//	None
-//
-// Return:
-//	None
-//
-// Description:
-//	Handle Keyboard Command
-//
-void KbdHandleCmd( void ) {
-
-
-	TcPrint( "KbdHandleCmd: %s\n", InputBuf );
-
-
-	// Clear buffer
-    InputIndex = 0;
-    CbMemSet( InputBuf, 0, LEN_CMDBUF );
-
-
-	TcPrint( "OluxOS > " );
-}
-
-
-
-#if 0
-//
-// KbdGetChar
-//
-// Input:
-//  None
-//
-// Return:
-//  A character
-//
-// Description:
-//  Read a character from keyboard
-//
-u8 KbdGetChar( void ) {
-
-	u32 i;
-
-	for( i = 0 ; ; i++ ) {
-
-		if( HasNewInput ) {
-
-			HasNewInput = 0;
-			return InputByte;
-		}
-	}
-}
-
-
-
-//
-// KbdGetASCII
-//
-// Input:
-//  None
-//
-// Return:
-//  A ASCII code
-//
-// Description:
-//  Read a character from keyboard
-//
-u8 KbdGetASCII( void ) {
-
-	return InputASCII;
-}
-#endif
 
 
 

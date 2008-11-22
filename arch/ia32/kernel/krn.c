@@ -67,18 +67,10 @@ void krn_entry( void ) {
     IntInitInterrupt();
 
 
-    // Scan Pci
-    PciDetectDevice();
-
-
     // Initialized task
     //TskInit();
     //TskStart();
 
-
-    // Initialize IDE Hard Disk
-    //IDEInit();
-	
 
 	// Init timer
 	TmInitTimer();
@@ -94,10 +86,6 @@ void krn_entry( void ) {
 
     // Start task scheduler
     //TskScheduler();
-    
-
-    // Start Setup Menu
-    //MenuInit();
     
 
     // FAT file system

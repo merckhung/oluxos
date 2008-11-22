@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 2006 -  2007 Olux Organization All rights reserved.
+ * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
- *
- * menu.c -- OluxOS IA32 text mode console Screen Setup Menu routines
+ * File: menu.c
+ * Description:
+ *  OluxOS IA32 text mode console Screen Setup Menu routines
  *
  */
 #include <types.h>
@@ -13,9 +12,10 @@
 #include <ia32/io.h>
 #include <ia32/debug.h>
 #include <driver/console.h>
+#include <driver/menu.h>
 
 
-static volatile u8 *ScnPtr = (u8 *)0xb8000;
+static volatile u8 *ScnPtr = (u8 *)VIDEO_TEXT_ADDR;
 
 
 void MenuBackground( void ) {
