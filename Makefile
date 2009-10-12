@@ -20,6 +20,7 @@ EXTRA_VERSION		:=
 
 ASFLAGS				=	-D__ASM__
 CFLAGS              =   -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -nostdinc -isystem include -DKERNEL_DEBUG
+CFLAGS              +=  -fno-stack-protector
 LDFLAGS             =	-cref -M -s -N
 MAKEFLAGS			+=	--no-print-directory --no-builtin-rules --no-builtin-variables --quiet
 
