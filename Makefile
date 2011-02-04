@@ -68,7 +68,7 @@ clean:
 emu:
 	$(DD) if=/dev/zero of=$(SYSIMG) bs=$(IMGSIZE) count=1
 	$(DD) if=$(KRNNAME) of=$(SYSIMG) bs=$(IMGSIZE) count=1 conv=notrunc
-	qemu -hda $(SYSIMG) -m 256 -no-kqemu -serial /dev/tty3
+	qemu -hda $(SYSIMG) -m 256 -serial /dev/tty8
 
 
 over: clean all emu
@@ -79,6 +79,6 @@ usb:
 
 
 usbemu:
-	qemu -hda $(TESTHDD) -m 256 -no-kqemu -serial /dev/tty3
+	qemu -hda $(TESTHDD) -m 256 -serial /dev/tty8
 
 

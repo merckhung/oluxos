@@ -26,7 +26,7 @@
 #include <driver/ksh.h>
 #include <fs/fat.h>
 #include <ia32/gdb.h>
-
+#include <ia32/kdbger.h>
 
 
 //
@@ -45,9 +45,9 @@ void krn_entry( void ) {
 
 
     // Initialize Serial Port
-    SrInit();
-    ScPrint( COPYRIGHT_STR"\n" );
-    ScPrint( PRODUCT_NAME" version "KRN_VER"\n\n" );
+    //SrInit();
+    //ScPrint( COPYRIGHT_STR"\n" );
+    //ScPrint( PRODUCT_NAME" version "KRN_VER"\n\n" );
 
 
     // Clear screen and print welcome message
@@ -57,15 +57,19 @@ void krn_entry( void ) {
 
 
     // Check SMBIOS
-    ChkSMBIOSSup();
+    //ChkSMBIOSSup();
 
 
     // Setup Page
-    MmPageInit();
+    //MmPageInit();
 
 
     // Init CPU interrupt and i8259A
     IntInitInterrupt();
+
+
+	// Initialize Kernel Debugger
+	kdbgerInitialization( UART_PORT0 );
 
 
     // Initialized task
@@ -74,11 +78,11 @@ void krn_entry( void ) {
 
 
 	// Init timer
-	TmInitTimer();
+	//TmInitTimer();
 	
 
     // Init keyboard
-    KbdInitKeyboard();
+    //KbdInitKeyboard();
 
 
 	// Enable serial interrupt
@@ -97,8 +101,12 @@ void krn_entry( void ) {
 	//GdbInit();
 
 
-    KshStart();
+    //KshStart();
+
+
+	for(;;);
 }
+
 
 
 
