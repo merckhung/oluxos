@@ -130,6 +130,12 @@ typedef enum _kdbgerReqOpCode {
 	KDBGER_REQ_IO_WRITE,
     KDBGER_RSP_IO_WRITE,
 
+	KDBGER_REQ_PCI_READ,
+	KDBGER_RSP_PCI_READ,
+
+	KDBGER_REQ_PCI_WRITE,
+	KDBGER_RSP_PCI_WRITE,
+
 	KDBGER_RSP_CPU_EXCEPTION,
 
 } kdbgerOpCode_t;
@@ -159,7 +165,7 @@ typedef struct PACKED _kdbgerCommHdr {
 } kdbgerCommHdr_t;
 
 
-// Memory Read/Write packet
+// Memory space Read/Write packets
 typedef struct PACKED {
 
 	kdbgerCommHdr_t			kdbgerCommHdr;
@@ -179,7 +185,7 @@ typedef struct PACKED {
 } kdbgerRspMemReadPkt_t, kdbgerReqMemWritePkt_t;
 
 
-// IO Read/Write packet
+// IO space Read/Write packets
 typedef struct PACKED {
 
 	kdbgerCommHdr_t			kdbgerCommHdr;
@@ -197,6 +203,26 @@ typedef struct PACKED {
 	s8						*ioContent;
 
 } kdbgerRspIoReadPkt_t, kdbgerReqIoWritePkt_t;
+
+
+// PCI config Read/Write packets
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u32						address;
+	u16						size;
+
+} kdbgerReqPciReadPkt_t, kdbgerRspPciWritePkt_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u32						address;
+	u16						size;
+	s8						*pciContent;
+
+} kdbgerRspPciReadPkt_t, kdbgerReqPciWritePkt_t;
 
 
 typedef struct PACKED {
@@ -229,6 +255,14 @@ typedef struct PACKED {
 		// IO Write
 		kdbgerReqIoWritePkt_t		kdbgerReqIoWritePkt;
 		kdbgerRspIoWritePkt_t		kdbgerRspIoWritePkt;
+
+		// PCI Read
+		kdbgerReqPciReadPkt_t		kdbgerReqPciReadPkt;
+		kdbgerRspPciReadPkt_t		kdbgerRspPciReadPkt;
+
+		// PCI Write
+		kdbgerReqPciWritePkt_t		kdbgerReqPciWritePkt;
+		kdbgerRspPciWritePkt_t		kdbgerRspPciWritePkt;
 
 		// CPU Exception
 		kdbgerRspCpuExceptionPkt_t	kdbgerRspCpuExceptionPkt;

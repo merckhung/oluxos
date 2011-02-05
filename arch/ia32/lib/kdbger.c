@@ -47,6 +47,8 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	u32 i, sz;
 	u64 addr;
 	u16 ioAddr;
+	u32 pciAddr;
+	u16 pciSz;
 
     // Disable interrupt
     IoOutByte( 0x00, kdbgerPortAddr + UART_IER );
@@ -178,6 +180,51 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
 					pKdbgerCommPkt->kdbgerRspIoWritePkt.address = ioAddr;
 					pKdbgerCommPkt->kdbgerRspIoWritePkt.size = sz;
+					break;
+
+                case KDBGER_REQ_PCI_READ:
+
+                    // Read PCI config space
+                    ptr = (s8 *)&pKdbgerCommPkt->kdbgerRspPciReadPkt.pciContent;
+                    pciAddr = pKdbgerCommPkt->kdbgerReqPciReadPkt.address;
+                    pciSz = pKdbgerCommPkt->kdbgerReqPciReadPkt.size;
+
+                    CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
+                    for( i = 0 ; i < pciSz ; i++ ) {
+
+                        // Read PCI config data
+                        //*(ptr + i) = IoInByte( ioAddr + i );
+                    }
+
+                    // Prepare the response packet
+                    pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_PCI_READ;
+                    pKdbgerCommPkt->kdbgerCommHdr.pktLen =
+                        sizeof( kdbgerRspPciReadPkt_t ) - sizeof( s8 * ) + pciSz;
+                    pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+                    pKdbgerCommPkt->kdbgerRspIoReadPkt.address = pciAddr;
+                    pKdbgerCommPkt->kdbgerRspIoReadPkt.size = pciSz;
+                    break;
+
+				case KDBGER_REQ_PCI_WRITE:
+
+					// Write PCI config space
+					ptr = (s8 *)&pKdbgerCommPkt->kdbgerReqPciWritePkt.pciContent;
+					pciAddr = pKdbgerCommPkt->kdbgerReqPciReadPkt.address;
+					pciSz = pKdbgerCommPkt->kdbgerReqPciReadPkt.size;
+
+					CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
+					for( i = 0 ; i < pciSz ; i++ ) {
+
+						// Write PCI config data
+						//IoOutByte( *(ptr + i), ioAddr + i );
+					}
+
+					// Prepare the response packet
+					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_PCI_WRITE;
+					pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerRspPciWritePkt_t );
+					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+					pKdbgerCommPkt->kdbgerRspIoWritePkt.address = pciAddr;
+					pKdbgerCommPkt->kdbgerRspIoWritePkt.size = pciSz;
 					break;
 
 				default:

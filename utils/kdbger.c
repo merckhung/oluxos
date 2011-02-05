@@ -144,7 +144,7 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 
 		case KDBGER_REQ_IO_READ:
 
-			pKdbgerCommPkt->kdbgerReqIoReadPkt.address = (u16)(addr & 0xFFFF);
+			pKdbgerCommPkt->kdbgerReqIoReadPkt.address = (u16)(addr & 0xFFFFULL);
 			pKdbgerCommPkt->kdbgerReqIoReadPkt.size = size;
 			pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerReqIoReadPkt_t );
 			break;
@@ -154,11 +154,30 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 			if( !size || !cntBuf )
 				return 1;
 
-			pKdbgerCommPkt->kdbgerReqIoWritePkt.address = (u16)(addr & 0xFFFF);
+			pKdbgerCommPkt->kdbgerReqIoWritePkt.address = (u16)(addr & 0xFFFFULL);
 			pKdbgerCommPkt->kdbgerReqIoWritePkt.size = size;
 			memcpy( &pKdbgerCommPkt->kdbgerReqIoWritePkt.ioContent, cntBuf, size );
 			pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
 				sizeof( kdbgerReqIoWritePkt_t ) - sizeof( s8 * ) + size; 
+			break;
+
+		case KDBGER_REQ_PCI_READ:
+
+			pKdbgerCommPkt->kdbgerReqPciReadPkt.address = (u32)(addr & 0xFFFFFFFFULL);
+			pKdbgerCommPkt->kdbgerReqPciReadPkt.size = (u16)(size & 0xFFFF);
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerReqPciReadPkt_t );
+			break;
+
+		case KDBGER_REQ_PCI_WRITE:
+
+			if( !size || !cntBuf )
+				return 1;
+
+			pKdbgerCommPkt->kdbgerReqPciWritePkt.address = (u32)(addr & 0xFFFFFFFFULL);
+			pKdbgerCommPkt->kdbgerReqPciWritePkt.size = (u16)(size & 0xFFFF);
+			memcpy( &pKdbgerCommPkt->kdbgerReqPciWritePkt.pciContent, cntBuf, size );
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
+				sizeof( kdbgerReqPciWritePkt_t ) - sizeof( s8 * ) + size; 
 			break;
 
 		default:
@@ -225,7 +244,25 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
             }
 			break;
 
-		defaults:
+		case KDBGER_RSP_PCI_READ:
+
+            if( op != KDBGER_REQ_PCI_READ ) {
+
+                fprintf( stderr, "Not expect response packet\n" );
+                return 1;
+            }
+			break;
+
+		case KDBGER_RSP_PCI_WRITE:
+
+            if( op != KDBGER_REQ_PCI_WRITE ) {
+
+                fprintf( stderr, "Not expect response packet\n" );
+                return 1;
+            }
+			break;
+
+		default:
 
 			fprintf( stderr, "Not expect response packet\n" );
 			return 1;
