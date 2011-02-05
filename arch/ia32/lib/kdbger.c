@@ -46,11 +46,15 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	volatile u8 *phyMem;
 	u32 i, sz;
 	u64 addr;
+	u16 ioAddr;
+
+    // Disable interrupt
+    IoOutByte( 0x00, kdbgerPortAddr + UART_IER );
 
 	if( kdbgerGetState() == KDBGER_UNKNOWN ) {
 
 		DbgPrint( "Kernel Debugger internal state is unknown\n" );
-		return;
+		goto done;
 	}
 
 	// Read LSR
@@ -71,7 +75,7 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 
 			// Internal error
 			kdbgerSetState( KDBGER_UNKNOWN );
-			return;
+			goto done;
 		}
 
 		// Receive one byte of a request packet
@@ -131,12 +135,57 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 					pKdbgerCommPkt->kdbgerRspMemWritePkt.size = sz;
 					break;
 
+				case KDBGER_REQ_IO_READ:
+
+					// Read IO content
+					ptr = (s8 *)&pKdbgerCommPkt->kdbgerRspIoReadPkt.ioContent;
+					ioAddr = pKdbgerCommPkt->kdbgerReqIoReadPkt.address;
+					sz = pKdbgerCommPkt->kdbgerReqIoReadPkt.size;
+
+					CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
+					for( i = 0 ; i < sz ; i++ ) {
+
+						// Read IO data
+						*(ptr + i) = IoInByte( ioAddr + i );
+					}
+
+					// Prepare the response packet
+					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_IO_READ;
+					pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
+						sizeof( kdbgerRspIoReadPkt_t ) - sizeof( s8 * ) + sz;
+					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+					pKdbgerCommPkt->kdbgerRspIoReadPkt.address = ioAddr;
+					pKdbgerCommPkt->kdbgerRspIoReadPkt.size = sz;
+					break;
+
+				case KDBGER_REQ_IO_WRITE:
+
+					// Write IO content
+					ptr = (s8 *)&pKdbgerCommPkt->kdbgerReqIoWritePkt.ioContent;
+					ioAddr = pKdbgerCommPkt->kdbgerReqIoReadPkt.address;
+					sz = pKdbgerCommPkt->kdbgerReqIoReadPkt.size;
+
+					CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
+					for( i = 0 ; i < sz ; i++ ) {
+
+						// Write IO data
+						IoOutByte( *(ptr + i), ioAddr + i );
+					}
+
+					// Prepare the response packet
+					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_IO_WRITE;
+					pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerRspIoWritePkt_t );
+					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+					pKdbgerCommPkt->kdbgerRspIoWritePkt.address = ioAddr;
+					pKdbgerCommPkt->kdbgerRspIoWritePkt.size = sz;
+					break;
+
 				default:
 
 					DbgPrint( "Unsupport OpCode = 0x%4.4X\n", pKdbgerCommPkt->kdbgerCommHdr.opCode );
 					// Discard this packet
 					kdbgerSetState( KDBGER_READY );
-					return;
+					goto done;
 			}
 
 
@@ -153,6 +202,11 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 			kdbgerSetState( KDBGER_READY );
 		}
 	}
+
+done:
+
+	// Reenable interrupt
+	IoOutByte( UART_IER_RXRD, kdbgerPortAddr + UART_IER );
 }
 
 

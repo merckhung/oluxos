@@ -112,7 +112,7 @@ static s32 configureTtyDevice( s32 fd ) {
 }
 
 
-s32 manipulateMemory( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, s8 *pktBuf, s32 lenPktBuf ) {
+s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, s8 *pktBuf, s32 lenPktBuf ) {
 
 	kdbgerCommPkt_t *pKdbgerCommPkt = (kdbgerCommPkt_t *)pktBuf;
 	s32 rwByte;
@@ -141,6 +141,25 @@ s32 manipulateMemory( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf,
 			pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
 				sizeof( kdbgerReqMemWritePkt_t ) - sizeof( s8 * ) + size; 
 			break;  
+
+		case KDBGER_REQ_IO_READ:
+
+			pKdbgerCommPkt->kdbgerReqIoReadPkt.address = (u16)(addr & 0xFFFF);
+			pKdbgerCommPkt->kdbgerReqIoReadPkt.size = size;
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerReqIoReadPkt_t );
+			break;
+
+		case KDBGER_REQ_IO_WRITE:
+
+			if( !size || !cntBuf )
+				return 1;
+
+			pKdbgerCommPkt->kdbgerReqIoWritePkt.address = (u16)(addr & 0xFFFF);
+			pKdbgerCommPkt->kdbgerReqIoWritePkt.size = size;
+			memcpy( &pKdbgerCommPkt->kdbgerReqIoWritePkt.ioContent, cntBuf, size );
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
+				sizeof( kdbgerReqIoWritePkt_t ) - sizeof( s8 * ) + size; 
+			break;
 
 		default:
 
@@ -182,6 +201,24 @@ s32 manipulateMemory( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf,
 		case KDBGER_RSP_MEM_WRITE:
 
             if( op != KDBGER_REQ_MEM_WRITE ) {
+
+                fprintf( stderr, "Not expect response packet\n" );
+                return 1;
+            }
+			break;
+
+		case KDBGER_RSP_IO_READ:
+
+            if( op != KDBGER_REQ_IO_READ ) {
+
+                fprintf( stderr, "Not expect response packet\n" );
+                return 1;
+            }
+			break;
+
+		case KDBGER_RSP_IO_WRITE:
+
+            if( op != KDBGER_REQ_IO_WRITE ) {
 
                 fprintf( stderr, "Not expect response packet\n" );
                 return 1;
@@ -253,7 +290,7 @@ s32 main( s32 argc, s8 **argv ) {
 
 
 	// Read memory
-	if( manipulateMemory( fd, KDBGER_REQ_MEM_READ, 0x7c00, 256, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+	if( executeFunction( fd, KDBGER_REQ_MEM_READ, 0x7c00, 256, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
 
 		fprintf( stderr, "Error on issuing memory reading request\n" );
 		goto ErrExit;
@@ -263,8 +300,8 @@ s32 main( s32 argc, s8 **argv ) {
 
 
 	// Write memory
-	memset( cntBuf, 0x38, 256 );
-    if( manipulateMemory( fd, KDBGER_REQ_MEM_WRITE, 0x7c00, 256, cntBuf, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+	memset( cntBuf, 0x99, 256 );
+    if( executeFunction( fd, KDBGER_REQ_MEM_WRITE, 0x7c00, 256, cntBuf, pktBuf, KDBGER_MAXSZ_PKT ) ) {
 
         fprintf( stderr, "Error on issuing memory writing request\n" );
         goto ErrExit;
@@ -272,13 +309,23 @@ s32 main( s32 argc, s8 **argv ) {
 
 
 	// Read memory
-	if( manipulateMemory( fd, KDBGER_REQ_MEM_READ, 0x7c00, 256, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+	if( executeFunction( fd, KDBGER_REQ_MEM_READ, 0x7c00, 256, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
 
 		fprintf( stderr, "Error on issuing memory reading request\n" );
 		goto ErrExit;
 	}
 	debugPrintBuffer( (s8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent,
 		pKdbgerCommPkt->kdbgerRspMemReadPkt.size, (u32)pKdbgerCommPkt->kdbgerRspMemReadPkt.address );
+
+
+	// Read IO
+	if( executeFunction( fd, KDBGER_REQ_IO_READ, 0x00, 256, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+
+		fprintf( stderr, "Error on issuing memory reading request\n" );
+		goto ErrExit;
+	}
+	debugPrintBuffer( (s8 *)&pKdbgerCommPkt->kdbgerRspIoReadPkt.ioContent,
+		pKdbgerCommPkt->kdbgerRspIoReadPkt.size, (u32)pKdbgerCommPkt->kdbgerRspIoReadPkt.address );
 
 
 ErrExit:
