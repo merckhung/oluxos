@@ -20,12 +20,15 @@
 ExternIRQHandler( 4 );
 
 
-static u16 kdbgerPortAddr;
+static u16 kdbgerPortAddr = UART_PORT0;
 static u8 kdbgerState = KDBGER_UNKNOWN;
+static s8 pktBuf[ KDBGER_MAXSZ_PKT ];
+static s32 idxBuf;
 
 
 static void kdbgerSetState( kdbgerState_t state ) {
 
+	//DbgPrint( "State from %d to %d\n", kdbgerState, state );
 	kdbgerState = state;
 }
 
@@ -38,47 +41,125 @@ static u8 kdbgerGetState( void ) {
 
 static void kdbgerIntHandler( u8 IrqNum ) {
 
-	u8 iirState;
-	u8 c;
+	u8 lsrState;
+	kdbgerCommPkt_t *pKdbgerCommPkt = (kdbgerCommPkt_t *)pktBuf;
+	s8 *ptr;
+	volatile u8 *phyMem;
+	u32 i, sz;
+	u64 addr;
 
-	// Read IIR
-	iirState = IoInByte( kdbgerPortAddr + UART_IIR );
-	if( iirState & UART_IIR_PND ) {
+	if( kdbgerGetState() == KDBGER_UNKNOWN ) {
 
-		// No interrupt pending
-		DbgPrint( "No interrupt pending\n" );
+		DbgPrint( "Kernel Debugger internal state is unknown\n" );
 		return;
 	}
 
-	// Preliminary handle IIR
-	iirState = (iirState & UART_IIR_ID_MASK) >> UART_IIR_ID_OFFET;
-	switch( iirState ) {
+	// Read LSR
+	lsrState = IoInByte( kdbgerPortAddr + UART_LSR );
+	if( lsrState & UART_LSR_RXDR ) {
 
-		case UART_IIR_TBE:
-			//DbgPrint( "UART_IIR_TBE\n" );
-			break;
+		//DbgPrint( "UART_LSR_RXDR\n" );
 
-		case UART_IIR_DR:
-			//DbgPrint( "UART_IIR_DR\n" );
-			c = IoInByte( kdbgerPortAddr + UART_RBR );
-            DbgPrint( "%c", c );
-            IoOutByte( c, kdbgerPortAddr + UART_THR );
-			break;
+		// Receive & assemble a request packet
+		if( kdbgerGetState() == KDBGER_READY ) {
 
-		case UART_IIR_SEB:
-			DbgPrint( "UART_IIR_SEB\n" );
-			break;
+			// Transit to RECV state
+			kdbgerSetState( KDBGER_PKT_RECV );
+			idxBuf = 0;
+			CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
+		}
+		else if( kdbgerGetState() != KDBGER_PKT_RECV ) {
 
-		default:
-		case UART_IIR_CHG_INPUT:
-			DbgPrint( "UART_IIR_CHG_INPUT\n" );
-			break;
+			// Internal error
+			kdbgerSetState( KDBGER_UNKNOWN );
+			return;
+		}
+
+		// Receive one byte of a request packet
+		pktBuf[ idxBuf++ ] = IoInByte( kdbgerPortAddr + UART_RBR );
+
+		// Response to a request
+		if( (kdbgerGetState() == KDBGER_PKT_RECV) && (idxBuf >= sizeof( kdbgerCommHdr_t ))
+			&& (idxBuf >= pKdbgerCommPkt->kdbgerCommHdr.pktLen) ) {
+
+			// Indicate receiving has done
+			kdbgerSetState( KDBGER_PKT_DONE );
+
+			// Look at OpCode
+			switch( pKdbgerCommPkt->kdbgerCommHdr.opCode ) {
+
+				case KDBGER_REQ_MEM_READ:
+
+					// Read memory content
+					ptr = (s8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent;
+					addr = pKdbgerCommPkt->kdbgerReqMemReadPkt.address;
+					phyMem = (volatile u8 *)(u32)addr;
+					sz = pKdbgerCommPkt->kdbgerReqMemReadPkt.size;
+
+					CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
+					for( i = 0 ; i < sz ; i++ ) {
+
+						*(ptr + i) = *(phyMem + i);
+					}
+
+					// Prepare the response packet
+					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_MEM_READ;
+					pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
+						sizeof( kdbgerRspMemReadPkt_t ) - sizeof( s8 * ) + sz;
+					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+					pKdbgerCommPkt->kdbgerRspMemReadPkt.address = addr;
+					pKdbgerCommPkt->kdbgerRspMemReadPkt.size = sz;
+					break;
+
+				case KDBGER_REQ_MEM_WRITE:
+
+					// write memory content
+					ptr = (s8 *)&pKdbgerCommPkt->kdbgerReqMemWritePkt.memContent;
+					addr = pKdbgerCommPkt->kdbgerReqMemWritePkt.address;
+					phyMem = (volatile u8 *)(u32)addr;
+					sz = pKdbgerCommPkt->kdbgerReqMemWritePkt.size;
+
+					for( i = 0 ; i < sz ; i++ ) {
+
+						*(phyMem + i) = *(ptr + i);
+					}
+
+					// Prepare the response packet
+					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_MEM_WRITE;
+					pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerRspMemWritePkt_t );
+					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+					pKdbgerCommPkt->kdbgerRspMemWritePkt.address = addr;
+					pKdbgerCommPkt->kdbgerRspMemWritePkt.size = sz;
+					break;
+
+				default:
+
+					DbgPrint( "Unsupport OpCode = 0x%4.4X\n", pKdbgerCommPkt->kdbgerCommHdr.opCode );
+					// Discard this packet
+					kdbgerSetState( KDBGER_READY );
+					return;
+			}
+
+
+			// Transit state to TRAN
+			kdbgerSetState( KDBGER_PKT_TRAN );
+
+			// Start to transmit
+			for( idxBuf = 0 ; idxBuf < pKdbgerCommPkt->kdbgerCommHdr.pktLen ; idxBuf++ ) {
+
+				IoOutByte( pktBuf[ idxBuf ], kdbgerPortAddr + UART_THR );
+			}
+
+			// Transit state to READY
+			kdbgerSetState( KDBGER_READY );
+		}
 	}
 }
 
 
 void kdbgerInitialization( kdbgerDebugPort_t port ) {
 
+	// Indicate INIT state
 	kdbgerSetState( KDBGER_INIT );
 
 	// Setup UART base address
@@ -98,11 +179,9 @@ void kdbgerInitialization( kdbgerDebugPort_t port ) {
     IoOutByte( 0x00, kdbgerPortAddr + UART_DLH );
 
     // DLAB = OFF, 8 Bits, No Parity, 1 Stop Bit
-    IoOutByte( (UART_STOPBIT_1 | UART_DATABIT_8), kdbgerPortAddr + UART_LCR );
+    IoOutByte( UART_STOPBIT_1 | UART_DATABIT_8, kdbgerPortAddr + UART_LCR );
 
-    // Turn off flow control
-    //IoOutByte( 0x00, kdbgerPortAddr + UART_MCR );
-
+	// Transit to READY state
 	kdbgerSetState( KDBGER_READY );
 
 	// Disable interrupt
@@ -115,7 +194,7 @@ void kdbgerInitialization( kdbgerDebugPort_t port ) {
 	IntEnable();
 
 	// Turn on interrupt
-    IoOutByte( UART_IER_RXRD | UART_IER_TBE, kdbgerPortAddr + UART_IER );
+    IoOutByte( UART_IER_RXRD, kdbgerPortAddr + UART_IER );
 }
 
 

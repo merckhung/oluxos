@@ -86,17 +86,14 @@ typedef enum {
 #define UART_RESETRF		0x02
 #define UART_TRFIFOE		0x01
 
-
 // Line Status Register (LSR)
-#define UART_FIFOE			0x80
-#define UART_TEMT			0x40
-#define UART_TDRQ			0x20
-#define UART_BI				0x10
-#define UART_FE				0x08
-#define UART_PE				0x04
-#define UART_OE				0x02
-#define UART_DR				0x01
-
+#define UART_LSR_RXDR		0x01
+#define UART_LSR_OVER		0x02
+#define UART_LSR_PARE		0x04
+#define UART_LSR_FRME		0x08
+#define UART_LSR_BREK		0x10
+#define UART_LSR_TBE		0x20
+#define UART_LSR_TXE		0x40
 
 // Modem Control Register (MCR)
 #define UART_DTR			0x01
@@ -104,7 +101,6 @@ typedef enum {
 #define UART_OUT1			0x04
 #define UART_OUT2			0x08
 #define UART_LOOPBACK		0x10
-
 
 // Baud Rate
 #define UART_BAUD_115200	0x01
@@ -115,9 +111,133 @@ typedef enum {
 #define UART_BAUD_1200		0x60
 
 
-//
+#define KDBGER_MAXSZ_PKT	4096
+
+
+typedef enum _kdbgerReqOpCode {
+
+	KDBGER_REQ_CONNECT = 1,
+
+	KDBGER_REQ_MEM_READ,
+	KDBGER_RSP_MEM_READ,
+
+	KDBGER_REQ_MEM_WRITE,
+	KDBGER_RSP_MEM_WRITE,
+
+	KDBGER_REQ_IO_READ,
+	KDBGER_RSP_IO_READ,
+
+	KDBGER_REQ_IO_WRITE,
+    KDBGER_RSP_IO_WRITE,
+
+	KDBGER_RSP_CPU_EXCEPTION,
+
+} kdbgerOpCode_t;
+
+
+typedef enum _kdbgErrorCode {
+
+	KDBGER_SUCCESS = 0,
+	KDBGER_FAILURE,
+
+} kdbgErrorCode_t;
+
+
+// Common packet
+typedef struct PACKED _kdbgerCommHdr {
+
+	u16		opCode;
+
+	union {
+
+		u16		pad;
+		u16		errorCode;
+	};
+
+	u32		pktLen;
+
+} kdbgerCommHdr_t;
+
+
+// Memory Read/Write packet
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u64						address;
+	u32						size;
+
+} kdbgerReqMemReadPkt_t, kdbgerRspMemWritePkt_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u64						address;
+	u32						size;
+	s8						*memContent;
+
+} kdbgerRspMemReadPkt_t, kdbgerReqMemWritePkt_t;
+
+
+// IO Read/Write packet
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u16						address;
+	u32						size;
+
+} kdbgerReqIoReadPkt_t, kdbgerRspIoWritePkt_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u16						address;
+	u32						size;
+	s8						*ioContent;
+
+} kdbgerRspIoReadPkt_t, kdbgerReqIoWritePkt_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr_t;
+	u32						exNum;
+
+} kdbgerRspCpuExceptionPkt_t;
+
+
+typedef struct PACKED {
+
+	union {
+
+		// Common
+		kdbgerCommHdr_t				kdbgerCommHdr;
+
+		// Memory Read
+		kdbgerReqMemReadPkt_t		kdbgerReqMemReadPkt;
+		kdbgerRspMemReadPkt_t		kdbgerRspMemReadPkt;
+
+		// Memory Write
+		kdbgerReqMemWritePkt_t		kdbgerReqMemWritePkt;
+		kdbgerRspMemWritePkt_t		kdbgerRspMemWritePkt;
+
+		// IO Read
+		kdbgerReqIoReadPkt_t		kdbgerReqIoReadPkt;
+		kdbgerRspIoReadPkt_t		kdbgerRspIoReadPkt;
+
+		// IO Write
+		kdbgerReqIoWritePkt_t		kdbgerReqIoWritePkt;
+		kdbgerRspIoWritePkt_t		kdbgerRspIoWritePkt;
+
+		// CPU Exception
+		kdbgerRspCpuExceptionPkt_t	kdbgerRspCpuExceptionPkt;
+	};
+
+} kdbgerCommPkt_t;
+
+
 // Prototypes
-//
 void kdbgerInitialization( kdbgerDebugPort_t port );
 
 
