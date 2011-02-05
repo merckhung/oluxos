@@ -37,50 +37,61 @@ static void help( void ) {
 
 
 static void debugPrintBuffer( s8 *pBuf, u32 size, u32 base ) {
+#define LINE_DIGITS	16
 
-    s32 i, j;
-    s8 c;
+    u32 i, j;
+	u8 buf[ LINE_DIGITS ];
+	s8 unalign = 0;
 
-    printf( "\n\n== Dump Memory Start ==\n\n" );
+	if( size % LINE_DIGITS ) {
+
+		unalign = 1;
+	}
+
     printf( " Address | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F|   ASCII DATA   \n" );
     printf( "---------------------------------------------------------------------------\n" );
 
-    for( i = 0 ; i < size ; i++ ) {
+    for( i = 0 ; i <= size ; i++ ) {
 
-        if( !(i % 16) ) {
-            if( (i > 15) ) {
-                for( j = i - 16 ; j < i ; j++ ) {
+        if( !(i % LINE_DIGITS) ) {
 
-                    c = *(pBuf + i ) & 0xFF;
-                    if( ((c >= '!') && (c <= '~')) ) {
+			if( i ) {
+				for( j = 0 ; j < LINE_DIGITS ; j++ ) {
 
-                        printf( "%c", c );
-                    }
-                    else {
+					if( buf[ j ] >= '!' && buf[ j ] <= '~' )
+						printf( "%c", buf[ j ] );
+					else
+						printf( "." );
+				}
+				printf( "\n" );
+			}
 
-                        printf( "." );
-                    }
-                }
-            }
-
-            if( i ) {
-
-                printf( "\n" );
-            }
-
-            if( i == size ) {
-
-                break;
-            }
+			if( i == size )
+				break;
 
             printf( "%8.8X : ", i + base );
+			memset( buf, ' ', sizeof( buf ) );
         }
 
-        printf( "%2.2X ", *(pBuf + i) & 0xFF );
+		buf[ i % LINE_DIGITS ] = (u8)(*(pBuf + i));
+        printf( "%2.2X ", buf[ i % LINE_DIGITS ] & 0xFF );
     }
 
-    printf( "\n---------------------------------------------------------------------------\n" );
-    printf( "\n== Dump Memory End ==\n\n" );
+	if( unalign ) {
+
+		for( j = LINE_DIGITS - (size % LINE_DIGITS) - 1 ; j-- ; ) 
+			printf( "   " );
+
+		for( j = 0 ; j < (size % LINE_DIGITS) ; j++ )
+			if( buf[ j ] >= '!' && buf[ j ] <= '~' )
+				printf( "%c", buf[ j ] );
+			else
+				printf( "." );
+
+		printf( "\n" );
+	}
+
+    printf( "---------------------------------------------------------------------------\n" );
 }
 
 
@@ -229,7 +240,7 @@ s32 main( s32 argc, s8 **argv ) {
 		goto ErrExit;
 	}
 	debugPrintBuffer( (s8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent,
-		pKdbgerCommPkt->kdbgerRspMemReadPkt.size, (u32)pKdbgerCommPkt->kdbgerRspMemReadPkt.address );
+		250, (u32)pKdbgerCommPkt->kdbgerRspMemReadPkt.address );
 
 
 	// Write memory

@@ -28,7 +28,6 @@ static s32 idxBuf;
 
 static void kdbgerSetState( kdbgerState_t state ) {
 
-	//DbgPrint( "State from %d to %d\n", kdbgerState, state );
 	kdbgerState = state;
 }
 
