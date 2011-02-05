@@ -10,7 +10,7 @@
 ################################################################################
 include ../scripts/rules.mk
 
-TARGET				=	krnimg instkrn
+TARGET				=	krnimg instkrn kdbger
 CFLAGS				=	-O2 -Wall -Iinclude -I../include
 LDFLAGS				=
 
@@ -22,6 +22,9 @@ krnimg: krnimg.c
 
 instkrn: instkrn.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $< libcomm.c
+
+kdbger: kdbger.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
 clean:
 	rm -f *.o $(TARGET)
