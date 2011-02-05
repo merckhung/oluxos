@@ -151,8 +151,6 @@ s32 manipulateMemory( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf,
 	// Fill in OpCode
 	pKdbgerCommPkt->kdbgerCommHdr.opCode = op;
 
-	printf( "pktLen = %d\n", pKdbgerCommPkt->kdbgerCommHdr.pktLen );
-
 	// Transmit the request
 	rwByte = write( fd, pktBuf, pKdbgerCommPkt->kdbgerCommHdr.pktLen );
 	if( rwByte != pKdbgerCommPkt->kdbgerCommHdr.pktLen ) {
@@ -170,10 +168,31 @@ s32 manipulateMemory( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf,
 		return 1;
 	}
 
-	printf( "rwByte = %d\n", rwByte );
-	printf( "opCode = 0x%4.4X\n", pKdbgerCommPkt->kdbgerCommHdr.opCode );
-	printf( "pktLen = 0x%8.8X\n", pKdbgerCommPkt->kdbgerCommHdr.pktLen );
-	printf( "errCod = 0x%4.4X\n", pKdbgerCommPkt->kdbgerCommHdr.errorCode );
+	switch( pKdbgerCommPkt->kdbgerCommHdr.opCode ) {
+
+		case KDBGER_RSP_MEM_READ:
+
+			if( op != KDBGER_REQ_MEM_READ ) {
+
+				fprintf( stderr, "Not expect response packet\n" );
+				return 1;
+			}
+			break;
+
+		case KDBGER_RSP_MEM_WRITE:
+
+            if( op != KDBGER_REQ_MEM_WRITE ) {
+
+                fprintf( stderr, "Not expect response packet\n" );
+                return 1;
+            }
+			break;
+
+		defaults:
+
+			fprintf( stderr, "Not expect response packet\n" );
+			return 1;
+	}
 
 	return 0;
 }
@@ -240,7 +259,7 @@ s32 main( s32 argc, s8 **argv ) {
 		goto ErrExit;
 	}
 	debugPrintBuffer( (s8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent,
-		250, (u32)pKdbgerCommPkt->kdbgerRspMemReadPkt.address );
+		256, (u32)pKdbgerCommPkt->kdbgerRspMemReadPkt.address );
 
 
 	// Write memory
