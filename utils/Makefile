@@ -24,7 +24,7 @@ instkrn: instkrn.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $< libcomm.c
 
 kdbger: kdbger.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) $(LDFLAGS) -lpanel -o $@ $<
 
 clean:
 	rm -f *.o $(TARGET)
