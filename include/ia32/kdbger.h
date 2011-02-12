@@ -160,6 +160,9 @@ typedef enum _kdbgerReqOpCode {
 	KDBGER_REQ_PCI_WRITE,
 	KDBGER_RSP_PCI_WRITE,
 
+	KDBGER_REQ_PCI_LIST,
+	KDBGER_RSP_PCI_LIST,
+
 	KDBGER_RSP_CPU_EXCEPTION,
 
 	KDBGER_RSP_NACK,
@@ -253,7 +256,34 @@ typedef struct PACKED {
 
 typedef struct PACKED {
 
-	kdbgerCommHdr_t			kdbgerCommHdr_t;
+	u16						bus;
+	u8						dev;
+	u8						fun;
+	u16						vendorId;
+	u16						deviceId;
+
+} kdbgerPciDev_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+
+} kdbgerReqPciListPkt_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u32						numOfPciDevice;
+	kdbgerPciDev_t			*pciListContent;
+
+} kdbgerRspPciListPkt_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
 	u32						exNum;
 
 } kdbgerRspCpuExceptionPkt_t;
@@ -289,6 +319,10 @@ typedef struct PACKED {
 		// PCI Write
 		kdbgerReqPciWritePkt_t		kdbgerReqPciWritePkt;
 		kdbgerRspPciWritePkt_t		kdbgerRspPciWritePkt;
+
+		// PCI List
+		kdbgerReqPciListPkt_t		kdbgerReqPciListPkt;
+		kdbgerRspPciListPkt_t		kdbgerRspPciListPkt;
 
 		// CPU Exception
 		kdbgerRspCpuExceptionPkt_t	kdbgerRspCpuExceptionPkt;

@@ -183,6 +183,12 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 				sizeof( kdbgerReqPciWritePkt_t ) - sizeof( s8 * ) + size; 
 			break;
 
+		case KDBGER_REQ_PCI_LIST:
+
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen =
+				sizeof( kdbgerReqPciWritePkt_t );
+			break;
+
 		default:
 
 			fprintf( stderr, "Unsupport operation, %d\n", op );
@@ -212,62 +218,42 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 	switch( pKdbgerCommPkt->kdbgerCommHdr.opCode ) {
 
 		case KDBGER_RSP_MEM_READ:
-
-			if( op != KDBGER_REQ_MEM_READ ) {
-
-				//fprintf( stderr, "Not expect response packet\n" );
+			if( op != KDBGER_REQ_MEM_READ )
 				return 1;
-			}
 			break;
 
 		case KDBGER_RSP_MEM_WRITE:
-
-            if( op != KDBGER_REQ_MEM_WRITE ) {
-
-                //fprintf( stderr, "Not expect response packet\n" );
+            if( op != KDBGER_REQ_MEM_WRITE )
                 return 1;
-            }
 			break;
 
 		case KDBGER_RSP_IO_READ:
-
-            if( op != KDBGER_REQ_IO_READ ) {
-
-                //fprintf( stderr, "Not expect response packet\n" );
+            if( op != KDBGER_REQ_IO_READ )
                 return 1;
-            }
 			break;
 
 		case KDBGER_RSP_IO_WRITE:
-
-            if( op != KDBGER_REQ_IO_WRITE ) {
-
-                //fprintf( stderr, "Not expect response packet\n" );
+            if( op != KDBGER_REQ_IO_WRITE )
                 return 1;
-            }
 			break;
 
 		case KDBGER_RSP_PCI_READ:
-
-            if( op != KDBGER_REQ_PCI_READ ) {
-
-                //fprintf( stderr, "Not expect response packet\n" );
+            if( op != KDBGER_REQ_PCI_READ )
                 return 1;
-            }
 			break;
 
 		case KDBGER_RSP_PCI_WRITE:
-
-            if( op != KDBGER_REQ_PCI_WRITE ) {
-
-                //fprintf( stderr, "Not expect response packet\n" );
+            if( op != KDBGER_REQ_PCI_WRITE )
                 return 1;
-            }
 			break;
 
-		default:
+		case KDBGER_RSP_PCI_LIST:
+			if( op != KDBGER_REQ_PCI_LIST )
+				return 1;
+			break;
 
-			//fprintf( stderr, "Not expect response packet\n" );
+		case KDBGER_RSP_NACK:
+		default:
 			return 1;
 	}
 
@@ -556,6 +542,10 @@ s32 main( s32 argc, s8 **argv ) {
 	s32 inputBuf, dumpByteOffset = 0, strIdx = 0;
 	u32 lastSecond = 0;
 	kdbgerHwFunc_t kdbgerHwFunc = KHF_MEM;
+	kdbgerRspPciListPkt_t *pKdbgerRspPciListPkt;
+	kdbgerPciDev_t *pKdbgerPciDev;
+	u32 numOfPciDevice;
+	u32 i;
 
 
 	s8 statusBarString[ KDBGER_STS_BUF_SZ ] = "(m)Memory (i)I/O (p)PCI/PCI-E (l)PCI/PCI-E List (c)CMOS (h)Help";
@@ -604,6 +594,21 @@ s32 main( s32 argc, s8 **argv ) {
 		fprintf( stderr, "Cannot configure device %s\n", ttyDevice );
 		goto ErrExit;
 	}
+
+
+	// Read PCI list
+	if( executeFunction( fd, KDBGER_REQ_PCI_LIST, 0, 0, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+
+		fprintf( stderr, "Cannot get PCI device listing\n" );
+		goto ErrExit;
+	}
+
+
+	// Save PCI list
+	pKdbgerRspPciListPkt = (kdbgerRspPciListPkt_t *)pktBuf;
+	numOfPciDevice = pKdbgerRspPciListPkt->numOfPciDevice;
+	pKdbgerPciDev = (kdbgerPciDev_t *)malloc( sizeof( kdbgerPciDev_t ) * numOfPciDevice );
+	memcpy( pKdbgerPciDev, &pKdbgerRspPciListPkt->pciListContent, sizeof( kdbgerPciDev_t ) * numOfPciDevice );
 
 
 	// Initialize ncurses

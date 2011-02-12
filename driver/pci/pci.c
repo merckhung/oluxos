@@ -176,11 +176,8 @@ void PciDetectDevice( void ) {
     u16 bus;
     u8 dev, func;
 
-
-    for( bus = 0 ; bus <= PCI_BUS_MAX ; bus++ ) {
-    
-        for( dev = 0 ; dev <= PCI_DEV_MAX ; dev++ ) {
-        
+    for( bus = 0 ; bus <= PCI_BUS_MAX ; bus++ )
+        for( dev = 0 ; dev <= PCI_DEV_MAX ; dev++ )
             for( func = 0 ; func <= PCI_FUN_MAX ; func++ ) {
             
                 value = PciReadConfigDWord( PciCalBaseAddr( bus, dev, func ), 0 );
@@ -190,8 +187,6 @@ void PciDetectDevice( void ) {
                                     , bus, dev, func, (value & 0xffff), ((value >> 16) & 0xffff) );
                 }
             }
-        }
-    }
 }
 
 

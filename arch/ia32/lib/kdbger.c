@@ -14,6 +14,7 @@
 #include <ia32/io.h>
 #include <ia32/gdb.h>
 #include <ia32/debug.h>
+#include <driver/pci.h>
 #include <ia32/kdbger.h>
 
 
@@ -24,7 +25,6 @@ static u16 kdbgerPortAddr = UART_PORT0;
 static u8 kdbgerState = KDBGER_UNKNOWN;
 static s8 pktBuf[ KDBGER_MAXSZ_PKT ];
 static s32 idxBuf;
-static s32 checker = 0;
 
 
 static void kdbgerSetState( kdbgerState_t state ) {
@@ -51,6 +51,38 @@ static void kdbgerIntrDisable( void ) {
 }
 
 
+static u32 kdbgerPciDetectDevice( kdbgerPciDev_t *pKdbgerPciDev ) {
+
+    u32 value;
+    u16 bus;
+    u8 dev, func;
+	u32 count = 0;
+
+    for( bus = 0 ; bus <= PCI_BUS_MAX ; bus++ )
+        for( dev = 0 ; dev <= PCI_DEV_MAX ; dev++ )
+            for( func = 0 ; func <= PCI_FUN_MAX ; func++ ) {
+
+                value = PciReadConfigDWord( PciCalBaseAddr( bus, dev, func ), 0 );
+                if( value != 0xFFFFFFFF ) {
+
+                    DbgPrint( "Pci Bus : %4X, Dev : %4X, Func : %4X, Vid = %4X, Did = %4X\n"
+                                    , bus, dev, func, (value & 0xFFFF), ((value >> 16) & 0xFFFF) );
+
+					pKdbgerPciDev->bus = bus;
+					pKdbgerPciDev->dev = dev;
+					pKdbgerPciDev->fun = func;
+					pKdbgerPciDev->vendorId = value & 0xFFFF;
+					pKdbgerPciDev->deviceId = (value >> 16) & 0xFFFF;
+
+					count++;
+					pKdbgerPciDev++;
+                }
+            }
+
+	return count;
+}
+
+
 static void kdbgerFifoEnable( void ) {
 
 	// FIFO Enable, TX & RX, 14 bytes
@@ -69,6 +101,7 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	u16 ioAddr;
 	u32 pciAddr;
 	u16 pciSz;
+	kdbgerPciDev_t *pKdbgerPciDev;
 	s8 restBuf[ KDBGER_FIFO_SZ ];
 	s32 restLen;
 
@@ -269,11 +302,25 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 					pKdbgerCommPkt->kdbgerRspIoWritePkt.size = pciSz;
 					break;
 
-				default:
+				case KDBGER_REQ_PCI_LIST:
 
-					DbgPrint( "Unsupport OpCode = 0x%4.4X\n", pKdbgerCommPkt->kdbgerCommHdr.opCode );
-					DbgPrint( "Len = %d\n", pKdbgerCommPkt->kdbgerCommHdr.pktLen );
-					DbgPrint( "idxBuf = %d\n", idxBuf );
+					// List PCI device
+					pKdbgerPciDev = (kdbgerPciDev_t *)&pKdbgerCommPkt->kdbgerRspPciListPkt.pciListContent;
+					CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
+
+					// Scan PCI devices
+					pKdbgerCommPkt->kdbgerRspPciListPkt.numOfPciDevice =
+						kdbgerPciDetectDevice( pKdbgerPciDev );
+
+					// Prepare the response packet
+					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_PCI_LIST;
+					pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
+						sizeof( kdbgerRspPciListPkt_t ) - sizeof( kdbgerPciDev_t * )
+						+ pKdbgerCommPkt->kdbgerRspPciListPkt.numOfPciDevice * sizeof( kdbgerPciDev_t );
+					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+					break;
+	
+				default:
 
 					CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
 					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_NACK;
@@ -303,8 +350,6 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	}
 
 done:
-
-	checker++;
 
 	// Reenable interrupt
 	kdbgerIntrEnable();
