@@ -399,7 +399,7 @@ void printDumpBasePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, s8 *infoStr ) {
 }
 
 
-void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, s32 *offset ) {
+void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, u64 *base, s32 *offset ) {
 
 	s32 i, x, y;
 	u8 valueBuf[ KDBGER_DUMP_VBUF_SZ + 1 ];
@@ -465,6 +465,29 @@ void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, s32
 		"%s",
 		asciiBuf );
 
+	// Print Offset bar
+	printWindowAt( pKdbgerDumpPanel,
+		offset, 
+		KDBGER_STRING_NLINE,
+		4,
+		KDBGER_DUMP_OFF_LINE,
+		KDBGER_DUMP_OFF_COLUMN,
+		RED_BLUE,
+		"%4.4X",
+		(*offset) );
+
+	// Print base address
+	printWindowAt( pKdbgerDumpPanel,
+		baseaddr, 
+		KDBGER_STRING_NLINE,
+		20,
+		KDBGER_DUMP_BASEADDR_LINE,
+		strlen( KDBGER_INFO_MEMORY_BASE ),
+		WHITE_BLUE,
+		KDBGER_INFO_MEMORY_BASE_FMT,
+		(u32)((*base) >> 32),
+		(u32)((*base) & 0xFFFFFFFFULL) );
+
 	// Highlight
 	y = ((*offset) / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_VALUE_LINE;
 	x = (((*offset) % KDBGER_DUMP_BYTE_PER_LINE) * 3) + KDBGER_DUMP_VALUE_COLUMN;
@@ -480,7 +503,7 @@ void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, s32
 }
 
 
-void handleKeyPressForDumpPanel( kdbgerKeyPress_t kdbgerKeyPress, s32 *offset ) {
+void handleKeyPressForDumpPanel( kdbgerKeyPress_t kdbgerKeyPress, u64 *base, s32 *offset ) {
 
 	switch( kdbgerKeyPress ) {
 
@@ -518,9 +541,13 @@ void handleKeyPressForDumpPanel( kdbgerKeyPress_t kdbgerKeyPress, s32 *offset ) 
             break;
 
 		case KBPRS_PGUP:
+
+			(*base) -= KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_PGDN:
+
+			(*base) += KDBGER_BYTE_PER_SCREEN;
             break;
 
 		default:
@@ -545,10 +572,9 @@ s32 main( s32 argc, s8 **argv ) {
 	kdbgerRspPciListPkt_t *pKdbgerRspPciListPkt;
 	kdbgerPciDev_t *pKdbgerPciDev;
 	u32 numOfPciDevice;
-	u32 i;
-
-
+	u64 dumpByteBase = 0;
 	s8 statusBarString[ KDBGER_STS_BUF_SZ ] = "(m)Memory (i)I/O (p)PCI/PCI-E (l)PCI/PCI-E List (c)CMOS (h)Help";
+
 
 	// Initialization
 	strncpy( ttyDevice, KDBGER_DEF_TTYDEV, KDBGER_MAX_PATH );
@@ -680,9 +706,11 @@ s32 main( s32 argc, s8 **argv ) {
 			default:
 			case KHF_MEM:
 
-				executeFunction( fd, KDBGER_REQ_MEM_READ, 0x7C00, KDBGER_BYTE_PER_SCREEN, NULL, pktBuf, KDBGER_MAXSZ_PKT );
-				handleKeyPressForDumpPanel( inputBuf, &dumpByteOffset );
-				printDumpUpdatePanel( &kdbgerMemoryPanel, (u8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent, &dumpByteOffset );
+				executeFunction( fd, KDBGER_REQ_MEM_READ, dumpByteBase, KDBGER_BYTE_PER_SCREEN, NULL, pktBuf, KDBGER_MAXSZ_PKT );
+
+				handleKeyPressForDumpPanel( inputBuf, &dumpByteBase, &dumpByteOffset );
+				printDumpUpdatePanel( &kdbgerMemoryPanel, (u8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent, &dumpByteBase, &dumpByteOffset );
+
 				break;
 
 			case KHF_IO:

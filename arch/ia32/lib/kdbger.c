@@ -65,9 +65,6 @@ static u32 kdbgerPciDetectDevice( kdbgerPciDev_t *pKdbgerPciDev ) {
                 value = PciReadConfigDWord( PciCalBaseAddr( bus, dev, func ), 0 );
                 if( value != 0xFFFFFFFF ) {
 
-                    DbgPrint( "Pci Bus : %4X, Dev : %4X, Func : %4X, Vid = %4X, Did = %4X\n"
-                                    , bus, dev, func, (value & 0xFFFF), ((value >> 16) & 0xFFFF) );
-
 					pKdbgerPciDev->bus = bus;
 					pKdbgerPciDev->dev = dev;
 					pKdbgerPciDev->fun = func;
