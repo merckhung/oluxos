@@ -180,65 +180,63 @@ s8 ConvertDWordToByte( u32 *Data, u32 Offset ) {
 }
 
 
-
-void DumpData( u32 *Data, u32 Length, u32 BaseAddr ) {
+void DumpData( s8 *pBuf, u32 size, u32 base ) {
+#define BYTE_PER_LINE 16
 
     u32 i, j;
-    u32 c;
+    u8 buf[ BYTE_PER_LINE ];
+    s8 unalign = 0;
 
+    if( size % BYTE_PER_LINE ) {
 
-    printf( "\n\n== Dump Memory Start ==\n\n" );
+        unalign = 1;
+    }
+
     printf( " Address | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F|   ASCII DATA   \n" );
     printf( "---------------------------------------------------------------------------\n" );
 
+    for( i = 0 ; i <= size ; i++ ) {
 
-    for( i = 0 ; i <= Length ; i++ ) {
-
-
-        if( !(i % 16) ) {
-
-
-            if( (i > 15) ) {
-
-                for( j = i - 16 ; j < i ; j++ ) {
-
-                    c = ConvertDWordToByte( Data, j );
-                    if( ((c >= '!') && (c <= '~')) ) {
-
-                        printf( "%c", c );
-                    }
-                    else {
-
-                        printf( "." );
-                    }
-                }
-            }
-
+        if( !(i % BYTE_PER_LINE) ) {
 
             if( i ) {
+                for( j = 0 ; j < BYTE_PER_LINE ; j++ ) {
 
+                    if( buf[ j ] >= '!' && buf[ j ] <= '~' )
+                        printf( "%c", buf[ j ] );
+                    else
+                        printf( "." );
+                }
                 printf( "\n" );
             }
 
-
-            if( i == Length ) {
-
+            if( i == size )
                 break;
-            }
 
-
-            printf( "%8.8X : ", i + BaseAddr );
+            printf( "%8.8X : ", i + base );
+            memset( buf, ' ', sizeof( buf ) );
         }
 
-
-        printf( "%2.2X ", ConvertDWordToByte( Data, i ) & 0xFF );
+        buf[ i % BYTE_PER_LINE ] = (u8)(*(pBuf + i));
+        printf( "%2.2X ", buf[ i % BYTE_PER_LINE ] & 0xFF );
     }
 
+    if( unalign ) {
 
-    printf( "\n---------------------------------------------------------------------------\n" );
-    printf( "\n== Dump Memory End ==\n\n" );
+        for( j = BYTE_PER_LINE - (size % BYTE_PER_LINE) - 1 ; j-- ; )
+            printf( "   " );
+
+        for( j = 0 ; j < (size % BYTE_PER_LINE) ; j++ )
+            if( buf[ j ] >= '!' && buf[ j ] <= '~' )
+                printf( "%c", buf[ j ] );
+            else
+                printf( "." );
+
+        printf( "\n" );
+    }
+
+    printf( "---------------------------------------------------------------------------\n" );
 }
-
 
 
 void DisplayInBits( u32 value ) {

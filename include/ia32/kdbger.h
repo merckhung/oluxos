@@ -138,7 +138,7 @@ typedef enum {
 } kdbgerBaudrate_t;
 
 
-typedef enum _kdbgerReqOpCode {
+typedef enum {
 
 	KDBGER_REQ_CONNECT = 1,
 

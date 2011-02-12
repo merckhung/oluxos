@@ -42,7 +42,7 @@ u32 CbAsciiBufToBin( const s8 *buf );
 bool ParseOneParameter( s8 *buf, u32 *first );
 bool ParseTwoParameters( s8 *buf, u32 *first, u32 *second );
 s8 ConvertDWordToByte( u32 *Data, u32 Offset );
-void DumpData( u32 *Data, u32 Length, u32 BaseAddr );
+void DumpData( s8 *pBuf, u32 size, u32 base );
 void DisplayInBits( u32 value );
 void ClrScr( void );
 s8 NonBlockReadKey( void );

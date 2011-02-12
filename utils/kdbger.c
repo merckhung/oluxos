@@ -30,71 +30,11 @@
 static void help( void ) {
 
     fprintf( stderr, "\nCopyright (c) 2011 Olux Organization All rights reserved.\n\n" );
-    fprintf( stderr, "OluxOS Kernel Debugger, Version "KDBGER_VERSION"\n\n" );
-
-    fprintf( stderr, "Authors: Merck Hung <merck@olux.org>\n\n" );
-
-    fprintf( stderr, "help: kdbger \n\n" );
-    fprintf( stderr, "\t-h\tPrint help and exit\n");
-	fprintf( stderr, "\t-v\tVerbose more message\n");
-}
-
-
-static void debugPrintBuffer( s8 *pBuf, u32 size, u32 base ) {
-
-    u32 i, j;
-	u8 buf[ KDBGER_DUMP_BYTE_PER_LINE ];
-	s8 unalign = 0;
-
-	if( size % KDBGER_DUMP_BYTE_PER_LINE ) {
-
-		unalign = 1;
-	}
-
-    printf( " Address | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F|   ASCII DATA   \n" );
-    printf( "---------------------------------------------------------------------------\n" );
-
-    for( i = 0 ; i <= size ; i++ ) {
-
-        if( !(i % KDBGER_DUMP_BYTE_PER_LINE) ) {
-
-			if( i ) {
-				for( j = 0 ; j < KDBGER_DUMP_BYTE_PER_LINE ; j++ ) {
-
-					if( buf[ j ] >= '!' && buf[ j ] <= '~' )
-						printf( "%c", buf[ j ] );
-					else
-						printf( "." );
-				}
-				printf( "\n" );
-			}
-
-			if( i == size )
-				break;
-
-            printf( "%8.8X : ", i + base );
-			memset( buf, ' ', sizeof( buf ) );
-        }
-
-		buf[ i % KDBGER_DUMP_BYTE_PER_LINE ] = (u8)(*(pBuf + i));
-        printf( "%2.2X ", buf[ i % KDBGER_DUMP_BYTE_PER_LINE ] & 0xFF );
-    }
-
-	if( unalign ) {
-
-		for( j = KDBGER_DUMP_BYTE_PER_LINE - (size % KDBGER_DUMP_BYTE_PER_LINE) - 1 ; j-- ; ) 
-			printf( "   " );
-
-		for( j = 0 ; j < (size % KDBGER_DUMP_BYTE_PER_LINE) ; j++ )
-			if( buf[ j ] >= '!' && buf[ j ] <= '~' )
-				printf( "%c", buf[ j ] );
-			else
-				printf( "." );
-
-		printf( "\n" );
-	}
-
-    printf( "---------------------------------------------------------------------------\n" );
+    fprintf( stderr, "OluxOS Kernel Debugger, Version "KDBGER_VERSION"\n" );
+    fprintf( stderr, "Author: Merck Hung <merckhung@gmail.com>\n" );
+    fprintf( stderr, "help: kdbger [-d /dev/ttyS0] [-h]\n\n" );
+	fprintf( stderr, "\t-d\tUART TTY device, default is " KDBGER_DEF_TTYDEV "\n");
+    fprintf( stderr, "\t-h\tPrint help and exit\n\n");
 }
 
 
@@ -110,6 +50,54 @@ static s32 configureTtyDevice( s32 fd ) {
 
     if( tcsetattr( fd, TCSANOW, &termSetting ) )
         return 1;
+
+	return 0;
+}
+
+
+s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op ) {
+
+	switch( pKdbgerCommPkt->kdbgerCommHdr.opCode ) {
+
+		case KDBGER_RSP_MEM_READ:
+			if( op != KDBGER_REQ_MEM_READ )
+				return 1;
+			break;
+
+		case KDBGER_RSP_MEM_WRITE:
+            if( op != KDBGER_REQ_MEM_WRITE )
+                return 1;
+			break;
+
+		case KDBGER_RSP_IO_READ:
+            if( op != KDBGER_REQ_IO_READ )
+                return 1;
+			break;
+
+		case KDBGER_RSP_IO_WRITE:
+            if( op != KDBGER_REQ_IO_WRITE )
+                return 1;
+			break;
+
+		case KDBGER_RSP_PCI_READ:
+            if( op != KDBGER_REQ_PCI_READ )
+                return 1;
+			break;
+
+		case KDBGER_RSP_PCI_WRITE:
+            if( op != KDBGER_REQ_PCI_WRITE )
+                return 1;
+			break;
+
+		case KDBGER_RSP_PCI_LIST:
+			if( op != KDBGER_REQ_PCI_LIST )
+				return 1;
+			break;
+
+		case KDBGER_RSP_NACK:
+		default:
+			return 1;
+	}
 
 	return 0;
 }
@@ -215,49 +203,9 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 		return 1;
 	}
 
-	switch( pKdbgerCommPkt->kdbgerCommHdr.opCode ) {
 
-		case KDBGER_RSP_MEM_READ:
-			if( op != KDBGER_REQ_MEM_READ )
-				return 1;
-			break;
-
-		case KDBGER_RSP_MEM_WRITE:
-            if( op != KDBGER_REQ_MEM_WRITE )
-                return 1;
-			break;
-
-		case KDBGER_RSP_IO_READ:
-            if( op != KDBGER_REQ_IO_READ )
-                return 1;
-			break;
-
-		case KDBGER_RSP_IO_WRITE:
-            if( op != KDBGER_REQ_IO_WRITE )
-                return 1;
-			break;
-
-		case KDBGER_RSP_PCI_READ:
-            if( op != KDBGER_REQ_PCI_READ )
-                return 1;
-			break;
-
-		case KDBGER_RSP_PCI_WRITE:
-            if( op != KDBGER_REQ_PCI_WRITE )
-                return 1;
-			break;
-
-		case KDBGER_RSP_PCI_LIST:
-			if( op != KDBGER_REQ_PCI_LIST )
-				return 1;
-			break;
-
-		case KDBGER_RSP_NACK:
-		default:
-			return 1;
-	}
-
-	return 0;
+	// Whether it valid or not
+	return verifyResponsePacket( pKdbgerCommPkt, op );
 }
 
 
@@ -742,16 +690,6 @@ Exit:
 
 
 /*
-	// Read memory
-	if( executeFunction( fd, KDBGER_REQ_MEM_READ, 0x7c00, 256, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
-
-		fprintf( stderr, "Error on issuing memory reading request\n" );
-		goto ErrExit;
-	}
-	debugPrintBuffer( (s8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent,
-		256, (u32)pKdbgerCommPkt->kdbgerRspMemReadPkt.address );
-
-
 	// Write memory
 	memset( cntBuf, 0x99, 256 );
     if( executeFunction( fd, KDBGER_REQ_MEM_WRITE, 0x7c00, 256, cntBuf, pktBuf, KDBGER_MAXSZ_PKT ) ) {
@@ -759,16 +697,6 @@ Exit:
         fprintf( stderr, "Error on issuing memory writing request\n" );
         goto ErrExit;
     }
-
-
-	// Read memory
-	if( executeFunction( fd, KDBGER_REQ_MEM_READ, 0x7c00, 256, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
-
-		fprintf( stderr, "Error on issuing memory reading request\n" );
-		goto ErrExit;
-	}
-	debugPrintBuffer( (s8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent,
-		pKdbgerCommPkt->kdbgerRspMemReadPkt.size, (u32)pKdbgerCommPkt->kdbgerRspMemReadPkt.address );
 
 
 	// Read IO
