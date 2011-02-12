@@ -104,6 +104,9 @@
 
 #define KDBGER_MAXSZ_PKT	2048
 #define KDBGER_FIFO_SZ		14
+#define KDBGER_SECTOR_SZ	512
+#define KDBGER_SECTOR_SZULL	512ULL
+#define KDBGER_IDE_BUF		(KDBGER_SECTOR_SZ * 2)
 
 
 typedef enum {
@@ -141,6 +144,7 @@ typedef enum {
 typedef enum {
 
 	KDBGER_REQ_CONNECT = 1,
+	KDBGER_RSP_CONNECT,
 
 	KDBGER_REQ_MEM_READ,
 	KDBGER_RSP_MEM_READ,
@@ -159,6 +163,12 @@ typedef enum {
 
 	KDBGER_REQ_PCI_WRITE,
 	KDBGER_RSP_PCI_WRITE,
+
+	KDBGER_REQ_IDE_READ,
+	KDBGER_RSP_IDE_READ,
+
+	KDBGER_REQ_IDE_WRITE,
+	KDBGER_RSP_IDE_WRITE,
 
 	KDBGER_REQ_PCI_LIST,
 	KDBGER_RSP_PCI_LIST,
@@ -278,6 +288,26 @@ typedef struct PACKED {
 } kdbgerRspPciReadPkt_t, kdbgerReqPciWritePkt_t;
 
 
+// IDE Read/Write packets
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u64						address;
+	u32						size;
+
+} kdbgerReqIdeReadPkt_t, kdbgerRspIdeWritePkt_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u64						address;
+	u32						size;
+	s8						*ideContent;
+
+} kdbgerRspIdeReadPkt_t, kdbgerReqIdeWritePkt_t;
+
+
 typedef struct PACKED {
 
 	kdbgerCommHdr_t			kdbgerCommHdr;
@@ -341,6 +371,14 @@ typedef struct PACKED {
 		// PCI Write
 		kdbgerReqPciWritePkt_t		kdbgerReqPciWritePkt;
 		kdbgerRspPciWritePkt_t		kdbgerRspPciWritePkt;
+
+		// IDE Read
+		kdbgerReqIdeReadPkt_t		kdbgerReqIdeReadPkt;
+		kdbgerRspIdeReadPkt_t		kdbgerRspIdeReadPkt;
+
+		// IDE Write
+		kdbgerReqIdeWritePkt_t		kdbgerReqIdeWritePkt;
+		kdbgerRspIdeWritePkt_t		kdbgerRspIdeWritePkt;
 
 		// PCI List
 		kdbgerReqPciListPkt_t		kdbgerReqPciListPkt;

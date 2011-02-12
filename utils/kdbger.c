@@ -59,6 +59,11 @@ s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op ) {
 
 	switch( pKdbgerCommPkt->kdbgerCommHdr.opCode ) {
 
+		case KDBGER_RSP_CONNECT:
+			if( op != KDBGER_REQ_CONNECT )
+				return 1;
+			break;
+
 		case KDBGER_RSP_MEM_READ:
 			if( op != KDBGER_REQ_MEM_READ )
 				return 1;
@@ -86,6 +91,16 @@ s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op ) {
 
 		case KDBGER_RSP_PCI_WRITE:
             if( op != KDBGER_REQ_PCI_WRITE )
+                return 1;
+			break;
+
+		case KDBGER_RSP_IDE_READ:
+            if( op != KDBGER_REQ_IDE_READ )
+                return 1;
+			break;
+
+		case KDBGER_RSP_IDE_WRITE:
+            if( op != KDBGER_REQ_IDE_WRITE )
                 return 1;
 			break;
 
@@ -118,6 +133,11 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 
 	// Fill in data fields
 	switch( op ) {
+
+		case KDBGER_REQ_CONNECT:
+
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerCommHdr_t );
+			break;
 
 		case KDBGER_REQ_MEM_READ:
 
@@ -174,6 +194,25 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 			memcpy( &pKdbgerCommPkt->kdbgerReqPciWritePkt.pciContent, cntBuf, size );
 			pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
 				sizeof( kdbgerReqPciWritePkt_t ) - sizeof( s8 * ) + size; 
+			break;
+
+		case KDBGER_REQ_IDE_READ:
+
+			pKdbgerCommPkt->kdbgerReqIdeReadPkt.address = addr;
+			pKdbgerCommPkt->kdbgerReqIdeReadPkt.size = size;
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerReqIdeReadPkt_t );
+			break;
+
+		case KDBGER_REQ_IDE_WRITE:
+
+			if( !size || !cntBuf )
+				return 1;
+
+			pKdbgerCommPkt->kdbgerReqIdeWritePkt.address = addr;
+			pKdbgerCommPkt->kdbgerReqIdeWritePkt.size = size;
+			memcpy( &pKdbgerCommPkt->kdbgerReqIdeWritePkt.ideContent, cntBuf, size );
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
+				sizeof( kdbgerReqIdeWritePkt_t ) - sizeof( s8 * ) + size; 
 			break;
 
 		case KDBGER_REQ_PCI_LIST:
@@ -586,6 +625,14 @@ s32 main( s32 argc, s8 **argv ) {
 	if( configureTtyDevice( fd ) ) {
 
 		fprintf( stderr, "Cannot configure device %s\n", ttyDevice );
+		goto ErrExit;
+	}
+
+
+	// Connect to OluxOS Kernel
+	if( executeFunction( fd, KDBGER_REQ_CONNECT, 0, 0, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+
+		fprintf( stderr, "Cannot connect to OluxOS Kernel via %s\n", ttyDevice );
 		goto ErrExit;
 	}
 
