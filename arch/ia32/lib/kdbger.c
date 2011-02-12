@@ -38,6 +38,18 @@ static u8 kdbgerGetState( void ) {
 }
 
 
+static void kdbgerIntrEnable( void ) {
+
+	IoOutByte( UART_IER_RXRD, kdbgerPortAddr + UART_REG_IER );
+}
+
+
+static void kdbgerIntrDisable( void ) {
+
+	IoOutByte( 0x00, kdbgerPortAddr + UART_REG_IER );
+}
+
+
 static void kdbgerIntHandler( u8 IrqNum ) {
 
 	u8 lsrState;
@@ -51,8 +63,9 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	u16 pciSz;
 
     // Disable interrupt
-    IoOutByte( 0x00, kdbgerPortAddr + UART_IER );
+    kdbgerIntrDisable();
 
+	// Make sure the state != UNKNOWN
 	if( kdbgerGetState() == KDBGER_UNKNOWN ) {
 
 		DbgPrint( "Kernel Debugger internal state is unknown\n" );
@@ -60,10 +73,10 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	}
 
 	// Read LSR
-	lsrState = IoInByte( kdbgerPortAddr + UART_LSR );
+	lsrState = IoInByte( kdbgerPortAddr + UART_REG_LSR );
 	if( lsrState & UART_LSR_RXDR ) {
 
-		//DbgPrint( "UART_LSR_RXDR\n" );
+		//DbgPrint( "UART_REG_LSR_RXDR\n" );
 
 		// Receive & assemble a request packet
 		if( kdbgerGetState() == KDBGER_READY ) {
@@ -81,7 +94,7 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 		}
 
 		// Receive one byte of a request packet
-		pktBuf[ idxBuf++ ] = IoInByte( kdbgerPortAddr + UART_RBR );
+		pktBuf[ idxBuf++ ] = IoInByte( kdbgerPortAddr + UART_REG_RBR );
 
 		// Response to a request
 		if( (kdbgerGetState() == KDBGER_PKT_RECV) && (idxBuf >= sizeof( kdbgerCommHdr_t ))
@@ -242,7 +255,7 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 			// Start to transmit
 			for( idxBuf = 0 ; idxBuf < pKdbgerCommPkt->kdbgerCommHdr.pktLen ; idxBuf++ ) {
 
-				IoOutByte( pktBuf[ idxBuf ], kdbgerPortAddr + UART_THR );
+				IoOutByte( pktBuf[ idxBuf ], kdbgerPortAddr + UART_REG_THR );
 			}
 
 			// Transit state to READY
@@ -253,7 +266,31 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 done:
 
 	// Reenable interrupt
-	IoOutByte( UART_IER_RXRD, kdbgerPortAddr + UART_IER );
+	kdbgerIntrEnable();
+}
+
+
+static void kdbgerFifoEnable( void ) {
+
+	// FIFO Enable, TX & RX, 14 bytes
+	IoOutByte( (UART_FCR_FE | UART_FCR_RFR | UART_FCR_XFR | UART_FCR_TL_14B), kdbgerPortAddr + UART_REG_FCR );
+}
+
+
+static void kdbgerSetupBaudrate( kdbgerBaudrate_t baud ) {
+
+	s8 tmp;
+
+	// DLAB On
+	tmp = IoInByte( kdbgerPortAddr + UART_REG_LCR );
+    IoOutByte( tmp | UART_LCR_DLAB, kdbgerPortAddr + UART_REG_LCR );
+
+    // Divisor
+    IoOutByte( baud, kdbgerPortAddr + UART_REG_DLL );
+    IoOutByte( 0x00, kdbgerPortAddr + UART_REG_DLH );
+
+    // DLAB Off
+    IoOutByte( tmp, kdbgerPortAddr + UART_REG_LCR );
 }
 
 
@@ -266,20 +303,16 @@ void kdbgerInitialization( kdbgerDebugPort_t port ) {
 	kdbgerPortAddr = port;
 
     // Turn off Interrupt
-    IoOutByte( 0x00, kdbgerPortAddr + UART_IER );
+    kdbgerIntrDisable();
 
-    // DLAB ON
-    IoOutByte( UART_DLAB, kdbgerPortAddr + UART_LCR );
+	// Setup baudrate
+	kdbgerSetupBaudrate( KDBGER_BAUD_115200 );
 
-    // Baudrate = 115200
-    // Divisor Low Byte
-    IoOutByte( UART_BAUD_115200, kdbgerPortAddr + UART_DLL );
+    // 8 Bits, No Parity, 1 Stop Bit
+    IoOutByte( UART_STOPBIT_1 | UART_DATABIT_8, kdbgerPortAddr + UART_REG_LCR );
 
-    // Divisor High Byte
-    IoOutByte( 0x00, kdbgerPortAddr + UART_DLH );
-
-    // DLAB = OFF, 8 Bits, No Parity, 1 Stop Bit
-    IoOutByte( UART_STOPBIT_1 | UART_DATABIT_8, kdbgerPortAddr + UART_LCR );
+	// Enable FIFO
+	kdbgerFifoEnable();
 
 	// Transit to READY state
 	kdbgerSetState( KDBGER_READY );
@@ -287,14 +320,14 @@ void kdbgerInitialization( kdbgerDebugPort_t port ) {
 	// Disable interrupt
 	IntDisable();
 
-	// Setup KDBGER interrupt handler
+	// Setup interrupt handler
 	IntRegInterrupt( IRQ_SERIAL0, IRQHandler( 4 ), kdbgerIntHandler );
 
 	// Enable interrupt
 	IntEnable();
 
 	// Turn on interrupt
-    IoOutByte( UART_IER_RXRD, kdbgerPortAddr + UART_IER );
+    kdbgerIntrEnable();
 }
 
 
