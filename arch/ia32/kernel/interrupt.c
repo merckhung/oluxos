@@ -243,7 +243,7 @@ void IntRegInterrupt( u32 IrqNum, void *IrqHandler, void (*HwIntHandler)( u8 Irq
 
 
     // Add interrupt gate
-    IntSetIDT( IrqNum + HW_INT_START, (u32)IrqHandler, __KERNEL_CS, GATE_INT_FLAG );
+    IntSetIDT( IrqNum + HW_INT_START, (void *)IrqHandler, __KERNEL_CS, GATE_INT_FLAG );
 
 
     // Install interrupt handler

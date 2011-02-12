@@ -163,6 +163,9 @@ typedef enum {
 	KDBGER_REQ_PCI_LIST,
 	KDBGER_RSP_PCI_LIST,
 
+	KDBGER_REQ_E810_LIST,
+	KDBGER_RSP_E810_LIST,
+
 	KDBGER_RSP_CPU_EXCEPTION,
 
 	KDBGER_RSP_NACK,
@@ -176,6 +179,27 @@ typedef enum _kdbgErrorCode {
 	KDBGER_FAILURE,
 
 } kdbgErrorCode_t;
+
+
+typedef struct PACKED {
+
+	u16						bus;
+	u8						dev;
+	u8						fun;
+	u16						vendorId;
+	u16						deviceId;
+
+} kdbgerPciDev_t;
+
+
+typedef struct PACKED {
+
+	u64						baseAddr;
+	u64						length;
+	u32						type;
+	u32						attr;
+
+} kdbgerE820record_t;
 
 
 // Common packet
@@ -256,20 +280,9 @@ typedef struct PACKED {
 
 typedef struct PACKED {
 
-	u16						bus;
-	u8						dev;
-	u8						fun;
-	u16						vendorId;
-	u16						deviceId;
-
-} kdbgerPciDev_t;
-
-
-typedef struct PACKED {
-
 	kdbgerCommHdr_t			kdbgerCommHdr;
 
-} kdbgerReqPciListPkt_t;
+} kdbgerReqPciListPkt_t, kdbgerReqE820ListPkt_t;
 
 
 typedef struct PACKED {
@@ -279,6 +292,15 @@ typedef struct PACKED {
 	kdbgerPciDev_t			*pciListContent;
 
 } kdbgerRspPciListPkt_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u32						numOfE820Record;
+	kdbgerE820record_t		e820ListContent[ 1 ];
+
+} kdbgerRspE820ListPkt_t;
 
 
 typedef struct PACKED {
@@ -323,6 +345,10 @@ typedef struct PACKED {
 		// PCI List
 		kdbgerReqPciListPkt_t		kdbgerReqPciListPkt;
 		kdbgerRspPciListPkt_t		kdbgerRspPciListPkt;
+
+		// E820 List
+		kdbgerReqE820ListPkt_t		kdbgerReqE820ListPkt;
+		kdbgerRspE820ListPkt_t		kdbgerRspE820ListPkt;
 
 		// CPU Exception
 		kdbgerRspCpuExceptionPkt_t	kdbgerRspCpuExceptionPkt;

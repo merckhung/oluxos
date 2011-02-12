@@ -182,9 +182,6 @@ u32 KshParseCmd( s8 *CmdBuf, s8 **Param ) {
 
 void KshExecCmd( s32 CmdCode, s8 *Param ) {
 
-	u32 lba;
-
-
     switch( CmdCode ) {
 
 

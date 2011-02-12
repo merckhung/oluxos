@@ -15,6 +15,8 @@
 #include <ia32/gdb.h>
 #include <ia32/debug.h>
 #include <driver/pci.h>
+#include <ia32/bios.h>
+#include <ia32/page.h>
 #include <ia32/kdbger.h>
 
 
@@ -80,6 +82,27 @@ static u32 kdbgerPciDetectDevice( kdbgerPciDev_t *pKdbgerPciDev ) {
 }
 
 
+static u32 kdbgerE820Copy( kdbgerE820record_t *pKdbgerE820record ) {
+
+	s32 i;
+	u32 count = 0;
+	volatile u8 *e820_count = (volatile u8 *)E820_COUNT;
+	volatile E820Result *e820_base = (volatile E820Result *)E820_BASE;
+
+	for( i = 0 ; i < *e820_count ; i++, pKdbgerE820record++, count++ ) {
+
+		pKdbgerE820record->baseAddr = (((u64)(e820_base + i)->BaseAddrHigh) & 0xFFFFFFFFULL) << 32;
+		pKdbgerE820record->baseAddr |= ((u64)(e820_base + i)->BaseAddrLow) & 0xFFFFFFFFULL;
+		pKdbgerE820record->length = (((u64)(e820_base + i)->LengthHigh) & 0xFFFFFFFFULL) << 32;
+		pKdbgerE820record->length |= ((u64)(e820_base + i)->LengthLow) & 0xFFFFFFFFULL;
+		pKdbgerE820record->type = (e820_base + i)->RecType;
+		pKdbgerE820record->attr = (e820_base + i)->Attributes;
+	}
+
+	return count;
+}
+
+
 static void kdbgerFifoEnable( void ) {
 
 	// FIFO Enable, TX & RX, 14 bytes
@@ -98,7 +121,6 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	u16 ioAddr;
 	u32 pciAddr;
 	u16 pciSz;
-	kdbgerPciDev_t *pKdbgerPciDev;
 	s8 restBuf[ KDBGER_FIFO_SZ ];
 	s32 restLen;
 
@@ -265,7 +287,7 @@ static void kdbgerIntHandler( u8 IrqNum ) {
                     for( i = 0 ; i < pciSz ; i++ ) {
 
                         // Read PCI config data
-                        //*(ptr + i) = IoInByte( ioAddr + i );
+						*(ptr + i) = PciReadConfigByte( pciAddr, i );
                     }
 
                     // Prepare the response packet
@@ -288,7 +310,7 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 					for( i = 0 ; i < pciSz ; i++ ) {
 
 						// Write PCI config data
-						//IoOutByte( *(ptr + i), ioAddr + i );
+						PciWriteConfigByte( pciAddr, i, *(ptr + i) );
 					}
 
 					// Prepare the response packet
@@ -302,18 +324,34 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 				case KDBGER_REQ_PCI_LIST:
 
 					// List PCI device
-					pKdbgerPciDev = (kdbgerPciDev_t *)&pKdbgerCommPkt->kdbgerRspPciListPkt.pciListContent;
 					CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
 
 					// Scan PCI devices
 					pKdbgerCommPkt->kdbgerRspPciListPkt.numOfPciDevice =
-						kdbgerPciDetectDevice( pKdbgerPciDev );
+						kdbgerPciDetectDevice( (kdbgerPciDev_t *)&pKdbgerCommPkt->kdbgerRspPciListPkt.pciListContent );
 
 					// Prepare the response packet
 					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_PCI_LIST;
 					pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
 						sizeof( kdbgerRspPciListPkt_t ) - sizeof( kdbgerPciDev_t * )
 						+ pKdbgerCommPkt->kdbgerRspPciListPkt.numOfPciDevice * sizeof( kdbgerPciDev_t );
+					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+					break;
+
+				case KDBGER_REQ_E810_LIST:
+
+					// List E820
+					CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
+
+					// Copy E820
+					pKdbgerCommPkt->kdbgerRspE820ListPkt.numOfE820Record =
+						kdbgerE820Copy( (kdbgerE820record_t *)&pKdbgerCommPkt->kdbgerRspE820ListPkt.e820ListContent );
+
+					// Prepare the response packet
+					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_E810_LIST;
+					pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
+						sizeof( kdbgerRspE820ListPkt_t ) - sizeof( kdbgerE820record_t * )
+						+ pKdbgerCommPkt->kdbgerRspE820ListPkt.numOfE820Record * sizeof( kdbgerE820record_t );
 					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
 					break;
 	

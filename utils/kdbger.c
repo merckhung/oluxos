@@ -94,6 +94,11 @@ s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op ) {
 				return 1;
 			break;
 
+		case KDBGER_RSP_E810_LIST:
+			if( op != KDBGER_REQ_E810_LIST )
+				return 1;
+			break;
+
 		case KDBGER_RSP_NACK:
 		default:
 			return 1;
@@ -175,6 +180,12 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 
 			pKdbgerCommPkt->kdbgerCommHdr.pktLen =
 				sizeof( kdbgerReqPciWritePkt_t );
+			break;
+
+		case KDBGER_REQ_E810_LIST:
+
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen =
+				sizeof( kdbgerReqE820ListPkt_t );
 			break;
 
 		default:
@@ -510,17 +521,26 @@ s32 main( s32 argc, s8 **argv ) {
 	s8 ttyDevice[ KDBGER_MAX_PATH ];
 	s8 c;
 	s8 pktBuf[ KDBGER_MAXSZ_PKT ];
-	s8 cntBuf[ KDBGER_MAXSZ_PKT ];
+	//s8 cntBuf[ KDBGER_MAXSZ_PKT ];
 	kdbgerCommPkt_t *pKdbgerCommPkt = (kdbgerCommPkt_t *)pktBuf;
 	kdbgerBasePanel_t kdbgerBasePanel;
 	kdbgerMemoryPanel_t kdbgerMemoryPanel;
+	u64 dumpByteBase = 0;
 	s32 inputBuf, dumpByteOffset = 0, strIdx = 0;
 	u32 lastSecond = 0;
 	kdbgerHwFunc_t kdbgerHwFunc = KHF_MEM;
+
+	// PCI List
 	kdbgerRspPciListPkt_t *pKdbgerRspPciListPkt;
 	kdbgerPciDev_t *pKdbgerPciDev;
 	u32 numOfPciDevice;
-	u64 dumpByteBase = 0;
+
+	// E820 List
+	kdbgerRspE820ListPkt_t *pKdbgerRspE820ListPkt;
+	kdbgerE820record_t *pKdbgerE820record;
+	u32 numOfE820Record;
+
+	// Status bar
 	s8 statusBarString[ KDBGER_STS_BUF_SZ ] = "(m)Memory (i)I/O (p)PCI/PCI-E (l)PCI/PCI-E List (c)CMOS (h)Help";
 
 
@@ -576,13 +596,28 @@ s32 main( s32 argc, s8 **argv ) {
 		fprintf( stderr, "Cannot get PCI device listing\n" );
 		goto ErrExit;
 	}
-
-
 	// Save PCI list
 	pKdbgerRspPciListPkt = (kdbgerRspPciListPkt_t *)pktBuf;
 	numOfPciDevice = pKdbgerRspPciListPkt->numOfPciDevice;
 	pKdbgerPciDev = (kdbgerPciDev_t *)malloc( sizeof( kdbgerPciDev_t ) * numOfPciDevice );
+	if( !pKdbgerPciDev )
+		goto ErrExit;
 	memcpy( pKdbgerPciDev, &pKdbgerRspPciListPkt->pciListContent, sizeof( kdbgerPciDev_t ) * numOfPciDevice );
+
+
+	// Read E820 list
+	if( executeFunction( fd, KDBGER_REQ_E810_LIST, 0, 0, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+
+		fprintf( stderr, "Cannot get E820 listing\n" );
+		goto ErrExit1;
+	}
+	// Save E820 list
+	pKdbgerRspE820ListPkt = (kdbgerRspE820ListPkt_t *)pktBuf;
+	numOfE820Record = pKdbgerRspE820ListPkt->numOfE820Record;
+	pKdbgerE820record = (kdbgerE820record_t *)malloc( sizeof( kdbgerE820record_t ) * numOfE820Record );
+	if( !pKdbgerE820record )
+		goto ErrExit1;
+	memcpy( pKdbgerE820record, &pKdbgerRspE820ListPkt->e820ListContent, sizeof( kdbgerE820record_t ) * numOfE820Record );
 
 
 	// Initialize ncurses
@@ -710,8 +745,12 @@ Exit:
 */
 
 
-ErrExit:
+	free( pKdbgerE820record );
 
+ErrExit1:
+	free( pKdbgerPciDev );
+
+ErrExit:
 	// Close TTY device
 	close( fd );
 
