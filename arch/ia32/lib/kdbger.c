@@ -24,6 +24,7 @@ static u16 kdbgerPortAddr = UART_PORT0;
 static u8 kdbgerState = KDBGER_UNKNOWN;
 static s8 pktBuf[ KDBGER_MAXSZ_PKT ];
 static s32 idxBuf;
+static s32 checker = 0;
 
 
 static void kdbgerSetState( kdbgerState_t state ) {
@@ -50,6 +51,13 @@ static void kdbgerIntrDisable( void ) {
 }
 
 
+static void kdbgerFifoEnable( void ) {
+
+	// FIFO Enable, TX & RX, 14 bytes
+	IoOutByte( (UART_FCR_FE | UART_FCR_RFR | UART_FCR_XFR | UART_FCR_TL_14B), kdbgerPortAddr + UART_REG_FCR );
+}
+
+
 static void kdbgerIntHandler( u8 IrqNum ) {
 
 	u8 lsrState;
@@ -61,6 +69,8 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	u16 ioAddr;
 	u32 pciAddr;
 	u16 pciSz;
+	s8 restBuf[ KDBGER_FIFO_SZ ];
+	s32 restLen;
 
     // Disable interrupt
     kdbgerIntrDisable();
@@ -75,8 +85,6 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	// Read LSR
 	lsrState = IoInByte( kdbgerPortAddr + UART_REG_LSR );
 	if( lsrState & UART_LSR_RXDR ) {
-
-		//DbgPrint( "UART_REG_LSR_RXDR\n" );
 
 		// Receive & assemble a request packet
 		if( kdbgerGetState() == KDBGER_READY ) {
@@ -93,12 +101,33 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 			goto done;
 		}
 
-		// Receive one byte of a request packet
-		pktBuf[ idxBuf++ ] = IoInByte( kdbgerPortAddr + UART_REG_RBR );
+		// Receive data of a request packet from FIFO
+		for( ; ; ) {
+
+			// Read a byte
+			pktBuf[ idxBuf++ ] = IoInByte( kdbgerPortAddr + UART_REG_RBR );
+			if( !(IoInByte( kdbgerPortAddr + UART_REG_LSR ) & UART_LSR_RXDR) )
+				break;
+		}
 
 		// Response to a request
 		if( (kdbgerGetState() == KDBGER_PKT_RECV) && (idxBuf >= sizeof( kdbgerCommHdr_t ))
 			&& (idxBuf >= pKdbgerCommPkt->kdbgerCommHdr.pktLen) ) {
+
+			if( idxBuf != pKdbgerCommPkt->kdbgerCommHdr.pktLen ) {
+
+				restLen = idxBuf - pKdbgerCommPkt->kdbgerCommHdr.pktLen;
+				if( restLen <= KDBGER_FIFO_SZ )
+					CbMemCpy( restBuf, pktBuf + pKdbgerCommPkt->kdbgerCommHdr.pktLen, restLen );
+				else {
+				
+					// Internal error
+					kdbgerSetState( KDBGER_UNKNOWN );	
+					goto done;
+				}
+			}
+			else
+				restLen = 0;
 
 			// Indicate receiving has done
 			kdbgerSetState( KDBGER_PKT_DONE );
@@ -243,9 +272,14 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 				default:
 
 					DbgPrint( "Unsupport OpCode = 0x%4.4X\n", pKdbgerCommPkt->kdbgerCommHdr.opCode );
-					// Discard this packet
-					kdbgerSetState( KDBGER_READY );
-					goto done;
+					DbgPrint( "Len = %d\n", pKdbgerCommPkt->kdbgerCommHdr.pktLen );
+					DbgPrint( "idxBuf = %d\n", idxBuf );
+
+					CbMemSet( pktBuf, 0, KDBGER_MAXSZ_PKT );
+					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_NACK;
+					pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerCommHdr_t );
+					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+					break;
 			}
 
 
@@ -253,27 +287,27 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 			kdbgerSetState( KDBGER_PKT_TRAN );
 
 			// Start to transmit
-			for( idxBuf = 0 ; idxBuf < pKdbgerCommPkt->kdbgerCommHdr.pktLen ; idxBuf++ ) {
+			for( idxBuf = 0 ; idxBuf < pKdbgerCommPkt->kdbgerCommHdr.pktLen ; )
+				if( IoInByte( kdbgerPortAddr + UART_REG_LSR ) & UART_LSR_TXE )
+					IoOutByte( pktBuf[ idxBuf++ ], kdbgerPortAddr + UART_REG_THR );
 
-				IoOutByte( pktBuf[ idxBuf ], kdbgerPortAddr + UART_REG_THR );
+			if( restLen ) {
+
+				CbMemCpy( pktBuf, restBuf, restLen );
+				idxBuf = restLen;
+				kdbgerSetState( KDBGER_PKT_RECV );
 			}
-
-			// Transit state to READY
-			kdbgerSetState( KDBGER_READY );
+			else
+				kdbgerSetState( KDBGER_READY );
 		}
 	}
 
 done:
 
+	checker++;
+
 	// Reenable interrupt
 	kdbgerIntrEnable();
-}
-
-
-static void kdbgerFifoEnable( void ) {
-
-	// FIFO Enable, TX & RX, 14 bytes
-	IoOutByte( (UART_FCR_FE | UART_FCR_RFR | UART_FCR_XFR | UART_FCR_TL_14B), kdbgerPortAddr + UART_REG_FCR );
 }
 
 

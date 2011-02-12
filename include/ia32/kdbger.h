@@ -102,7 +102,8 @@
 #define UART_BAUD_1200		0x60
 
 
-#define KDBGER_MAXSZ_PKT	4096
+#define KDBGER_MAXSZ_PKT	2048
+#define KDBGER_FIFO_SZ		14
 
 
 typedef enum {
@@ -160,6 +161,8 @@ typedef enum _kdbgerReqOpCode {
 	KDBGER_RSP_PCI_WRITE,
 
 	KDBGER_RSP_CPU_EXCEPTION,
+
+	KDBGER_RSP_NACK,
 
 } kdbgerOpCode_t;
 

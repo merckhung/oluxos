@@ -215,7 +215,7 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 
 			if( op != KDBGER_REQ_MEM_READ ) {
 
-				fprintf( stderr, "Not expect response packet\n" );
+				//fprintf( stderr, "Not expect response packet\n" );
 				return 1;
 			}
 			break;
@@ -224,7 +224,7 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 
             if( op != KDBGER_REQ_MEM_WRITE ) {
 
-                fprintf( stderr, "Not expect response packet\n" );
+                //fprintf( stderr, "Not expect response packet\n" );
                 return 1;
             }
 			break;
@@ -233,7 +233,7 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 
             if( op != KDBGER_REQ_IO_READ ) {
 
-                fprintf( stderr, "Not expect response packet\n" );
+                //fprintf( stderr, "Not expect response packet\n" );
                 return 1;
             }
 			break;
@@ -242,7 +242,7 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 
             if( op != KDBGER_REQ_IO_WRITE ) {
 
-                fprintf( stderr, "Not expect response packet\n" );
+                //fprintf( stderr, "Not expect response packet\n" );
                 return 1;
             }
 			break;
@@ -251,7 +251,7 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 
             if( op != KDBGER_REQ_PCI_READ ) {
 
-                fprintf( stderr, "Not expect response packet\n" );
+                //fprintf( stderr, "Not expect response packet\n" );
                 return 1;
             }
 			break;
@@ -260,14 +260,14 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, 
 
             if( op != KDBGER_REQ_PCI_WRITE ) {
 
-                fprintf( stderr, "Not expect response packet\n" );
+                //fprintf( stderr, "Not expect response packet\n" );
                 return 1;
             }
 			break;
 
 		default:
 
-			fprintf( stderr, "Not expect response packet\n" );
+			//fprintf( stderr, "Not expect response packet\n" );
 			return 1;
 	}
 
@@ -621,10 +621,6 @@ s32 main( s32 argc, s8 **argv ) {
 	printBasePlane( &kdbgerBasePanel );
 
 
-	// Read memory
-	executeFunction( fd, KDBGER_REQ_MEM_READ, 0x7C00, KDBGER_BYTE_PER_SCREEN, NULL, pktBuf, KDBGER_MAXSZ_PKT );
-
-
 	printDumpBasePanel( &kdbgerMemoryPanel, KDBGER_INFO_MEMORY_BASE );
 
 
@@ -678,6 +674,8 @@ s32 main( s32 argc, s8 **argv ) {
 
 			default:
 			case KHF_MEM:
+
+				executeFunction( fd, KDBGER_REQ_MEM_READ, 0x7C00, KDBGER_BYTE_PER_SCREEN, NULL, pktBuf, KDBGER_MAXSZ_PKT );
 				handleKeyPressForDumpPanel( inputBuf, &dumpByteOffset );
 				printDumpUpdatePanel( &kdbgerMemoryPanel, (u8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent, &dumpByteOffset );
 				break;
@@ -701,7 +699,7 @@ s32 main( s32 argc, s8 **argv ) {
 		doupdate();
 
 		// Delay for a while
-		usleep( 1000 );
+		usleep( 30000 );
 	}
 
 Exit:
