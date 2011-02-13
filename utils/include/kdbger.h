@@ -254,3 +254,19 @@ typedef struct {
 } kdbgerUiProperty_t;
 
 
+// Prototypes
+s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op );
+s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8 *cntBuf, u8 *pktBuf, s32 lenPktBuf );
+s32 connectToOluxOSKernel( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readPciList( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readE820List( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readMemory( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readIo( kdbgerUiProperty_t *pKdbgerUiProperty );
+
+void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void clearDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void clearDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+
+
