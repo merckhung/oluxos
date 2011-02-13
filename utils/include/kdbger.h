@@ -150,7 +150,8 @@ typedef enum {
 	KBPRS_F11 = 0x113,
 	KBPRS_F12 = 0x114,
 
-	KBPRS_SPACE = ' ',
+	KBPRS_SPACE = 0x20,
+	KBPRS_ENTER = 0x0A,
 
 } kdbgerKeyPress_t;
 
@@ -233,10 +234,12 @@ typedef struct {
 	WINDOW 				*bits;
 	WINDOW				*baseaddr;
 
-	u8					toggleBits;
 	u64					dumpByteBase;
 	s32					dumpByteOffset;
 	s8					*infoStr;
+	u8					toggleBits;
+	u8					toggleEditing;
+	u8					editingBuf;
 
 } kdbgerDumpPanel_t, kdbgerMemoryPanel_t;
 
@@ -271,6 +274,13 @@ typedef struct {
 // Prototypes
 s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op );
 s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8 *cntBuf, u8 *pktBuf, s32 lenPktBuf );
+s32 connectToOluxOSKernel( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readPciList( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readE820List( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readMemory( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 writeMemoryByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readIo( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 writeIoByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 
 void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );

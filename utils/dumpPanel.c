@@ -28,6 +28,9 @@
 #include <kdbger.h>
 
 
+static u32 editorColorCount = 0;
+
+
 void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	// Print Top bar
@@ -75,7 +78,7 @@ void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
-	s32 i, x, y;
+	s32 i, x, y, color;
 	u8 valueBuf[ KDBGER_DUMP_VBUF_SZ + 1 ];
 	u8 asciiBuf[ KDBGER_DUMP_ABUF_SZ + 1 ];
 	u8 *vp = valueBuf, *ap = asciiBuf;
@@ -197,19 +200,41 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			break;
 	}
 
-	// Highlight
+
+	// Highlight & Editing
 	y = (pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_VALUE_LINE;
 	x = ((pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset % KDBGER_DUMP_BYTE_PER_LINE) * 3) + KDBGER_DUMP_VALUE_COLUMN;
-	printWindowMove(
-		pKdbgerUiProperty->kdbgerDumpPanel,
-		highlight,
-		KDBGER_STRING_NLINE,
-		KDBGER_DUMP_HL_DIGITS,
-		y,
-		x,
-		YELLOW_RED,
-		"%2.2X",
-		*(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset) );
+	if( pKdbgerUiProperty->kdbgerDumpPanel.toggleEditing ) {
+
+		color = (editorColorCount++ % 2) ? YELLOW_RED : YELLOW_BLACK;
+
+		printWindowMove(
+			pKdbgerUiProperty->kdbgerDumpPanel,
+			highlight,
+			KDBGER_STRING_NLINE,
+			KDBGER_DUMP_HL_DIGITS,
+			y,
+			x,
+			color,
+			"%2.2X",
+			pKdbgerUiProperty->kdbgerDumpPanel.editingBuf );
+		}
+	else {
+
+		printWindowMove(
+			pKdbgerUiProperty->kdbgerDumpPanel,
+			highlight,
+			KDBGER_STRING_NLINE,
+			KDBGER_DUMP_HL_DIGITS,
+			y,
+			x,
+			YELLOW_RED,
+			"%2.2X",
+			*(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset) );
+
+		pKdbgerUiProperty->kdbgerDumpPanel.editingBuf = *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset);
+	}
+
 
 	// Bits
 	if( pKdbgerUiProperty->kdbgerDumpPanel.toggleBits ) {
@@ -259,6 +284,67 @@ void clearDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
+	if( pKdbgerUiProperty->kdbgerDumpPanel.toggleEditing ) {
+
+		// Trigger write action
+		if( pKdbgerUiProperty->inputBuf == KBPRS_ENTER ) {
+
+			switch( pKdbgerUiProperty->kdbgerHwFunc ) {
+
+				case KHF_MEM:
+					writeMemoryByEditing( pKdbgerUiProperty );
+					break;
+
+				case KHF_IO:
+					writeIoByEditing( pKdbgerUiProperty );
+					break;
+
+				case KHF_PCI:
+					break;
+
+				case KHF_IDE:
+					break;
+
+				default:
+					break;
+			}
+
+			// Exit
+			pKdbgerUiProperty->kdbgerDumpPanel.toggleEditing = 0;
+			return;
+		}
+
+		// Editing
+		if( (pKdbgerUiProperty->inputBuf >= '0' 
+			&& pKdbgerUiProperty->inputBuf <= '9')
+			|| (pKdbgerUiProperty->inputBuf >= 'a'
+			&& pKdbgerUiProperty->inputBuf <= 'f')
+			|| (pKdbgerUiProperty->inputBuf >= 'A'
+			&& pKdbgerUiProperty->inputBuf <= 'F') ) {
+
+			// Left shift 4 bits
+			pKdbgerUiProperty->kdbgerDumpPanel.editingBuf <<= 4;
+
+			if( pKdbgerUiProperty->inputBuf <= '9' ) {
+
+				pKdbgerUiProperty->kdbgerDumpPanel.editingBuf |=
+					(u8)((pKdbgerUiProperty->inputBuf - 0x30) & 0x0F);
+			}
+			else if( pKdbgerUiProperty->inputBuf > 'F' ) {
+
+				pKdbgerUiProperty->kdbgerDumpPanel.editingBuf |=
+					(u8)((pKdbgerUiProperty->inputBuf - 0x60 + 9) & 0x0F);
+			}
+			else {
+
+				pKdbgerUiProperty->kdbgerDumpPanel.editingBuf |=
+					(u8)((pKdbgerUiProperty->inputBuf - 0x40 + 9) & 0x0F);
+			}
+		}
+
+		return;
+	}
+
 	switch( pKdbgerUiProperty->inputBuf ) {
 
 		case KBPRS_UP:
@@ -303,6 +389,11 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase += KDBGER_BYTE_PER_SCREEN;
             break;
+
+		case KBPRS_ENTER:
+
+			pKdbgerUiProperty->kdbgerDumpPanel.toggleEditing = 1;
+			break;
 
 		case KBPRS_SPACE:
 

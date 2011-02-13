@@ -231,3 +231,117 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8 *cntBuf, 
 }
 
 
+s32 connectToOluxOSKernel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Connect to OluxOS Kernel
+	return executeFunction( 
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_CONNECT,
+			0,
+			0,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 readPciList( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	kdbgerRspPciListPkt_t *pKdbgerRspPciListPkt;
+
+	// Read PCI list
+	if( executeFunction( pKdbgerUiProperty->fd, KDBGER_REQ_PCI_LIST, 0, 0, NULL, pKdbgerUiProperty->pktBuf, KDBGER_MAXSZ_PKT ) )
+		return 1;
+
+	// Save PCI list
+	pKdbgerRspPciListPkt = (kdbgerRspPciListPkt_t *)pKdbgerUiProperty->pktBuf;
+	pKdbgerUiProperty->numOfPciDevice = pKdbgerRspPciListPkt->numOfPciDevice;
+	pKdbgerUiProperty->pKdbgerPciDev = (kdbgerPciDev_t *)malloc( sizeof( kdbgerPciDev_t ) * pKdbgerUiProperty->numOfPciDevice );
+
+	if( !pKdbgerUiProperty->pKdbgerPciDev )
+		return 1;
+
+	memcpy( pKdbgerUiProperty->pKdbgerPciDev, &pKdbgerRspPciListPkt->pciListContent, sizeof( kdbgerPciDev_t ) * pKdbgerUiProperty->numOfPciDevice );
+
+	return 0;
+}
+
+
+s32 readE820List( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	kdbgerRspE820ListPkt_t *pKdbgerRspE820ListPkt;
+
+	// Read E820 list
+	if( executeFunction( pKdbgerUiProperty->fd, KDBGER_REQ_E810_LIST, 0, 0, NULL, pKdbgerUiProperty->pktBuf, KDBGER_MAXSZ_PKT ) )
+		return 1;
+
+	// Save E820 list
+	pKdbgerRspE820ListPkt = (kdbgerRspE820ListPkt_t *)pKdbgerUiProperty->pktBuf;
+	pKdbgerUiProperty->numOfE820Record = pKdbgerRspE820ListPkt->numOfE820Record;
+	pKdbgerUiProperty->pKdbgerE820record = (kdbgerE820record_t *)malloc( sizeof( kdbgerE820record_t ) * pKdbgerUiProperty->numOfE820Record );
+
+	if( !pKdbgerUiProperty->pKdbgerE820record )
+		return 1;
+
+	memcpy( pKdbgerUiProperty->pKdbgerE820record, &pKdbgerRspE820ListPkt->e820ListContent, sizeof( kdbgerE820record_t ) * pKdbgerUiProperty->numOfE820Record );
+
+	return 0;
+}
+
+
+s32 readMemory( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Read memory
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_MEM_READ,
+			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase,
+			KDBGER_BYTE_PER_SCREEN,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 writeMemoryByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Write memory
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_MEM_WRITE,
+			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset,
+			sizeof( pKdbgerUiProperty->kdbgerDumpPanel.editingBuf ),
+			&pKdbgerUiProperty->kdbgerDumpPanel.editingBuf,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 readIo( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Read io
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_IO_READ,
+			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase,
+			KDBGER_BYTE_PER_SCREEN,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 writeIoByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Write io
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_IO_WRITE,
+			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset,
+			sizeof( pKdbgerUiProperty->kdbgerDumpPanel.editingBuf ),
+			&pKdbgerUiProperty->kdbgerDumpPanel.editingBuf,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
