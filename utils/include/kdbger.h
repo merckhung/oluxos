@@ -32,6 +32,8 @@
 #define KDBGER_INFO_LINE			(KDBGER_MAX_LINE - 1)
 #define KDBGER_INFO_COLUMN			0
 
+#define KDBGER_HELP_TXT				"(m)Memory (i)I/O (p)PCI/PCI-E (l)PCI/PCI-E List (c)CMOS (h)Help";
+
 #define KDBGER_DUMP_TOP_BAR			"00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F"
 #define KDBGER_DUMP_LEFT_BAR		"000000100020003000400050006000700080009000A000B000C000D000E000F0"
 #define KDBGER_DUMP_RTOP_BAR		"0123456789ABCDEF"
@@ -67,53 +69,53 @@
 
 
 #define printWindow( RESRC, NAME, LINE, COLUMN, X, Y, COLORPAIR, FORMAT, ARGS... ) {\
-    RESRC->NAME = newwin( LINE, COLUMN, X, Y );\
-    RESRC->panel##NAME = new_panel( RESRC->NAME );\
-    wbkgd( RESRC->NAME, COLOR_PAIR( COLORPAIR ) );\
-    wattrset( RESRC->NAME, COLOR_PAIR( COLORPAIR ) | A_BOLD );\
-    wprintw( RESRC->NAME, FORMAT, ##ARGS );\
-    wattrset( RESRC->NAME, A_NORMAL );\
+    RESRC.NAME = newwin( LINE, COLUMN, X, Y );\
+    RESRC.panel##NAME = new_panel( RESRC.NAME );\
+    wbkgd( RESRC.NAME, COLOR_PAIR( COLORPAIR ) );\
+    wattrset( RESRC.NAME, COLOR_PAIR( COLORPAIR ) | A_BOLD );\
+    wprintw( RESRC.NAME, FORMAT, ##ARGS );\
+    wattrset( RESRC.NAME, A_NORMAL );\
 }
 
 
 #define printWindowAt( RESRC, NAME, LINE, COLUMN, X, Y, COLORPAIR, FORMAT, ARGS... ) {\
-    if( !RESRC->NAME ) {\
-        RESRC->NAME = newwin( LINE, COLUMN, X, Y );\
-        RESRC->panel##NAME = new_panel( RESRC->NAME );\
+    if( !RESRC.NAME ) {\
+        RESRC.NAME = newwin( LINE, COLUMN, X, Y );\
+        RESRC.panel##NAME = new_panel( RESRC.NAME );\
     }\
-    wbkgd( RESRC->NAME, COLOR_PAIR( COLORPAIR ) );\
-    wattrset( RESRC->NAME, COLOR_PAIR( COLORPAIR ) | A_BOLD );\
-    mvwprintw( RESRC->NAME, 0, 0, FORMAT, ##ARGS );\
-    wattrset( RESRC->NAME, A_NORMAL );\
+    wbkgd( RESRC.NAME, COLOR_PAIR( COLORPAIR ) );\
+    wattrset( RESRC.NAME, COLOR_PAIR( COLORPAIR ) | A_BOLD );\
+    mvwprintw( RESRC.NAME, 0, 0, FORMAT, ##ARGS );\
+    wattrset( RESRC.NAME, A_NORMAL );\
 }
 
 
 #define printWindowMove( RESRC, NAME, LINE, COLUMN, X, Y, COLORPAIR, FORMAT, ARGS... ) {\
-    if( RESRC->panel##NAME ) {\
-        del_panel( RESRC->panel##NAME );\
-        RESRC->panel##NAME = NULL;\
+    if( RESRC.panel##NAME ) {\
+        del_panel( RESRC.panel##NAME );\
+        RESRC.panel##NAME = NULL;\
     }\
-    if( RESRC->NAME ) {\
-        delwin( RESRC->NAME );\
-        RESRC->NAME = NULL;\
+    if( RESRC.NAME ) {\
+        delwin( RESRC.NAME );\
+        RESRC.NAME = NULL;\
     }\
-    RESRC->NAME = newwin( LINE, COLUMN, X, Y );\
-    RESRC->panel##NAME = new_panel( RESRC->NAME );\
-    wbkgd( RESRC->NAME, COLOR_PAIR( COLORPAIR ) );\
-    wattrset( RESRC->NAME, COLOR_PAIR( COLORPAIR ) | A_BOLD );\
-    mvwprintw( RESRC->NAME, 0, 0, FORMAT, ##ARGS );\
-    wattrset( RESRC->NAME, A_NORMAL );\
+    RESRC.NAME = newwin( LINE, COLUMN, X, Y );\
+    RESRC.panel##NAME = new_panel( RESRC.NAME );\
+    wbkgd( RESRC.NAME, COLOR_PAIR( COLORPAIR ) );\
+    wattrset( RESRC.NAME, COLOR_PAIR( COLORPAIR ) | A_BOLD );\
+    mvwprintw( RESRC.NAME, 0, 0, FORMAT, ##ARGS );\
+    wattrset( RESRC.NAME, A_NORMAL );\
 }
 
 
 #define destroyWindow( RESRC, NAME ) {\
-    if( RESRC->panel##NAME ) {\
-        del_panel( RESRC->panel##NAME );\
-        RESRC->panel##NAME = NULL;\
+    if( RESRC.panel##NAME ) {\
+        del_panel( RESRC.panel##NAME );\
+        RESRC.panel##NAME = NULL;\
     }\
-    if( RESRC->NAME ) {\
-        delwin( RESRC->NAME );\
-        RESRC->NAME = NULL;\
+    if( RESRC.NAME ) {\
+        delwin( RESRC.NAME );\
+        RESRC.NAME = NULL;\
     }\
 }
 
@@ -128,6 +130,7 @@ typedef enum {
 	KBPRS_PGUP = 0x153,
 	KBPRS_PGDN = 0x152,
 	KBPRS_F1 = 0x109,
+	KBPRS_SPACE = ' ',
 
 	KBPRS_U_M = 'M',
 	KBPRS_L_M = 'm',
@@ -199,6 +202,7 @@ typedef struct {
     PANEL *panelascii;
 	PANEL *panelinfo;
 	PANEL *panelhighlight;
+	PANEL *panelbits;
 	PANEL *panelbaseaddr;
 
 	WINDOW *top;
@@ -209,8 +213,42 @@ typedef struct {
     WINDOW *ascii;
 	WINDOW *info;
 	WINDOW *highlight;
+	WINDOW *bits;
 	WINDOW *baseaddr;
 
 } kdbgerDumpPanel_t, kdbgerMemoryPanel_t;
+
+
+typedef struct {
+
+	// General
+	s32					fd;
+	s32					inputBuf;
+	kdbgerHwFunc_t		kdbgerHwFunc;
+	kdbgerHwFunc_t		kdbgerPreviousHwFunc;
+	u8					pktBuf[ KDBGER_MAXSZ_PKT ];
+	kdbgerCommPkt_t		*pKdbgerCommPkt;
+
+	// Base panel
+	kdbgerBasePanel_t	kdbgerBasePanel;
+	kdbgerDumpPanel_t	kdbgerDumpPanel;
+	u32					lastSecond;
+	s8					*infoStr;
+	s8					*statusStr;
+	s32					strIdx;
+
+	// Dump panel
+	u64					dumpByteBase;
+	s32					dumpByteOffset;
+
+	// PCI list
+	kdbgerPciDev_t		*pKdbgerPciDev;
+	u32					numOfPciDevice;
+
+	// E820 list
+	kdbgerE820record_t	*pKdbgerE820record;
+	u32					numOfE820Record;
+
+} kdbgerUiProperty_t;
 
 

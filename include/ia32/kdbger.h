@@ -243,7 +243,7 @@ typedef struct PACKED {
 	kdbgerCommHdr_t			kdbgerCommHdr;
 	u64						address;
 	u32						size;
-	s8						*memContent;
+	u8						*memContent;
 
 } kdbgerRspMemReadPkt_t, kdbgerReqMemWritePkt_t;
 
@@ -263,7 +263,7 @@ typedef struct PACKED {
 	kdbgerCommHdr_t			kdbgerCommHdr;
 	u16						address;
 	u32						size;
-	s8						*ioContent;
+	u8						*ioContent;
 
 } kdbgerRspIoReadPkt_t, kdbgerReqIoWritePkt_t;
 
@@ -283,7 +283,7 @@ typedef struct PACKED {
 	kdbgerCommHdr_t			kdbgerCommHdr;
 	u32						address;
 	u16						size;
-	s8						*pciContent;
+	u8						*pciContent;
 
 } kdbgerRspPciReadPkt_t, kdbgerReqPciWritePkt_t;
 
@@ -303,7 +303,7 @@ typedef struct PACKED {
 	kdbgerCommHdr_t			kdbgerCommHdr;
 	u64						address;
 	u32						size;
-	s8						*ideContent;
+	u8						*ideContent;
 
 } kdbgerRspIdeReadPkt_t, kdbgerReqIdeWritePkt_t;
 

@@ -21,7 +21,6 @@
 #include <olux.h>
 
 
-
 s32 CbPower( s32 x, s32 y ) {
 
     s32 sum = 0;
@@ -37,7 +36,6 @@ s32 CbPower( s32 x, s32 y ) {
 
     return sum;
 }
-
 
 
 s8 CbAsciiToBin( s8 value ) {
@@ -65,7 +63,6 @@ s8 CbAsciiToBin( s8 value ) {
 }
 
 
-
 u32 CbAsciiBufToBin( const s8 *buf ) {
 
     u32 i, size, cal = 0;
@@ -88,7 +85,6 @@ u32 CbAsciiBufToBin( const s8 *buf ) {
 }
 
 
-
 bool ParseOneParameter( s8 *buf, u32 *first ) {
 
 
@@ -109,7 +105,6 @@ bool ParseOneParameter( s8 *buf, u32 *first ) {
     *first = CbAsciiBufToBin( buf + 2 );
     return TRUE;
 }
-
 
 
 bool ParseTwoParameters( s8 *buf, u32 *first, u32 *second ) {
@@ -158,7 +153,6 @@ bool ParseTwoParameters( s8 *buf, u32 *first, u32 *second ) {
 
     return TRUE;
 }
-
 
 
 s8 ConvertDWordToByte( u32 *Data, u32 Offset ) {
@@ -286,12 +280,11 @@ void DisplayInBits( u32 value ) {
 }
 
 
-
 void ClrScr( void ) {
 
-    write( OLUX_STD_OUT, OLUX_CLEAR_SCREEN, strlen( OLUX_CLEAR_SCREEN ) );
+	s32 ret;
+	ret = write( OLUX_STD_OUT, OLUX_CLEAR_SCREEN, strlen( OLUX_CLEAR_SCREEN ) );
 }
-
 
 
 s8 NonBlockReadKey( void ) {
@@ -306,7 +299,6 @@ s8 NonBlockReadKey( void ) {
 
     return c;
 }
-
 
 
 bool ReadLine( s8 *Buf, u32 Length ) {
@@ -338,44 +330,29 @@ bool ReadLine( s8 *Buf, u32 Length ) {
 }
 
 
-
 s8 GetKey( void ) {
 
+	s32 ret;
     s8 c;
     struct termios orig, new;
 
-
-    if( tcgetattr( OLUX_STD_IN, &orig ) ) {
-
+    if( tcgetattr( OLUX_STD_IN, &orig ) )
         return 0;
-    }
-
 
     memcpy( &new, &orig, sizeof( struct termios ) );
-
 
     new.c_lflag &= ~(ICANON);
     new.c_cc[ VMIN ] = 1;
     new.c_cc[ VTIME ] = 0;
 
-
-    if( tcsetattr( OLUX_STD_IN, TCSAFLUSH, &new ) ) {
-
+    if( tcsetattr( OLUX_STD_IN, TCSAFLUSH, &new ) )
         return 0;
-    }
 
-
-    read( OLUX_STD_IN, &c, 1 );
-
-
-    if( tcsetattr( OLUX_STD_IN, TCSAFLUSH, &orig ) ) {
-
+    ret = read( OLUX_STD_IN, &c, 1 );
+    if( tcsetattr( OLUX_STD_IN, TCSAFLUSH, &orig ) )
         return 0;
-    }
-
 
     return c;
 }
-
 
 

@@ -123,7 +123,7 @@ s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op ) {
 }
 
 
-s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, s8 *cntBuf, s8 *pktBuf, s32 lenPktBuf ) {
+s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8 *cntBuf, u8 *pktBuf, s32 lenPktBuf ) {
 
 	kdbgerCommPkt_t *pKdbgerCommPkt = (kdbgerCommPkt_t *)pktBuf;
 	s32 rwByte;
@@ -276,16 +276,39 @@ void initColorPairs( void ) {
 }
 
 
-void printBasePlane( kdbgerBasePanel_t *pKdbgerBasePanel ) {
+void printBasePlane( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
     // Background Color
-    printWindow( pKdbgerBasePanel, background, KDBGER_MAX_LINE, KDBGER_MAX_COLUMN, KDBGER_MIN_LINE, KDBGER_MIN_COLUMN, WHITE_BLUE, "" );
+    printWindow( 
+		pKdbgerUiProperty->kdbgerBasePanel, 
+		background,
+		KDBGER_MAX_LINE,
+		KDBGER_MAX_COLUMN,
+		KDBGER_MIN_LINE,
+		KDBGER_MIN_COLUMN,
+		WHITE_BLUE,
+		"" );
 
     // Logo
-    printWindow( pKdbgerBasePanel, logo, KDBGER_STRING_NLINE, KDBGER_MAX_COLUMN, KDBGER_MIN_LINE, KDBGER_MIN_COLUMN, WHITE_RED, KDBGER_PROGRAM_FNAME );
+    printWindow(
+		pKdbgerUiProperty->kdbgerBasePanel,
+		logo,
+		KDBGER_STRING_NLINE,
+		KDBGER_MAX_COLUMN,
+		KDBGER_MIN_LINE,
+		KDBGER_MIN_COLUMN,
+		WHITE_RED,
+		KDBGER_PROGRAM_FNAME );
 
 	// Copyright
-    printWindow( pKdbgerBasePanel, copyright, KDBGER_STRING_NLINE, strlen( KDBGER_AUTHER_NAME ), KDBGER_MIN_LINE, KDBGER_MAX_COLUMN - strlen( KDBGER_AUTHER_NAME ), WHITE_RED, KDBGER_AUTHER_NAME );
+    printWindow(
+		pKdbgerUiProperty->kdbgerBasePanel,
+		copyright,
+		KDBGER_STRING_NLINE,
+		strlen( KDBGER_AUTHER_NAME ),
+		KDBGER_MIN_LINE,
+		KDBGER_MAX_COLUMN - strlen( KDBGER_AUTHER_NAME ),
+		WHITE_RED, KDBGER_AUTHER_NAME );
 
 	// Update screen
     update_panels();
@@ -293,7 +316,7 @@ void printBasePlane( kdbgerBasePanel_t *pKdbgerBasePanel ) {
 }
 
 
-void updateStatusTimer( kdbgerBasePanel_t *pKdbgerBasePanel, u32 *lastSecond, s8 *strPtr, s32 *strIdx ) {
+void updateStatusTimer( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	time_t timer;
 	struct tm *nowtime;
@@ -311,10 +334,10 @@ void updateStatusTimer( kdbgerBasePanel_t *pKdbgerBasePanel, u32 *lastSecond, s8
 	if( !nowtime )
 		return;
 
-	if( (*lastSecond) < thisSecond ) {
+	if( pKdbgerUiProperty->lastSecond < thisSecond ) {
 
 		// Update timer per second
-		printWindowAt( pKdbgerBasePanel, 
+		printWindowAt( pKdbgerUiProperty->kdbgerBasePanel, 
 			time,
 			KDBGER_STRING_NLINE,
 			KDBGER_MAX_TIMESTR,
@@ -329,33 +352,42 @@ void updateStatusTimer( kdbgerBasePanel_t *pKdbgerBasePanel, u32 *lastSecond, s8
 		update = 1;
 	}
 
-	if( strPtr && ((thisSecond - (*lastSecond)) >= KDBGER_STS_INTV_SECS) ) {
+	if( pKdbgerUiProperty->statusStr && ((thisSecond - pKdbgerUiProperty->lastSecond) >= KDBGER_STS_INTV_SECS) ) {
 
-		s32 len = strlen( strPtr );
-		if( *strIdx >= len )
-			*strIdx = 0;
+		s32 len = strlen( pKdbgerUiProperty->statusStr );
+		if( pKdbgerUiProperty->strIdx >= len )
+			pKdbgerUiProperty->strIdx = 0;
 
-		if( (len - *strIdx) > (KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR) )
+		if( (len - pKdbgerUiProperty->strIdx) > (KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR) )
 			len = KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR;
 
-		snprintf( stsBuf, len, "%s", (strPtr + *strIdx) );
+		snprintf( stsBuf, len, "%s", (pKdbgerUiProperty->statusStr + pKdbgerUiProperty->strIdx) );
 
 		// Update status bar
-    	printWindow( pKdbgerBasePanel, status, KDBGER_STRING_NLINE, KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR, KDBGER_MAX_LINE, KDBGER_MIN_COLUMN, RED_WHITE, "%s", stsBuf );
+    	printWindow( 
+			pKdbgerUiProperty->kdbgerBasePanel,
+			status,
+			KDBGER_STRING_NLINE,
+			KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR,
+			KDBGER_MAX_LINE,
+			KDBGER_MIN_COLUMN,
+			RED_WHITE,
+			"%s",
+			stsBuf );
 
-		(*strIdx)++;
+		pKdbgerUiProperty->strIdx++;
 		update = 1;
 	}
 
 	if( update )
-		*lastSecond = thisSecond;
+		pKdbgerUiProperty->lastSecond = thisSecond;
 }
 
 
-void printDumpBasePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, s8 *infoStr ) {
+void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	// Print Top bar
-	printWindowAt( pKdbgerDumpPanel,
+	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
 		top, 
 		KDBGER_STRING_NLINE,
 		strlen( KDBGER_DUMP_TOP_BAR ),
@@ -365,7 +397,7 @@ void printDumpBasePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, s8 *infoStr ) {
 		KDBGER_DUMP_TOP_BAR );
 
 	// Print Rtop bar
-	printWindowAt( pKdbgerDumpPanel,
+	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
 		rtop, 
 		KDBGER_STRING_NLINE,
 		KDBGER_DUMP_BYTE_PER_LINE,
@@ -375,7 +407,7 @@ void printDumpBasePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, s8 *infoStr ) {
 		KDBGER_DUMP_RTOP_BAR );
 
 	// Print Left bar
-	printWindowAt( pKdbgerDumpPanel,
+	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
 		left,
 		KDBGER_DUMP_BYTE_PER_LINE,
 		4,
@@ -385,7 +417,7 @@ void printDumpBasePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, s8 *infoStr ) {
 		KDBGER_DUMP_LEFT_BAR );
 
 	// Print Info base
-	printWindowAt( pKdbgerDumpPanel,
+	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
 		info,
 		KDBGER_STRING_NLINE,
 		KDBGER_MAX_COLUMN,
@@ -393,16 +425,17 @@ void printDumpBasePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, s8 *infoStr ) {
 		KDBGER_INFO_COLUMN,
 		WHITE_BLUE,
 		"%s",
-		infoStr );
+		pKdbgerUiProperty->infoStr );
 }
 
 
-void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, u64 *base, s32 *offset ) {
+void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	s32 i, x, y;
 	u8 valueBuf[ KDBGER_DUMP_VBUF_SZ + 1 ];
 	u8 asciiBuf[ KDBGER_DUMP_ABUF_SZ + 1 ];
 	u8 *vp = valueBuf, *ap = asciiBuf;
+	u8 *dataPtr = (u8 *)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent;
 	u8 *pDataPtr = dataPtr;
 
 	// Terminate buffers
@@ -442,7 +475,8 @@ void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, u64
 	}
 
 	// Print value
-	printWindowAt( pKdbgerDumpPanel,
+	printWindowAt(
+		pKdbgerUiProperty->kdbgerDumpPanel,
 		value, 
 		KDBGER_DUMP_BYTE_PER_LINE,
 		KDBGER_DUMP_BUF_PER_LINE,
@@ -453,7 +487,8 @@ void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, u64
 		valueBuf );
 
 	// Print ASCII
-	printWindowAt( pKdbgerDumpPanel,
+	printWindowAt(
+		pKdbgerUiProperty->kdbgerDumpPanel,
 		ascii,
 		KDBGER_DUMP_BYTE_PER_LINE,
 		KDBGER_DUMP_BYTE_PER_LINE,
@@ -464,7 +499,8 @@ void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, u64
 		asciiBuf );
 
 	// Print Offset bar
-	printWindowAt( pKdbgerDumpPanel,
+	printWindowAt(
+		pKdbgerUiProperty->kdbgerDumpPanel,
 		offset, 
 		KDBGER_STRING_NLINE,
 		4,
@@ -472,10 +508,11 @@ void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, u64
 		KDBGER_DUMP_OFF_COLUMN,
 		RED_BLUE,
 		"%4.4X",
-		(*offset) );
+		pKdbgerUiProperty->dumpByteOffset );
 
 	// Print base address
-	printWindowAt( pKdbgerDumpPanel,
+	printWindowAt(
+		pKdbgerUiProperty->kdbgerDumpPanel,
 		baseaddr, 
 		KDBGER_STRING_NLINE,
 		20,
@@ -483,13 +520,14 @@ void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, u64
 		strlen( KDBGER_INFO_MEMORY_BASE ),
 		WHITE_BLUE,
 		KDBGER_INFO_MEMORY_BASE_FMT,
-		(u32)((*base) >> 32),
-		(u32)((*base) & 0xFFFFFFFFULL) );
+		(u32)(pKdbgerUiProperty->dumpByteBase >> 32),
+		(u32)(pKdbgerUiProperty->dumpByteBase & 0xFFFFFFFFULL) );
 
 	// Highlight
-	y = ((*offset) / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_VALUE_LINE;
-	x = (((*offset) % KDBGER_DUMP_BYTE_PER_LINE) * 3) + KDBGER_DUMP_VALUE_COLUMN;
-	printWindowMove( pKdbgerDumpPanel,
+	y = (pKdbgerUiProperty->dumpByteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_VALUE_LINE;
+	x = ((pKdbgerUiProperty->dumpByteOffset % KDBGER_DUMP_BYTE_PER_LINE) * 3) + KDBGER_DUMP_VALUE_COLUMN;
+	printWindowMove(
+		pKdbgerUiProperty->kdbgerDumpPanel,
 		highlight,
 		1,
 		2,
@@ -497,56 +535,60 @@ void printDumpUpdatePanel( kdbgerDumpPanel_t *pKdbgerDumpPanel, u8 *dataPtr, u64
 		x,
 		YELLOW_BLUE,
 		"%2.2X",
-		*(pDataPtr + (*offset)) );
+		*(pDataPtr + pKdbgerUiProperty->dumpByteOffset) );
 }
 
 
-void handleKeyPressForDumpPanel( kdbgerKeyPress_t kdbgerKeyPress, u64 *base, s32 *offset ) {
+void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
-	switch( kdbgerKeyPress ) {
+	switch( pKdbgerUiProperty->inputBuf ) {
 
 		case KBPRS_UP:
 
-			if( ((*offset) - KDBGER_DUMP_BYTE_PER_LINE) >= 0 )
-				(*offset) -= KDBGER_DUMP_BYTE_PER_LINE;
+			if( (pKdbgerUiProperty->dumpByteOffset - KDBGER_DUMP_BYTE_PER_LINE) >= 0 )
+				pKdbgerUiProperty->dumpByteOffset -= KDBGER_DUMP_BYTE_PER_LINE;
 			else
-				(*offset) = KDBGER_BYTE_PER_SCREEN - (KDBGER_DUMP_BYTE_PER_LINE - (*offset));
+				pKdbgerUiProperty->dumpByteOffset = KDBGER_BYTE_PER_SCREEN - (KDBGER_DUMP_BYTE_PER_LINE - pKdbgerUiProperty->dumpByteOffset);
             break;
 
 		case KBPRS_DOWN:
 
-			if( ((*offset) + KDBGER_DUMP_BYTE_PER_LINE) < KDBGER_BYTE_PER_SCREEN )
-				(*offset) += KDBGER_DUMP_BYTE_PER_LINE;
+			if( (pKdbgerUiProperty->dumpByteOffset + KDBGER_DUMP_BYTE_PER_LINE) < KDBGER_BYTE_PER_SCREEN )
+				pKdbgerUiProperty->dumpByteOffset += KDBGER_DUMP_BYTE_PER_LINE;
 			else
-				(*offset) %= KDBGER_DUMP_BYTE_PER_LINE;
+				pKdbgerUiProperty->dumpByteOffset %= KDBGER_DUMP_BYTE_PER_LINE;
             break;
 
 		case KBPRS_LEFT:
 
-			if( ((*offset) - 1) >= 0 && ((*offset) % KDBGER_DUMP_BYTE_PER_LINE) > 0 )
-				(*offset)--;
+			if( (pKdbgerUiProperty->dumpByteOffset - 1) >= 0 && (pKdbgerUiProperty->dumpByteOffset % KDBGER_DUMP_BYTE_PER_LINE) > 0 )
+				pKdbgerUiProperty->dumpByteOffset--;
 			else
-				(*offset) += (KDBGER_DUMP_BYTE_PER_LINE - 1);
+				pKdbgerUiProperty->dumpByteOffset += (KDBGER_DUMP_BYTE_PER_LINE - 1);
             break;
 
 		case KBPRS_RIGHT:
 
-			if( ((*offset) + 1) < KDBGER_BYTE_PER_SCREEN 
-				&& (((*offset) + 1) % KDBGER_DUMP_BYTE_PER_LINE) )
-				(*offset)++;
+			if( (pKdbgerUiProperty->dumpByteOffset + 1) < KDBGER_BYTE_PER_SCREEN 
+				&& ((pKdbgerUiProperty->dumpByteOffset + 1) % KDBGER_DUMP_BYTE_PER_LINE) )
+				pKdbgerUiProperty->dumpByteOffset++;
 			else
-				(*offset) -= (KDBGER_DUMP_BYTE_PER_LINE - 1);
+				pKdbgerUiProperty->dumpByteOffset -= (KDBGER_DUMP_BYTE_PER_LINE - 1);
             break;
 
 		case KBPRS_PGUP:
 
-			(*base) -= KDBGER_BYTE_PER_SCREEN;
+			pKdbgerUiProperty->dumpByteBase -= KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_PGDN:
 
-			(*base) += KDBGER_BYTE_PER_SCREEN;
+			pKdbgerUiProperty->dumpByteBase += KDBGER_BYTE_PER_SCREEN;
             break;
+
+		case KBPRS_SPACE:
+
+			break;
 
 		default:
 			break;
@@ -554,39 +596,93 @@ void handleKeyPressForDumpPanel( kdbgerKeyPress_t kdbgerKeyPress, u64 *base, s32
 }
 
 
+s32 connectToOluxOSKernel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Connect to OluxOS Kernel
+	return executeFunction( 
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_CONNECT,
+			0,
+			0,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 readPciList( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	kdbgerRspPciListPkt_t *pKdbgerRspPciListPkt;
+
+	// Read PCI list
+	if( executeFunction( pKdbgerUiProperty->fd, KDBGER_REQ_PCI_LIST, 0, 0, NULL, pKdbgerUiProperty->pktBuf, KDBGER_MAXSZ_PKT ) )
+		return -1;
+
+	// Save PCI list
+	pKdbgerRspPciListPkt = (kdbgerRspPciListPkt_t *)pKdbgerUiProperty->pktBuf;
+	pKdbgerUiProperty->numOfPciDevice = pKdbgerRspPciListPkt->numOfPciDevice;
+	pKdbgerUiProperty->pKdbgerPciDev = (kdbgerPciDev_t *)malloc( sizeof( kdbgerPciDev_t ) * pKdbgerUiProperty->numOfPciDevice );
+
+	if( !pKdbgerUiProperty->pKdbgerPciDev )
+		return -1;
+
+	memcpy( pKdbgerUiProperty->pKdbgerPciDev, &pKdbgerRspPciListPkt->pciListContent, sizeof( kdbgerPciDev_t ) * pKdbgerUiProperty->numOfPciDevice );
+
+	return 0;
+}
+
+
+s32 readE820List( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	kdbgerRspE820ListPkt_t *pKdbgerRspE820ListPkt;
+
+	// Read E820 list
+	if( executeFunction( pKdbgerUiProperty->fd, KDBGER_REQ_E810_LIST, 0, 0, NULL, pKdbgerUiProperty->pktBuf, KDBGER_MAXSZ_PKT ) )
+		return -1;
+
+	// Save E820 list
+	pKdbgerRspE820ListPkt = (kdbgerRspE820ListPkt_t *)pKdbgerUiProperty->pktBuf;
+	pKdbgerUiProperty->numOfE820Record = pKdbgerRspE820ListPkt->numOfE820Record;
+	pKdbgerUiProperty->pKdbgerE820record = (kdbgerE820record_t *)malloc( sizeof( kdbgerE820record_t ) * pKdbgerUiProperty->numOfE820Record );
+
+	if( !pKdbgerUiProperty->pKdbgerE820record )
+		return -1;
+
+	memcpy( pKdbgerUiProperty->pKdbgerE820record, &pKdbgerRspE820ListPkt->e820ListContent, sizeof( kdbgerE820record_t ) * pKdbgerUiProperty->numOfE820Record );
+
+	return 0;
+}
+
+
+s32 readMemory( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Read memory
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_MEM_READ,
+			pKdbgerUiProperty->dumpByteBase,
+			KDBGER_BYTE_PER_SCREEN,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
 s32 main( s32 argc, s8 **argv ) {
 
-	s32 fd;
-	s8 ttyDevice[ KDBGER_MAX_PATH ];
-	s8 c;
-	s8 pktBuf[ KDBGER_MAXSZ_PKT ];
-	//s8 cntBuf[ KDBGER_MAXSZ_PKT ];
-	kdbgerCommPkt_t *pKdbgerCommPkt = (kdbgerCommPkt_t *)pktBuf;
-	kdbgerBasePanel_t kdbgerBasePanel;
-	kdbgerMemoryPanel_t kdbgerMemoryPanel;
-	u64 dumpByteBase = 0;
-	s32 inputBuf, dumpByteOffset = 0, strIdx = 0;
-	u32 lastSecond = 0;
-	kdbgerHwFunc_t kdbgerHwFunc = KHF_MEM;
-
-	// PCI List
-	kdbgerRspPciListPkt_t *pKdbgerRspPciListPkt;
-	kdbgerPciDev_t *pKdbgerPciDev;
-	u32 numOfPciDevice;
-
-	// E820 List
-	kdbgerRspE820ListPkt_t *pKdbgerRspE820ListPkt;
-	kdbgerE820record_t *pKdbgerE820record;
-	u32 numOfE820Record;
-
-	// Status bar
-	s8 statusBarString[ KDBGER_STS_BUF_SZ ] = "(m)Memory (i)I/O (p)PCI/PCI-E (l)PCI/PCI-E List (c)CMOS (h)Help";
+	s8 c, ttyDevice[ KDBGER_MAX_PATH ];
+	kdbgerUiProperty_t kdbgerUiProperty =
+	{ 0, 0, KHF_MEM, KHF_MEM, { 0 }, NULL,
+		{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+		{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+			NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+	 0, NULL, NULL, 0, 0, 0, NULL, 0, NULL, 0 };
 
 
 	// Initialization
 	strncpy( ttyDevice, KDBGER_DEF_TTYDEV, KDBGER_MAX_PATH );
-	memset( &kdbgerBasePanel, 0, sizeof( kdbgerBasePanel_t ) );
-	memset( &kdbgerMemoryPanel, 0, sizeof( kdbgerMemoryPanel_t ) );
+	kdbgerUiProperty.pKdbgerCommPkt = (kdbgerCommPkt_t *)kdbgerUiProperty.pktBuf;
+	kdbgerUiProperty.statusStr = KDBGER_HELP_TXT;
 
 
 	// Handle parameters
@@ -613,8 +709,8 @@ s32 main( s32 argc, s8 **argv ) {
 
 
 	// Open TTY device
-	fd = open( ttyDevice, O_RDWR );
-	if( fd < 0 ) {
+	kdbgerUiProperty.fd = open( ttyDevice, O_RDWR );
+	if( kdbgerUiProperty.fd < 0 ) {
 
 		fprintf( stderr, "Cannot open device %s\n", ttyDevice );
 		return 1;
@@ -622,7 +718,7 @@ s32 main( s32 argc, s8 **argv ) {
 
 
 	// Configure TTY device
-	if( configureTtyDevice( fd ) ) {
+	if( configureTtyDevice( kdbgerUiProperty.fd ) ) {
 
 		fprintf( stderr, "Cannot configure device %s\n", ttyDevice );
 		goto ErrExit;
@@ -630,41 +726,25 @@ s32 main( s32 argc, s8 **argv ) {
 
 
 	// Connect to OluxOS Kernel
-	if( executeFunction( fd, KDBGER_REQ_CONNECT, 0, 0, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+	if( connectToOluxOSKernel( &kdbgerUiProperty ) ) {
 
 		fprintf( stderr, "Cannot connect to OluxOS Kernel via %s\n", ttyDevice );
 		goto ErrExit;
 	}
 
-
 	// Read PCI list
-	if( executeFunction( fd, KDBGER_REQ_PCI_LIST, 0, 0, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+	if( readPciList( &kdbgerUiProperty ) ) {
 
 		fprintf( stderr, "Cannot get PCI device listing\n" );
 		goto ErrExit;
 	}
-	// Save PCI list
-	pKdbgerRspPciListPkt = (kdbgerRspPciListPkt_t *)pktBuf;
-	numOfPciDevice = pKdbgerRspPciListPkt->numOfPciDevice;
-	pKdbgerPciDev = (kdbgerPciDev_t *)malloc( sizeof( kdbgerPciDev_t ) * numOfPciDevice );
-	if( !pKdbgerPciDev )
-		goto ErrExit;
-	memcpy( pKdbgerPciDev, &pKdbgerRspPciListPkt->pciListContent, sizeof( kdbgerPciDev_t ) * numOfPciDevice );
-
 
 	// Read E820 list
-	if( executeFunction( fd, KDBGER_REQ_E810_LIST, 0, 0, NULL, pktBuf, KDBGER_MAXSZ_PKT ) ) {
+	if( readE820List( &kdbgerUiProperty ) ) {
 
 		fprintf( stderr, "Cannot get E820 listing\n" );
 		goto ErrExit1;
 	}
-	// Save E820 list
-	pKdbgerRspE820ListPkt = (kdbgerRspE820ListPkt_t *)pktBuf;
-	numOfE820Record = pKdbgerRspE820ListPkt->numOfE820Record;
-	pKdbgerE820record = (kdbgerE820record_t *)malloc( sizeof( kdbgerE820record_t ) * numOfE820Record );
-	if( !pKdbgerE820record )
-		goto ErrExit1;
-	memcpy( pKdbgerE820record, &pKdbgerRspE820ListPkt->e820ListContent, sizeof( kdbgerE820record_t ) * numOfE820Record );
 
 
 	// Initialize ncurses
@@ -679,22 +759,18 @@ s32 main( s32 argc, s8 **argv ) {
 
 
 	// Print base panel
-	printBasePlane( &kdbgerBasePanel );
+	printBasePlane( &kdbgerUiProperty );
 
-
-	printDumpBasePanel( &kdbgerMemoryPanel, KDBGER_INFO_MEMORY_BASE );
+	kdbgerUiProperty.infoStr = KDBGER_INFO_MEMORY_BASE;
+	printDumpBasePanel( &kdbgerUiProperty );
 
 
 	// Main loop
 	for( ; ; ) {
 
 		// Get keyboard input
-		inputBuf = getch();
-/*
-		if( inputBuf >= 0 )
-			printf( "0x%8.8X\n", inputBuf );
-*/
-		switch( inputBuf ) {
+		kdbgerUiProperty.inputBuf = getch();
+		switch( kdbgerUiProperty.inputBuf ) {
 
 			// ESC
 			case KBPRS_ESC:
@@ -707,39 +783,38 @@ s32 main( s32 argc, s8 **argv ) {
 			// PCI/PCI-E listing
 			case KBPRS_U_L:
 			case KBPRS_L_L:
-				kdbgerHwFunc = KHF_PCIL;
+				kdbgerUiProperty.kdbgerHwFunc = KHF_PCIL;
 				break;
 
 			// PCI/PCI-E config space
 			case KBPRS_U_P:
 			case KBPRS_L_P:
-				kdbgerHwFunc = KHF_PCI;
+				kdbgerUiProperty.kdbgerHwFunc = KHF_PCI;
 				break;
 
 			// I/O
 			case KBPRS_U_I:
 			case KBPRS_L_I:
-				kdbgerHwFunc = KHF_IO;
+				kdbgerUiProperty.kdbgerHwFunc = KHF_IO;
 				break;
 
 			// Memory
 			default:
 			case KBPRS_U_M:
 			case KBPRS_L_M:
-				kdbgerHwFunc = KHF_MEM;
+				kdbgerUiProperty.kdbgerHwFunc = KHF_MEM;
 				break;
 		}
 
 
-		switch( kdbgerHwFunc ) {
+		switch( kdbgerUiProperty.kdbgerHwFunc ) {
 
 			default:
 			case KHF_MEM:
 
-				executeFunction( fd, KDBGER_REQ_MEM_READ, dumpByteBase, KDBGER_BYTE_PER_SCREEN, NULL, pktBuf, KDBGER_MAXSZ_PKT );
-
-				handleKeyPressForDumpPanel( inputBuf, &dumpByteBase, &dumpByteOffset );
-				printDumpUpdatePanel( &kdbgerMemoryPanel, (u8 *)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent, &dumpByteBase, &dumpByteOffset );
+				handleKeyPressForDumpPanel( &kdbgerUiProperty );
+				if( !readMemory( &kdbgerUiProperty ) )
+					printDumpUpdatePanel( &kdbgerUiProperty );
 
 				break;
 
@@ -755,7 +830,7 @@ s32 main( s32 argc, s8 **argv ) {
 
 
         // Update timer
-		updateStatusTimer( &kdbgerBasePanel, &lastSecond, statusBarString, &strIdx );
+		updateStatusTimer( &kdbgerUiProperty );
 
 		// Refresh Screen
 		update_panels();
@@ -792,14 +867,14 @@ Exit:
 */
 
 
-	free( pKdbgerE820record );
+	free( kdbgerUiProperty.pKdbgerE820record );
 
 ErrExit1:
-	free( pKdbgerPciDev );
+	free( kdbgerUiProperty.pKdbgerPciDev );
 
 ErrExit:
 	// Close TTY device
-	close( fd );
+	close( kdbgerUiProperty.fd );
 
     return 0;
 }
