@@ -149,10 +149,12 @@ typedef enum {
 
 typedef enum {
 
+	KHF_INIT,
 	KHF_MEM,
 	KHF_IO,
 	KHF_PCI,
 	KHF_PCIL,
+	KHF_IDE,
 
 } kdbgerHwFunc_t;
 
