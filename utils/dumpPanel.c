@@ -19,6 +19,7 @@
 #include <termios.h>
 
 #include <otypes.h>
+#include <olux.h>
 #include <packet.h>
 
 #include <ncurses.h>
@@ -202,13 +203,37 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	printWindowMove(
 		pKdbgerUiProperty->kdbgerDumpPanel,
 		highlight,
-		1,
-		2,
+		KDBGER_STRING_NLINE,
+		KDBGER_DUMP_HL_DIGITS,
 		y,
 		x,
-		YELLOW_BLUE,
+		YELLOW_RED,
 		"%2.2X",
 		*(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset) );
+
+	// Bits
+	if( pKdbgerUiProperty->kdbgerDumpPanel.toggleBits ) {
+
+		printWindowMove(
+			pKdbgerUiProperty->kdbgerDumpPanel,
+			bits,
+			KDBGER_STRING_NLINE,
+			KDBGER_DUMP_BITS_DIGITS,
+			y + 1,
+			x,
+			WHITE_RED,
+			"%d%d%d%d_%d%d%d%d",
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset), 7 ),			
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset), 6 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset), 5 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset), 4 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset), 3 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset), 2 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset), 1 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset), 0 ) );
+	}
+	else
+		destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, bits );
 }
 
 
@@ -228,6 +253,7 @@ void clearDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, offset );
 	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, baseaddr );
 	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, highlight );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, bits );
 }
 
 
@@ -280,6 +306,7 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 		case KBPRS_SPACE:
 
+			pKdbgerUiProperty->kdbgerDumpPanel.toggleBits = !pKdbgerUiProperty->kdbgerDumpPanel.toggleBits;
 			break;
 
 		default:

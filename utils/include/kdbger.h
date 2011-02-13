@@ -32,7 +32,12 @@
 #define KDBGER_INFO_LINE			(KDBGER_MAX_LINE - 1)
 #define KDBGER_INFO_COLUMN			0
 
-#define KDBGER_HELP_TXT				"(m)Memory (i)I/O (p)PCI/PCI-E (l)PCI/PCI-E List (c)CMOS (h)Help";
+#define KDBGER_HELP_LINE			(KDBGER_MAX_LINE - 4)
+#define KDBGER_HELP_COLUMN			(KDBGER_MAX_COLUMN - 4)
+#define KDBGER_HELP_X_POS			3
+#define KDBGER_HELP_Y_POS			2
+
+#define KDBGER_WELCOME_TXT			"Welcome to OluxOS Kernel Debugger which was developed by Merck Hung <merckhung@gmail.com>, Cell: +886-988-682504. Enjoy it!!!"
 
 #define KDBGER_DUMP_TOP_BAR			"00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F"
 #define KDBGER_DUMP_LEFT_BAR		"000000100020003000400050006000700080009000A000B000C000D000E000F0"
@@ -40,6 +45,8 @@
 
 #define KDBGER_DUMP_OFF_LINE		4
 #define KDBGER_DUMP_OFF_COLUMN		1
+#define KDBGER_DUMP_HL_DIGITS		2
+#define KDBGER_DUMP_BITS_DIGITS		9
 
 #define KDBGER_DUMP_BASEADDR_LINE	KDBGER_INFO_LINE
 
@@ -129,20 +136,21 @@ typedef enum {
 	KBPRS_RIGHT = 0x105,
 	KBPRS_PGUP = 0x153,
 	KBPRS_PGDN = 0x152,
+
 	KBPRS_F1 = 0x109,
+	KBPRS_F2 = 0x10A,
+	KBPRS_F3 = 0x10B,
+	KBPRS_F4 = 0x10C,
+	KBPRS_F5 = 0x10D,
+	KBPRS_F6 = 0x10E,
+	KBPRS_F7 = 0x10F,
+	KBPRS_F8 = 0x110,
+	KBPRS_F9 = 0x111,
+	KBPRS_F10 = 0x112,
+	KBPRS_F11 = 0x113,
+	KBPRS_F12 = 0x114,
+
 	KBPRS_SPACE = ' ',
-
-	KBPRS_U_M = 'M',
-	KBPRS_L_M = 'm',
-
-	KBPRS_U_I = 'I',
-	KBPRS_L_I = 'i',
-
-	KBPRS_U_P = 'P',
-	KBPRS_L_P = 'p',
-
-	KBPRS_U_L = 'L',
-	KBPRS_L_L = 'l',
 
 } kdbgerKeyPress_t;
 
@@ -184,16 +192,19 @@ typedef struct {
     PANEL				*panelcopyright;
     PANEL				*panelstatus;
     PANEL				*paneltime;
+	PANEL				*panelhelp;
 
     WINDOW				*background;
     WINDOW				*logo;
     WINDOW				*copyright;
     WINDOW				*status;
     WINDOW				*time;
+	WINDOW				*help;
 
 	u32					lastSecond;
 	s8					*statusStr;
 	s32					strIdx;
+	u8					toggleHelp;
 
 } kdbgerBasePanel_t;
 

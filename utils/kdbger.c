@@ -172,11 +172,48 @@ void printBasePlane( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		strlen( KDBGER_AUTHER_NAME ),
 		KDBGER_MIN_LINE,
 		KDBGER_MAX_COLUMN - strlen( KDBGER_AUTHER_NAME ),
-		WHITE_RED, KDBGER_AUTHER_NAME );
+		WHITE_RED,
+		KDBGER_AUTHER_NAME );
 
 	// Update screen
     update_panels();
     doupdate();
+}
+
+
+void printBaseHelp( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	s8 *helpTxt = "Copyright (C) 2011 OluxOS Kernel Debugger, all right reserved.\n\
+Author: Merck Hung <merckhung@gmail.com>\n\n\
+  <F1>:  Help\n\
+  <F2>:  PCI/PCI-E device listing\n\
+  <F3>:  PCI/PCI-E device configuration space\n\
+  <F4>:  CPU I/O space (Intel x86 arch only)\n\
+  <F5>:  CPU Memory space\n\
+  <F6>:  IDE hard drive content (1st HDD)\n\
+  <F7>:  CMOS content (Intel x86 arch only)\n\
+  <F8>:  I2C space\n\
+  <F9>:  TBD\n\
+  <F10>: TBD\n\
+  <F11>: TBD\n\
+  <F12>: TBD\n\
+";
+
+	if( pKdbgerUiProperty->kdbgerBasePanel.toggleHelp ) {
+
+		printWindowMove(
+			pKdbgerUiProperty->kdbgerBasePanel, 
+			help,
+			(KDBGER_MAX_LINE - 4),
+			(KDBGER_MAX_COLUMN - 4),
+			KDBGER_HELP_X_POS,
+			KDBGER_HELP_Y_POS,
+			BLACK_WHITE,
+			"%s",
+			helpTxt );
+	}
+	else
+		destroyWindow( pKdbgerUiProperty->kdbgerBasePanel, help );
 }
 
 
@@ -277,7 +314,7 @@ s32 main( s32 argc, s8 **argv ) {
 	memset( &kdbgerUiProperty, 0, sizeof( kdbgerUiProperty_t ) );
 	kdbgerUiProperty.kdbgerHwFunc = kdbgerUiProperty.kdbgerPreviousHwFunc = KHF_INIT;
 	kdbgerUiProperty.pKdbgerCommPkt = (kdbgerCommPkt_t *)kdbgerUiProperty.pktBuf;
-	kdbgerUiProperty.kdbgerBasePanel.statusStr = KDBGER_HELP_TXT;
+	kdbgerUiProperty.kdbgerBasePanel.statusStr = KDBGER_WELCOME_TXT;
 
 
 	// Handle parameters
@@ -363,6 +400,8 @@ s32 main( s32 argc, s8 **argv ) {
 
 		// Get keyboard input
 		kdbgerUiProperty.inputBuf = getch();
+//		if( kdbgerUiProperty.inputBuf != -1 )
+//			printf( "C = 0x%8.8X\n", kdbgerUiProperty.inputBuf );
 		switch( kdbgerUiProperty.inputBuf ) {
 
 			// ESC
@@ -371,32 +410,29 @@ s32 main( s32 argc, s8 **argv ) {
 
 			// Help
 			case KBPRS_F1:
+				kdbgerUiProperty.kdbgerBasePanel.toggleHelp = !kdbgerUiProperty.kdbgerBasePanel.toggleHelp;
 				break;
 
 			// PCI/PCI-E listing
-			case KBPRS_U_L:
-			case KBPRS_L_L:
+			case KBPRS_F2:
 				kdbgerUiProperty.kdbgerPreviousHwFunc = kdbgerUiProperty.kdbgerHwFunc;
 				kdbgerUiProperty.kdbgerHwFunc = KHF_PCIL;
 				break;
 
 			// PCI/PCI-E config space
-			case KBPRS_U_P:
-			case KBPRS_L_P:
+			case KBPRS_F3:
 				kdbgerUiProperty.kdbgerPreviousHwFunc = kdbgerUiProperty.kdbgerHwFunc;
 				kdbgerUiProperty.kdbgerHwFunc = KHF_PCI;
 				break;
 
 			// I/O
-			case KBPRS_U_I:
-			case KBPRS_L_I:
+			case KBPRS_F4:
 				kdbgerUiProperty.kdbgerPreviousHwFunc = kdbgerUiProperty.kdbgerHwFunc;
 				kdbgerUiProperty.kdbgerHwFunc = KHF_IO;
 				break;
 
 			// Memory
-			case KBPRS_U_M:
-			case KBPRS_L_M:
+			case KBPRS_F5:
 				kdbgerUiProperty.kdbgerPreviousHwFunc = kdbgerUiProperty.kdbgerHwFunc;
 				kdbgerUiProperty.kdbgerHwFunc = KHF_MEM;
 				break;
@@ -463,6 +499,10 @@ s32 main( s32 argc, s8 **argv ) {
 			case KHF_PCIL:
 				break;
 		}
+
+
+		// Help Text
+		printBaseHelp( &kdbgerUiProperty );
 
 
         // Update timer
