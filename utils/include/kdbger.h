@@ -179,44 +179,53 @@ typedef enum {
 
 typedef struct {
 
-    PANEL   *panelbackground;
-    PANEL   *panellogo;
-    PANEL   *panelcopyright;
-    PANEL   *panelstatus;
-    PANEL   *paneltime;
+    PANEL				*panelbackground;
+    PANEL				*panellogo;
+    PANEL				*panelcopyright;
+    PANEL				*panelstatus;
+    PANEL				*paneltime;
 
-    WINDOW  *background;
-    WINDOW  *logo;
-    WINDOW  *copyright;
-    WINDOW  *status;
-    WINDOW  *time;
+    WINDOW				*background;
+    WINDOW				*logo;
+    WINDOW				*copyright;
+    WINDOW				*status;
+    WINDOW				*time;
+
+	u32					lastSecond;
+	s8					*statusStr;
+	s32					strIdx;
 
 } kdbgerBasePanel_t;
 
 
 typedef struct {
 
-	PANEL *paneltop;
-	PANEL *paneloffset;
-	PANEL *panelleft;
-	PANEL *panelrtop;
-    PANEL *panelvalue;
-    PANEL *panelascii;
-	PANEL *panelinfo;
-	PANEL *panelhighlight;
-	PANEL *panelbits;
-	PANEL *panelbaseaddr;
+	PANEL				*paneltop;
+	PANEL				*paneloffset;
+	PANEL				*panelleft;
+	PANEL				*panelrtop;
+    PANEL				*panelvalue;
+    PANEL				*panelascii;
+	PANEL				*panelinfo;
+	PANEL				*panelhighlight;
+	PANEL				*panelbits;
+	PANEL				*panelbaseaddr;
 
-	WINDOW *top;
-	WINDOW *offset;
-	WINDOW *left;
-	WINDOW *rtop;
-    WINDOW *value;
-    WINDOW *ascii;
-	WINDOW *info;
-	WINDOW *highlight;
-	WINDOW *bits;
-	WINDOW *baseaddr;
+	WINDOW				*top;
+	WINDOW				*offset;
+	WINDOW				*left;
+	WINDOW				*rtop;
+    WINDOW				*value;
+    WINDOW				*ascii;
+	WINDOW				*info;
+	WINDOW				*highlight;
+	WINDOW 				*bits;
+	WINDOW				*baseaddr;
+
+	u8					toggleBits;
+	u64					dumpByteBase;
+	s32					dumpByteOffset;
+	s8					*infoStr;
 
 } kdbgerDumpPanel_t, kdbgerMemoryPanel_t;
 
@@ -228,20 +237,14 @@ typedef struct {
 	s32					inputBuf;
 	kdbgerHwFunc_t		kdbgerHwFunc;
 	kdbgerHwFunc_t		kdbgerPreviousHwFunc;
+
+	// Packet
 	u8					pktBuf[ KDBGER_MAXSZ_PKT ];
 	kdbgerCommPkt_t		*pKdbgerCommPkt;
 
 	// Base panel
 	kdbgerBasePanel_t	kdbgerBasePanel;
 	kdbgerDumpPanel_t	kdbgerDumpPanel;
-	u32					lastSecond;
-	s8					*infoStr;
-	s8					*statusStr;
-	s32					strIdx;
-
-	// Dump panel
-	u64					dumpByteBase;
-	s32					dumpByteOffset;
 
 	// PCI list
 	kdbgerPciDev_t		*pKdbgerPciDev;
@@ -257,16 +260,11 @@ typedef struct {
 // Prototypes
 s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op );
 s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8 *cntBuf, u8 *pktBuf, s32 lenPktBuf );
-s32 connectToOluxOSKernel( kdbgerUiProperty_t *pKdbgerUiProperty );
-s32 readPciList( kdbgerUiProperty_t *pKdbgerUiProperty );
-s32 readE820List( kdbgerUiProperty_t *pKdbgerUiProperty );
-s32 readMemory( kdbgerUiProperty_t *pKdbgerUiProperty );
-s32 readIo( kdbgerUiProperty_t *pKdbgerUiProperty );
 
 void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void clearDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void clearDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
-void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 
 

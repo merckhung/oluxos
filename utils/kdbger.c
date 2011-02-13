@@ -90,7 +90,7 @@ void updateStatusTimer( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	if( !nowtime )
 		return;
 
-	if( pKdbgerUiProperty->lastSecond < thisSecond ) {
+	if( pKdbgerUiProperty->kdbgerBasePanel.lastSecond < thisSecond ) {
 
 		// Update timer per second
 		printWindowAt( pKdbgerUiProperty->kdbgerBasePanel, 
@@ -108,16 +108,16 @@ void updateStatusTimer( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		update = 1;
 	}
 
-	if( pKdbgerUiProperty->statusStr && ((thisSecond - pKdbgerUiProperty->lastSecond) >= KDBGER_STS_INTV_SECS) ) {
+	if( pKdbgerUiProperty->kdbgerBasePanel.statusStr && ((thisSecond - pKdbgerUiProperty->kdbgerBasePanel.lastSecond) >= KDBGER_STS_INTV_SECS) ) {
 
-		s32 len = strlen( pKdbgerUiProperty->statusStr );
-		if( pKdbgerUiProperty->strIdx >= len )
-			pKdbgerUiProperty->strIdx = 0;
+		s32 len = strlen( pKdbgerUiProperty->kdbgerBasePanel.statusStr );
+		if( pKdbgerUiProperty->kdbgerBasePanel.strIdx >= len )
+			pKdbgerUiProperty->kdbgerBasePanel.strIdx = 0;
 
-		if( (len - pKdbgerUiProperty->strIdx) > (KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR) )
+		if( (len - pKdbgerUiProperty->kdbgerBasePanel.strIdx) > (KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR) )
 			len = KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR;
 
-		snprintf( stsBuf, len, "%s", (pKdbgerUiProperty->statusStr + pKdbgerUiProperty->strIdx) );
+		snprintf( stsBuf, len, "%s", (pKdbgerUiProperty->kdbgerBasePanel.statusStr + pKdbgerUiProperty->kdbgerBasePanel.strIdx) );
 
 		// Update status bar
     	printWindow( 
@@ -131,12 +131,12 @@ void updateStatusTimer( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			"%s",
 			stsBuf );
 
-		pKdbgerUiProperty->strIdx++;
+		pKdbgerUiProperty->kdbgerBasePanel.strIdx++;
 		update = 1;
 	}
 
 	if( update )
-		pKdbgerUiProperty->lastSecond = thisSecond;
+		pKdbgerUiProperty->kdbgerBasePanel.lastSecond = thisSecond;
 }
 
 
@@ -180,21 +180,104 @@ void printBasePlane( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 }
 
 
+s32 connectToOluxOSKernel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Connect to OluxOS Kernel
+	return executeFunction( 
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_CONNECT,
+			0,
+			0,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 readPciList( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	kdbgerRspPciListPkt_t *pKdbgerRspPciListPkt;
+
+	// Read PCI list
+	if( executeFunction( pKdbgerUiProperty->fd, KDBGER_REQ_PCI_LIST, 0, 0, NULL, pKdbgerUiProperty->pktBuf, KDBGER_MAXSZ_PKT ) )
+		return 1;
+
+	// Save PCI list
+	pKdbgerRspPciListPkt = (kdbgerRspPciListPkt_t *)pKdbgerUiProperty->pktBuf;
+	pKdbgerUiProperty->numOfPciDevice = pKdbgerRspPciListPkt->numOfPciDevice;
+	pKdbgerUiProperty->pKdbgerPciDev = (kdbgerPciDev_t *)malloc( sizeof( kdbgerPciDev_t ) * pKdbgerUiProperty->numOfPciDevice );
+
+	if( !pKdbgerUiProperty->pKdbgerPciDev )
+		return 1;
+
+	memcpy( pKdbgerUiProperty->pKdbgerPciDev, &pKdbgerRspPciListPkt->pciListContent, sizeof( kdbgerPciDev_t ) * pKdbgerUiProperty->numOfPciDevice );
+
+	return 0;
+}
+
+
+s32 readE820List( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	kdbgerRspE820ListPkt_t *pKdbgerRspE820ListPkt;
+
+	// Read E820 list
+	if( executeFunction( pKdbgerUiProperty->fd, KDBGER_REQ_E810_LIST, 0, 0, NULL, pKdbgerUiProperty->pktBuf, KDBGER_MAXSZ_PKT ) )
+		return 1;
+
+	// Save E820 list
+	pKdbgerRspE820ListPkt = (kdbgerRspE820ListPkt_t *)pKdbgerUiProperty->pktBuf;
+	pKdbgerUiProperty->numOfE820Record = pKdbgerRspE820ListPkt->numOfE820Record;
+	pKdbgerUiProperty->pKdbgerE820record = (kdbgerE820record_t *)malloc( sizeof( kdbgerE820record_t ) * pKdbgerUiProperty->numOfE820Record );
+
+	if( !pKdbgerUiProperty->pKdbgerE820record )
+		return 1;
+
+	memcpy( pKdbgerUiProperty->pKdbgerE820record, &pKdbgerRspE820ListPkt->e820ListContent, sizeof( kdbgerE820record_t ) * pKdbgerUiProperty->numOfE820Record );
+
+	return 0;
+}
+
+
+s32 readMemory( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Read memory
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_MEM_READ,
+			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase,
+			KDBGER_BYTE_PER_SCREEN,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 readIo( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Read memory
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_IO_READ,
+			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase,
+			KDBGER_BYTE_PER_SCREEN,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
 s32 main( s32 argc, s8 **argv ) {
 
 	s8 c, ttyDevice[ KDBGER_MAX_PATH ];
-	kdbgerUiProperty_t kdbgerUiProperty =
-	{ 0, 0, KHF_INIT, KHF_INIT, { 0 }, NULL,
-		{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-		{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-			NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-	 0, NULL, NULL, 0, 0, 0, NULL, 0, NULL, 0 };
+	kdbgerUiProperty_t kdbgerUiProperty;
 
 
 	// Initialization
 	strncpy( ttyDevice, KDBGER_DEF_TTYDEV, KDBGER_MAX_PATH );
+	memset( &kdbgerUiProperty, 0, sizeof( kdbgerUiProperty_t ) );
+	kdbgerUiProperty.kdbgerHwFunc = kdbgerUiProperty.kdbgerPreviousHwFunc = KHF_INIT;
 	kdbgerUiProperty.pKdbgerCommPkt = (kdbgerCommPkt_t *)kdbgerUiProperty.pktBuf;
-	kdbgerUiProperty.statusStr = KDBGER_HELP_TXT;
+	kdbgerUiProperty.kdbgerBasePanel.statusStr = KDBGER_HELP_TXT;
 
 
 	// Handle parameters
@@ -333,20 +416,20 @@ s32 main( s32 argc, s8 **argv ) {
 			// Clear screen & reset
 			clearDumpBasePanel( &kdbgerUiProperty );
 			clearDumpUpdatePanel( &kdbgerUiProperty );
-			kdbgerUiProperty.dumpByteBase = 0;
-			kdbgerUiProperty.dumpByteOffset = 0;
+			kdbgerUiProperty.kdbgerDumpPanel.dumpByteBase = 0;
+			kdbgerUiProperty.kdbgerDumpPanel.dumpByteOffset = 0;
 
 			// Print
 			switch( kdbgerUiProperty.kdbgerHwFunc ) {
 
 				default:
 				case KHF_MEM:
-					kdbgerUiProperty.infoStr = KDBGER_INFO_MEMORY_BASE;
+					kdbgerUiProperty.kdbgerDumpPanel.infoStr = KDBGER_INFO_MEMORY_BASE;
 					printDumpBasePanel( &kdbgerUiProperty );
 					break;
 
 				case KHF_IO:
-					kdbgerUiProperty.infoStr = KDBGER_INFO_IO_BASE;
+					kdbgerUiProperty.kdbgerDumpPanel.infoStr = KDBGER_INFO_IO_BASE;
 					printDumpBasePanel( &kdbgerUiProperty );
 					break;
 

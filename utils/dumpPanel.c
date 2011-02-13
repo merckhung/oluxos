@@ -68,26 +68,7 @@ void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		KDBGER_INFO_COLUMN,
 		WHITE_BLUE,
 		"%s",
-		pKdbgerUiProperty->infoStr );
-}
-
-
-void clearDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
-
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, top );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, rtop );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, left );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, info );
-}
-
-
-void clearDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
-
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, value );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, ascii );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, offset );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, baseaddr );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, highlight );
+		pKdbgerUiProperty->kdbgerDumpPanel.infoStr );
 }
 
 
@@ -170,7 +151,7 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		KDBGER_DUMP_OFF_COLUMN,
 		RED_BLUE,
 		"%4.4X",
-		pKdbgerUiProperty->dumpByteOffset );
+		pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset );
 
 	// Print base address
 	switch( pKdbgerUiProperty->kdbgerHwFunc ) {
@@ -182,11 +163,11 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 				KDBGER_STRING_NLINE,
 				20,
 				KDBGER_DUMP_BASEADDR_LINE,
-				strlen( pKdbgerUiProperty->infoStr ),
+				strlen( pKdbgerUiProperty->kdbgerDumpPanel.infoStr ),
 				WHITE_BLUE,
 				KDBGER_INFO_MEMORY_BASE_FMT,
-				(u32)(pKdbgerUiProperty->dumpByteBase >> 32),
-				(u32)(pKdbgerUiProperty->dumpByteBase & 0xFFFFFFFFULL) );
+				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase >> 32),
+				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase & 0xFFFFFFFFULL) );
 			break;
 
 		case KHF_IO:
@@ -196,10 +177,10 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 				KDBGER_STRING_NLINE,
 				20,
 				KDBGER_DUMP_BASEADDR_LINE,
-				strlen( pKdbgerUiProperty->infoStr ),
+				strlen( pKdbgerUiProperty->kdbgerDumpPanel.infoStr ),
 				WHITE_BLUE,
 				KDBGER_INFO_IO_BASE_FMT,
-				(u32)(pKdbgerUiProperty->dumpByteBase & 0x0000FFFFULL) );
+				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase & 0x0000FFFFULL) );
 			break;
 
 		case KHF_PCI:
@@ -216,8 +197,8 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	}
 
 	// Highlight
-	y = (pKdbgerUiProperty->dumpByteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_VALUE_LINE;
-	x = ((pKdbgerUiProperty->dumpByteOffset % KDBGER_DUMP_BYTE_PER_LINE) * 3) + KDBGER_DUMP_VALUE_COLUMN;
+	y = (pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_VALUE_LINE;
+	x = ((pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset % KDBGER_DUMP_BYTE_PER_LINE) * 3) + KDBGER_DUMP_VALUE_COLUMN;
 	printWindowMove(
 		pKdbgerUiProperty->kdbgerDumpPanel,
 		highlight,
@@ -227,7 +208,26 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		x,
 		YELLOW_BLUE,
 		"%2.2X",
-		*(pDataPtr + pKdbgerUiProperty->dumpByteOffset) );
+		*(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset) );
+}
+
+
+void clearDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, top );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, rtop );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, left );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, info );
+}
+
+
+void clearDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, value );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, ascii );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, offset );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, baseaddr );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, highlight );
 }
 
 
@@ -237,45 +237,45 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 		case KBPRS_UP:
 
-			if( (pKdbgerUiProperty->dumpByteOffset - KDBGER_DUMP_BYTE_PER_LINE) >= 0 )
-				pKdbgerUiProperty->dumpByteOffset -= KDBGER_DUMP_BYTE_PER_LINE;
+			if( (pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset - KDBGER_DUMP_BYTE_PER_LINE) >= 0 )
+				pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset -= KDBGER_DUMP_BYTE_PER_LINE;
 			else
-				pKdbgerUiProperty->dumpByteOffset = KDBGER_BYTE_PER_SCREEN - (KDBGER_DUMP_BYTE_PER_LINE - pKdbgerUiProperty->dumpByteOffset);
+				pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset = KDBGER_BYTE_PER_SCREEN - (KDBGER_DUMP_BYTE_PER_LINE - pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset);
             break;
 
 		case KBPRS_DOWN:
 
-			if( (pKdbgerUiProperty->dumpByteOffset + KDBGER_DUMP_BYTE_PER_LINE) < KDBGER_BYTE_PER_SCREEN )
-				pKdbgerUiProperty->dumpByteOffset += KDBGER_DUMP_BYTE_PER_LINE;
+			if( (pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset + KDBGER_DUMP_BYTE_PER_LINE) < KDBGER_BYTE_PER_SCREEN )
+				pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset += KDBGER_DUMP_BYTE_PER_LINE;
 			else
-				pKdbgerUiProperty->dumpByteOffset %= KDBGER_DUMP_BYTE_PER_LINE;
+				pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset %= KDBGER_DUMP_BYTE_PER_LINE;
             break;
 
 		case KBPRS_LEFT:
 
-			if( (pKdbgerUiProperty->dumpByteOffset - 1) >= 0 && (pKdbgerUiProperty->dumpByteOffset % KDBGER_DUMP_BYTE_PER_LINE) > 0 )
-				pKdbgerUiProperty->dumpByteOffset--;
+			if( (pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset - 1) >= 0 && (pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset % KDBGER_DUMP_BYTE_PER_LINE) > 0 )
+				pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset--;
 			else
-				pKdbgerUiProperty->dumpByteOffset += (KDBGER_DUMP_BYTE_PER_LINE - 1);
+				pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset += (KDBGER_DUMP_BYTE_PER_LINE - 1);
             break;
 
 		case KBPRS_RIGHT:
 
-			if( (pKdbgerUiProperty->dumpByteOffset + 1) < KDBGER_BYTE_PER_SCREEN 
-				&& ((pKdbgerUiProperty->dumpByteOffset + 1) % KDBGER_DUMP_BYTE_PER_LINE) )
-				pKdbgerUiProperty->dumpByteOffset++;
+			if( (pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset + 1) < KDBGER_BYTE_PER_SCREEN 
+				&& ((pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset + 1) % KDBGER_DUMP_BYTE_PER_LINE) )
+				pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset++;
 			else
-				pKdbgerUiProperty->dumpByteOffset -= (KDBGER_DUMP_BYTE_PER_LINE - 1);
+				pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset -= (KDBGER_DUMP_BYTE_PER_LINE - 1);
             break;
 
 		case KBPRS_PGUP:
 
-			pKdbgerUiProperty->dumpByteBase -= KDBGER_BYTE_PER_SCREEN;
+			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase -= KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_PGDN:
 
-			pKdbgerUiProperty->dumpByteBase += KDBGER_BYTE_PER_SCREEN;
+			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase += KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_SPACE:
