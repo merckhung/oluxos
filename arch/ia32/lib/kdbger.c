@@ -414,7 +414,6 @@ static void kdbgerIntHandler( u8 IrqNum ) {
                     ptr = (s8 *)&pKdbgerCommPkt->kdbgerRspPciReadPkt.pciContent;
                     pciAddr = pKdbgerCommPkt->kdbgerReqPciReadPkt.address;
                     pciSz = pKdbgerCommPkt->kdbgerReqPciReadPkt.size;
-
                     for( i = 0 ; i < pciSz ; i++ ) {
 
                         // Read PCI config data

@@ -24,7 +24,7 @@ instkrn: instkrn.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $< libcomm.c
 
 kdbger: kdbger.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -lpanel -o $@ $< packet.c dumpPanel.c pciPanel.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -lpanel -o $@ $< packet.c dumpPanel.c utils.c
 
 clean:
 	rm -f *.o $(TARGET)

@@ -62,6 +62,7 @@ void krn_entry( void ) {
 
     // Setup Page
     //MmPageInit();
+	PciDetectDevice();
 
 
     // Init CPU interrupt and i8259A

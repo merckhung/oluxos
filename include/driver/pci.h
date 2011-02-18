@@ -24,7 +24,7 @@ u16 PciReadConfigWord( u32 address, u8 offset );
 void PciWriteConfigWord( u32 address, u8 offset, u16 value );
 u32 PciReadConfigDWord( u32 address, u8 offset );
 void PciWriteConfigDWord( u32 address, u8 offset, u32 value );
-u32 PciCalBaseAddr( u8 bus, u8 dev, u8 func );
+u32 PciCalBaseAddr( u16 bus, u8 dev, u8 func );
 
 void PciDetectDevice( void );
 

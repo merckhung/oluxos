@@ -152,9 +152,12 @@ void PciWriteConfigDWord( u32 address, u8 offset, u32 value ) {
 // Description:
 //  Calculate Pci base address by bus, device, and function numbers
 //
-u32 PciCalBaseAddr( u8 bus, u8 dev, u8 func ) {
+u32 PciCalBaseAddr( u16 bus, u8 dev, u8 func ) {
 
-    return PCI_ENABLE_BIT | (bus << 16) | ((dev & 0x1f) << 11) | ((func & 0x07) << 8);
+    return PCI_ENABLE_BIT
+		| (((u32)bus) << 16)
+		| ((((u32)dev) & 0x1F) << 11)
+		| ((((u32)func) & 0x07) << 8);
 }
 
 

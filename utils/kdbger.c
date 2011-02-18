@@ -249,12 +249,10 @@ s32 main( s32 argc, s8 **argv ) {
         switch( c ) {
 
 			case 'd':
-
 				strncpy( ttyDevice, optarg, KDBGER_MAX_PATH );
 				break;
 
             case 'h':
-
                 help();
                 return 0;
 
@@ -396,11 +394,14 @@ s32 main( s32 argc, s8 **argv ) {
 					break;
 
 				case KHF_PCI:
-					kdbgerUiProperty.kdbgerPciPanel.infoStr = KDBGER_INFO_PCI_BASE;
-					printPciBasePanel( &kdbgerUiProperty );
+					kdbgerUiProperty.kdbgerDumpPanel.infoStr = KDBGER_INFO_PCI_BASE;
+					printDumpBasePanel( &kdbgerUiProperty );
 					break;
 
 				case KHF_PCIL:
+					break;
+
+				case KHF_IDE:
 					break;
 			}
 		}
@@ -422,19 +423,20 @@ s32 main( s32 argc, s8 **argv ) {
 				break;
 
 			case KHF_PCI:
-				handleKeyPressForPciPanel( &kdbgerUiProperty );
+				handleKeyPressForDumpPanel( &kdbgerUiProperty );
 				if( !readPci( &kdbgerUiProperty ) )
-					printPciUpdatePanel( &kdbgerUiProperty );
+					printDumpUpdatePanel( &kdbgerUiProperty );
 				break;
 
 			case KHF_PCIL:
 				break;
-		}
 
+			case KHF_IDE:
+				break;
+		}
 
 		// Help Text
 		printBaseHelp( &kdbgerUiProperty );
-
 
         // Update timer
 		updateStatusTimer( &kdbgerUiProperty );
@@ -451,7 +453,6 @@ Exit:
 
 	// Terminate ncurses
 	endwin();
-
 
 	// Free resources
 	free( kdbgerUiProperty.pKdbgerE820record );

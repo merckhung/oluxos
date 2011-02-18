@@ -82,8 +82,29 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	u8 valueBuf[ KDBGER_DUMP_VBUF_SZ + 1 ];
 	u8 asciiBuf[ KDBGER_DUMP_ABUF_SZ + 1 ];
 	u8 *vp = valueBuf, *ap = asciiBuf;
-	u8 *dataPtr = (u8 *)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent;
-	u8 *pDataPtr = dataPtr;
+	u8 *dataPtr, *pDataPtr;
+	kdbgerPciDev_t *pKdbgerPciDev;
+
+	switch( pKdbgerUiProperty->kdbgerHwFunc ) {
+
+		case KHF_PCI:
+			dataPtr = (u8 *)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspPciReadPkt.pciContent;
+			break;
+
+		case KHF_IO:
+			dataPtr = (u8 *)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIoReadPkt.ioContent;
+			break;
+
+		case KHF_IDE:
+			dataPtr = (u8 *)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIdeReadPkt.ideContent;
+			break;
+
+		default:
+		case KHF_MEM:
+			dataPtr = (u8 *)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent;
+		break;
+	}
+	pDataPtr = dataPtr;
 
 	// Terminate buffers
 	valueBuf[ KDBGER_DUMP_VBUF_SZ ] = 0;
@@ -179,7 +200,7 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 				pKdbgerUiProperty->kdbgerDumpPanel,
 				baseaddr, 
 				KDBGER_STRING_NLINE,
-				20,
+				5,
 				KDBGER_DUMP_BASEADDR_LINE,
 				strlen( pKdbgerUiProperty->kdbgerDumpPanel.infoStr ),
 				WHITE_BLUE,
@@ -188,6 +209,19 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			break;
 
 		case KHF_PCI:
+			pKdbgerPciDev = getPciDevice( pKdbgerUiProperty, 
+							pKdbgerUiProperty->kdbgerDumpPanel.byteBase );
+			if( pKdbgerPciDev )
+				printWindowAt(
+					pKdbgerUiProperty->kdbgerDumpPanel,
+					baseaddr, 
+					KDBGER_STRING_NLINE,
+					29,
+					KDBGER_DUMP_BASEADDR_LINE,
+					strlen( pKdbgerUiProperty->kdbgerDumpPanel.infoStr ),
+					WHITE_BLUE,
+					KDBGER_INFO_PCI_BASE_FMT,
+					pKdbgerPciDev->bus, pKdbgerPciDev->dev, pKdbgerPciDev->fun );
 			break;
 
 		case KHF_PCIL:
@@ -316,6 +350,7 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 					break;
 
 				case KHF_PCI:
+					writePciByEditing( pKdbgerUiProperty );
 					break;
 
 				case KHF_IDE:
@@ -398,12 +433,26 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 		case KBPRS_PGUP:
 
-			pKdbgerUiProperty->kdbgerDumpPanel.byteBase -= KDBGER_BYTE_PER_SCREEN;
+            if( pKdbgerUiProperty->kdbgerHwFunc == KHF_PCI ) {
+				if( !pKdbgerUiProperty->kdbgerDumpPanel.byteBase )
+					pKdbgerUiProperty->kdbgerDumpPanel.byteBase = pKdbgerUiProperty->numOfPciDevice - 1;
+				else
+					pKdbgerUiProperty->kdbgerDumpPanel.byteBase--;
+            }
+            else
+				pKdbgerUiProperty->kdbgerDumpPanel.byteBase -= KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_PGDN:
 
-			pKdbgerUiProperty->kdbgerDumpPanel.byteBase += KDBGER_BYTE_PER_SCREEN;
+			if( pKdbgerUiProperty->kdbgerHwFunc == KHF_PCI ) {
+				if( (pKdbgerUiProperty->kdbgerDumpPanel.byteBase + 1) >= pKdbgerUiProperty->numOfPciDevice )
+					pKdbgerUiProperty->kdbgerDumpPanel.byteBase = 0;
+				else
+					pKdbgerUiProperty->kdbgerDumpPanel.byteBase++;
+			}
+			else
+				pKdbgerUiProperty->kdbgerDumpPanel.byteBase += KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_ENTER:

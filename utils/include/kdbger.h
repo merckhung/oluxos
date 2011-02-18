@@ -1,3 +1,14 @@
+/*
+ * Copyright (C) 2006 - 2011 Olux Organization All rights reserved.
+ * Author: Merck Hung <merck@olux.org>
+ *
+ * File: kdbger.h
+ * Description:
+ *  OluxOS Kernel Debugger header file
+ *
+ */
+
+
 #define KDBGER_VERSION				"0.1"
 #define KDBGER_MAX_PATH				40
 #define KDBGER_DEF_TTYDEV			"/dev/pts/0"
@@ -256,7 +267,7 @@ typedef struct {
 	u8					toggleEditing;
 	u8					editingBuf;
 
-} kdbgerDumpPanel_t, kdbgerPciPanel_t;
+} kdbgerDumpPanel_t;
 
 
 typedef struct {
@@ -274,7 +285,6 @@ typedef struct {
 	// Base panel
 	kdbgerBasePanel_t	kdbgerBasePanel;
 	kdbgerDumpPanel_t	kdbgerDumpPanel;
-	kdbgerPciPanel_t	kdbgerPciPanel;
 
 	// PCI list
 	kdbgerPciDev_t		*pKdbgerPciDev;
@@ -292,6 +302,7 @@ s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op );
 s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8 *cntBuf, u8 *pktBuf, s32 lenPktBuf );
 s32 connectToOluxOSKernel( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 readPciList( kdbgerUiProperty_t *pKdbgerUiProperty );
+kdbgerPciDev_t *getPciDevice( kdbgerUiProperty_t *pKdbgerUiProperty, s32 num );
 s32 readE820List( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 readMemory( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writeMemoryByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
@@ -299,6 +310,7 @@ s32 readIo( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writeIoByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 readPci( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writePciByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
+u32 calculatePciAddress( u16 bus, u8 dev, u8 func );
 
 void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
