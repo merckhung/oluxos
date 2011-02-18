@@ -51,7 +51,7 @@
 #define KDBGER_HELP_X_POS			3
 #define KDBGER_HELP_Y_POS			2
 
-#define KDBGER_WELCOME_TXT			"Welcome to OluxOS Kernel Debugger which was developed by Merck Hung <merckhung@gmail.com>, Cell: +886-988-682504. Enjoy it!!!"
+#define KDBGER_WELCOME_TXT			"Welcome to OluxOS Kernel Debugger. Copyright (C) 2006 - 2011, Merck Hung all right reserved. Contact Merck Hung, Email: merckhung@gmail.com, Cell: +886-988-682504, City: Taipei City, Taiwan."
 
 #define KDBGER_DUMP_TOP_BAR			"00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F"
 #define KDBGER_DUMP_LEFT_BAR		"000000100020003000400050006000700080009000A000B000C000D000E000F0"
