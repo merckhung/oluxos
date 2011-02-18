@@ -46,6 +46,7 @@
 #define KDBGER_DUMP_OFF_LINE		4
 #define KDBGER_DUMP_OFF_COLUMN		1
 #define KDBGER_DUMP_HL_DIGITS		2
+#define KDBGER_DUMP_HLA_DIGITS		1
 #define KDBGER_DUMP_BITS_DIGITS		9
 
 #define KDBGER_DUMP_BASEADDR_LINE	KDBGER_INFO_LINE
@@ -172,16 +173,28 @@ typedef enum {
 
     WHITE_RED = 1,
     WHITE_BLUE,
+	WHITE_YELLOW,
+	WHITE_BLACK,
+
     BLACK_WHITE,
+	BLACK_GREEN,
+	BLACK_YELLOW,
+
     CYAN_BLUE,
-    RED_BLUE,
+	CYAN_WHITE,
+
     YELLOW_BLUE,
-    BLACK_GREEN,
-    BLACK_YELLOW,
     YELLOW_RED,
     YELLOW_BLACK,
-    WHITE_YELLOW,
+	YELLOW_WHITE,
+
 	RED_WHITE,
+	RED_BLUE,
+
+	MAGENTA_BLUE,
+
+	GREEN_BLUE,
+	GREEN_WHITE,
 
 } kdbgerColorPairs_t;
 
@@ -222,6 +235,7 @@ typedef struct {
 	PANEL				*panelhighlight;
 	PANEL				*panelbits;
 	PANEL				*panelbaseaddr;
+	PANEL				*panelhlascii;
 
 	WINDOW				*top;
 	WINDOW				*offset;
@@ -233,15 +247,16 @@ typedef struct {
 	WINDOW				*highlight;
 	WINDOW 				*bits;
 	WINDOW				*baseaddr;
+	WINDOW				*hlascii;
 
-	u64					dumpByteBase;
-	s32					dumpByteOffset;
+	u64					byteBase;
+	s32					byteOffset;
 	s8					*infoStr;
 	u8					toggleBits;
 	u8					toggleEditing;
 	u8					editingBuf;
 
-} kdbgerDumpPanel_t, kdbgerMemoryPanel_t;
+} kdbgerDumpPanel_t, kdbgerPciPanel_t;
 
 
 typedef struct {
@@ -259,6 +274,7 @@ typedef struct {
 	// Base panel
 	kdbgerBasePanel_t	kdbgerBasePanel;
 	kdbgerDumpPanel_t	kdbgerDumpPanel;
+	kdbgerPciPanel_t	kdbgerPciPanel;
 
 	// PCI list
 	kdbgerPciDev_t		*pKdbgerPciDev;
@@ -281,11 +297,19 @@ s32 readMemory( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writeMemoryByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 readIo( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writeIoByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readPci( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 writePciByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 
 void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void clearDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void clearDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+
+void printPciBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void printPciUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void clearPciBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void clearPciUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void handleKeyPressForPciPanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 
 

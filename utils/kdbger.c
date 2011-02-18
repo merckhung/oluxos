@@ -59,16 +59,28 @@ void initColorPairs( void ) {
 
     init_pair( WHITE_RED, COLOR_WHITE, COLOR_RED );
     init_pair( WHITE_BLUE, COLOR_WHITE, COLOR_BLUE );
+	init_pair( WHITE_YELLOW, COLOR_WHITE, COLOR_YELLOW );
+	init_pair( WHITE_BLACK, COLOR_WHITE, COLOR_BLACK );
+
     init_pair( BLACK_WHITE, COLOR_BLACK, COLOR_WHITE );
+	init_pair( BLACK_GREEN, COLOR_BLACK, COLOR_GREEN );
+	init_pair( BLACK_YELLOW, COLOR_BLACK, COLOR_YELLOW );
+
     init_pair( CYAN_BLUE, COLOR_CYAN, COLOR_BLUE );
+	init_pair( CYAN_WHITE, COLOR_CYAN, COLOR_WHITE );
+
     init_pair( RED_BLUE, COLOR_RED, COLOR_BLUE );
+	init_pair( RED_WHITE, COLOR_RED, COLOR_WHITE );
+
     init_pair( YELLOW_BLUE, COLOR_YELLOW, COLOR_BLUE );
-    init_pair( BLACK_GREEN, COLOR_BLACK, COLOR_GREEN );
-    init_pair( BLACK_YELLOW, COLOR_BLACK, COLOR_YELLOW );
     init_pair( YELLOW_RED, COLOR_YELLOW, COLOR_RED );
     init_pair( YELLOW_BLACK, COLOR_YELLOW, COLOR_BLACK );
-    init_pair( WHITE_YELLOW, COLOR_WHITE, COLOR_YELLOW );
-	init_pair( RED_WHITE, COLOR_RED, COLOR_WHITE );
+	init_pair( YELLOW_WHITE, COLOR_YELLOW, COLOR_WHITE );
+
+	init_pair( MAGENTA_BLUE, COLOR_MAGENTA, COLOR_BLUE );
+
+	init_pair( GREEN_BLUE, COLOR_GREEN, COLOR_BLUE );
+	init_pair( GREEN_WHITE, COLOR_GREEN, COLOR_WHITE );
 }
 
 
@@ -127,7 +139,7 @@ void updateStatusTimer( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR,
 			KDBGER_MAX_LINE,
 			KDBGER_MIN_COLUMN,
-			RED_WHITE,
+			BLACK_WHITE,
 			"%s",
 			stsBuf );
 
@@ -366,8 +378,8 @@ s32 main( s32 argc, s8 **argv ) {
 			// Clear screen & reset
 			clearDumpBasePanel( &kdbgerUiProperty );
 			clearDumpUpdatePanel( &kdbgerUiProperty );
-			kdbgerUiProperty.kdbgerDumpPanel.dumpByteBase = 0;
-			kdbgerUiProperty.kdbgerDumpPanel.dumpByteOffset = 0;
+			kdbgerUiProperty.kdbgerDumpPanel.byteBase = 0;
+			kdbgerUiProperty.kdbgerDumpPanel.byteOffset = 0;
 
 			// Print
 			switch( kdbgerUiProperty.kdbgerHwFunc ) {
@@ -384,6 +396,8 @@ s32 main( s32 argc, s8 **argv ) {
 					break;
 
 				case KHF_PCI:
+					kdbgerUiProperty.kdbgerPciPanel.infoStr = KDBGER_INFO_PCI_BASE;
+					printPciBasePanel( &kdbgerUiProperty );
 					break;
 
 				case KHF_PCIL:
@@ -408,6 +422,9 @@ s32 main( s32 argc, s8 **argv ) {
 				break;
 
 			case KHF_PCI:
+				handleKeyPressForPciPanel( &kdbgerUiProperty );
+				if( !readPci( &kdbgerUiProperty ) )
+					printPciUpdatePanel( &kdbgerUiProperty );
 				break;
 
 			case KHF_PCIL:

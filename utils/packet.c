@@ -295,7 +295,7 @@ s32 readMemory( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	return executeFunction(
 			pKdbgerUiProperty->fd,
 			KDBGER_REQ_MEM_READ,
-			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase,
+			pKdbgerUiProperty->kdbgerDumpPanel.byteBase,
 			KDBGER_BYTE_PER_SCREEN,
 			NULL,
 			pKdbgerUiProperty->pktBuf,
@@ -309,7 +309,7 @@ s32 writeMemoryByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	return executeFunction(
 			pKdbgerUiProperty->fd,
 			KDBGER_REQ_MEM_WRITE,
-			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset,
+			pKdbgerUiProperty->kdbgerDumpPanel.byteBase + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset,
 			sizeof( pKdbgerUiProperty->kdbgerDumpPanel.editingBuf ),
 			&pKdbgerUiProperty->kdbgerDumpPanel.editingBuf,
 			pKdbgerUiProperty->pktBuf,
@@ -323,7 +323,7 @@ s32 readIo( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	return executeFunction(
 			pKdbgerUiProperty->fd,
 			KDBGER_REQ_IO_READ,
-			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase,
+			pKdbgerUiProperty->kdbgerDumpPanel.byteBase,
 			KDBGER_BYTE_PER_SCREEN,
 			NULL,
 			pKdbgerUiProperty->pktBuf,
@@ -337,9 +337,37 @@ s32 writeIoByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	return executeFunction(
 			pKdbgerUiProperty->fd,
 			KDBGER_REQ_IO_WRITE,
-			pKdbgerUiProperty->kdbgerDumpPanel.dumpByteBase + pKdbgerUiProperty->kdbgerDumpPanel.dumpByteOffset,
+			pKdbgerUiProperty->kdbgerDumpPanel.byteBase + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset,
 			sizeof( pKdbgerUiProperty->kdbgerDumpPanel.editingBuf ),
 			&pKdbgerUiProperty->kdbgerDumpPanel.editingBuf,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 readPci( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Read io
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_PCI_READ,
+			pKdbgerUiProperty->kdbgerPciPanel.byteBase,
+			KDBGER_BYTE_PER_SCREEN,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 writePciByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Write io
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_PCI_WRITE,
+			pKdbgerUiProperty->kdbgerPciPanel.byteBase + pKdbgerUiProperty->kdbgerPciPanel.byteOffset,
+			sizeof( pKdbgerUiProperty->kdbgerPciPanel.editingBuf ),
+			&pKdbgerUiProperty->kdbgerPciPanel.editingBuf,
 			pKdbgerUiProperty->pktBuf,
 			KDBGER_MAXSZ_PKT );
 }

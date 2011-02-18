@@ -31,10 +31,10 @@
 static u32 editorColorCount = 0;
 
 
-void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+void printPciBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	// Print Top bar
-	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
+	printWindowAt( pKdbgerUiProperty->kdbgerPciPanel,
 		top, 
 		KDBGER_STRING_NLINE,
 		strlen( KDBGER_DUMP_TOP_BAR ),
@@ -44,7 +44,7 @@ void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		KDBGER_DUMP_TOP_BAR );
 
 	// Print Rtop bar
-	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
+	printWindowAt( pKdbgerUiProperty->kdbgerPciPanel,
 		rtop, 
 		KDBGER_STRING_NLINE,
 		KDBGER_DUMP_BYTE_PER_LINE,
@@ -54,7 +54,7 @@ void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		KDBGER_DUMP_RTOP_BAR );
 
 	// Print Left bar
-	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
+	printWindowAt( pKdbgerUiProperty->kdbgerPciPanel,
 		left,
 		KDBGER_DUMP_BYTE_PER_LINE,
 		4,
@@ -64,7 +64,7 @@ void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		KDBGER_DUMP_LEFT_BAR );
 
 	// Print Info base
-	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
+	printWindowAt( pKdbgerUiProperty->kdbgerPciPanel,
 		info,
 		KDBGER_STRING_NLINE,
 		KDBGER_MAX_COLUMN,
@@ -72,11 +72,11 @@ void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		KDBGER_INFO_COLUMN,
 		WHITE_BLUE,
 		"%s",
-		pKdbgerUiProperty->kdbgerDumpPanel.infoStr );
+		pKdbgerUiProperty->kdbgerPciPanel.infoStr );
 }
 
 
-void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+void printPciUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	s32 i, x, y, color;
 	u8 valueBuf[ KDBGER_DUMP_VBUF_SZ + 1 ];
@@ -123,7 +123,7 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	// Print value
 	printWindowAt(
-		pKdbgerUiProperty->kdbgerDumpPanel,
+		pKdbgerUiProperty->kdbgerPciPanel,
 		value, 
 		KDBGER_DUMP_BYTE_PER_LINE,
 		KDBGER_DUMP_BUF_PER_LINE,
@@ -135,7 +135,7 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	// Print ASCII
 	printWindowAt(
-		pKdbgerUiProperty->kdbgerDumpPanel,
+		pKdbgerUiProperty->kdbgerPciPanel,
 		ascii,
 		KDBGER_DUMP_BYTE_PER_LINE,
 		KDBGER_DUMP_BYTE_PER_LINE,
@@ -147,7 +147,7 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	// Print Offset bar
 	printWindowAt(
-		pKdbgerUiProperty->kdbgerDumpPanel,
+		pKdbgerUiProperty->kdbgerPciPanel,
 		offset, 
 		KDBGER_STRING_NLINE,
 		4,
@@ -155,36 +155,36 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		KDBGER_DUMP_OFF_COLUMN,
 		YELLOW_BLUE,
 		"%4.4X",
-		pKdbgerUiProperty->kdbgerDumpPanel.byteOffset );
+		pKdbgerUiProperty->kdbgerPciPanel.byteOffset );
 
 	// Print base address
 	switch( pKdbgerUiProperty->kdbgerHwFunc ) {
 
 		case KHF_MEM:
 			printWindowAt(
-				pKdbgerUiProperty->kdbgerDumpPanel,
+				pKdbgerUiProperty->kdbgerPciPanel,
 				baseaddr, 
 				KDBGER_STRING_NLINE,
 				20,
 				KDBGER_DUMP_BASEADDR_LINE,
-				strlen( pKdbgerUiProperty->kdbgerDumpPanel.infoStr ),
+				strlen( pKdbgerUiProperty->kdbgerPciPanel.infoStr ),
 				WHITE_BLUE,
 				KDBGER_INFO_MEMORY_BASE_FMT,
-				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase >> 32),
-				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFFFFFFFULL) );
+				(u32)(pKdbgerUiProperty->kdbgerPciPanel.byteBase >> 32),
+				(u32)(pKdbgerUiProperty->kdbgerPciPanel.byteBase & 0xFFFFFFFFULL) );
 			break;
 
 		case KHF_IO:
 			printWindowAt(
-				pKdbgerUiProperty->kdbgerDumpPanel,
+				pKdbgerUiProperty->kdbgerPciPanel,
 				baseaddr, 
 				KDBGER_STRING_NLINE,
 				20,
 				KDBGER_DUMP_BASEADDR_LINE,
-				strlen( pKdbgerUiProperty->kdbgerDumpPanel.infoStr ),
+				strlen( pKdbgerUiProperty->kdbgerPciPanel.infoStr ),
 				WHITE_BLUE,
 				KDBGER_INFO_IO_BASE_FMT,
-				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0x0000FFFFULL) );
+				(u32)(pKdbgerUiProperty->kdbgerPciPanel.byteBase & 0x0000FFFFULL) );
 			break;
 
 		case KHF_PCI:
@@ -202,14 +202,14 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 
 	// Highlight & Editing
-	y = (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_VALUE_LINE;
-	x = ((pKdbgerUiProperty->kdbgerDumpPanel.byteOffset % KDBGER_DUMP_BYTE_PER_LINE) * 3) + KDBGER_DUMP_VALUE_COLUMN;
-	if( pKdbgerUiProperty->kdbgerDumpPanel.toggleEditing ) {
+	y = (pKdbgerUiProperty->kdbgerPciPanel.byteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_VALUE_LINE;
+	x = ((pKdbgerUiProperty->kdbgerPciPanel.byteOffset % KDBGER_DUMP_BYTE_PER_LINE) * 3) + KDBGER_DUMP_VALUE_COLUMN;
+	if( pKdbgerUiProperty->kdbgerPciPanel.toggleEditing ) {
 
 		color = (editorColorCount++ % 2) ? YELLOW_RED : YELLOW_BLACK;
 
 		printWindowMove(
-			pKdbgerUiProperty->kdbgerDumpPanel,
+			pKdbgerUiProperty->kdbgerPciPanel,
 			highlight,
 			KDBGER_STRING_NLINE,
 			KDBGER_DUMP_HL_DIGITS,
@@ -217,12 +217,12 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			x,
 			color,
 			"%2.2X",
-			pKdbgerUiProperty->kdbgerDumpPanel.editingBuf );
+			pKdbgerUiProperty->kdbgerPciPanel.editingBuf );
 		}
 	else {
 
 		printWindowMove(
-			pKdbgerUiProperty->kdbgerDumpPanel,
+			pKdbgerUiProperty->kdbgerPciPanel,
 			highlight,
 			KDBGER_STRING_NLINE,
 			KDBGER_DUMP_HL_DIGITS,
@@ -230,17 +230,17 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			x,
 			YELLOW_RED,
 			"%2.2X",
-			*(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset) );
+			*(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset) );
 
-		pKdbgerUiProperty->kdbgerDumpPanel.editingBuf = *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset);
+		pKdbgerUiProperty->kdbgerPciPanel.editingBuf = *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset);
 	}
 
 
 	// Bits
-	if( pKdbgerUiProperty->kdbgerDumpPanel.toggleBits ) {
+	if( pKdbgerUiProperty->kdbgerPciPanel.toggleBits ) {
 
 		printWindowMove(
-			pKdbgerUiProperty->kdbgerDumpPanel,
+			pKdbgerUiProperty->kdbgerPciPanel,
 			bits,
 			KDBGER_STRING_NLINE,
 			KDBGER_DUMP_BITS_DIGITS,
@@ -248,24 +248,24 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			x,
 			WHITE_RED,
 			"%d%d%d%d_%d%d%d%d",
-			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset), 7 ),			
-			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset), 6 ),
-			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset), 5 ),
-			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset), 4 ),
-			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset), 3 ),
-			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset), 2 ),
-			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset), 1 ),
-			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset), 0 ) );
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset), 7 ),			
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset), 6 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset), 5 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset), 4 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset), 3 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset), 2 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset), 1 ),
+			OLUX_GET_BIT( *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset), 0 ) );
 	}
 	else
-		destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, bits );
+		destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, bits );
 
 
 	// Print ASCII highlight
-    y = (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_ASCII_LINE;
-    x = (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset % KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_ASCII_COLUMN;
+    y = (pKdbgerUiProperty->kdbgerPciPanel.byteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_ASCII_LINE;
+    x = (pKdbgerUiProperty->kdbgerPciPanel.byteOffset % KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_ASCII_COLUMN;
 	printWindowMove(
-		pKdbgerUiProperty->kdbgerDumpPanel,
+		pKdbgerUiProperty->kdbgerPciPanel,
 		hlascii,
 		KDBGER_STRING_NLINE,
 		KDBGER_DUMP_HLA_DIGITS,
@@ -273,34 +273,34 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		x,
 		YELLOW_RED,
 		"%c",
-		KDBGER_DUMP_ASCII_FILTER( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset) ) );
+		KDBGER_DUMP_ASCII_FILTER( *(pDataPtr + pKdbgerUiProperty->kdbgerPciPanel.byteOffset) ) );
 }
 
 
-void clearDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+void clearPciBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, top );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, rtop );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, left );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, info );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, top );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, rtop );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, left );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, info );
 }
 
 
-void clearDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+void clearPciUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, value );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, ascii );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, offset );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, baseaddr );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, highlight );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, hlascii );
-	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, bits );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, value );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, ascii );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, offset );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, baseaddr );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, highlight );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, hlascii );
+	destroyWindow( pKdbgerUiProperty->kdbgerPciPanel, bits );
 }
 
 
-void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+void handleKeyPressForPciPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
-	if( pKdbgerUiProperty->kdbgerDumpPanel.toggleEditing ) {
+	if( pKdbgerUiProperty->kdbgerPciPanel.toggleEditing ) {
 
 		// Trigger write action
 		if( pKdbgerUiProperty->inputBuf == KBPRS_ENTER ) {
@@ -326,7 +326,7 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			}
 
 			// Exit
-			pKdbgerUiProperty->kdbgerDumpPanel.toggleEditing = 0;
+			pKdbgerUiProperty->kdbgerPciPanel.toggleEditing = 0;
 			return;
 		}
 
@@ -339,21 +339,21 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			&& pKdbgerUiProperty->inputBuf <= 'F') ) {
 
 			// Left shift 4 bits
-			pKdbgerUiProperty->kdbgerDumpPanel.editingBuf <<= 4;
+			pKdbgerUiProperty->kdbgerPciPanel.editingBuf <<= 4;
 
 			if( pKdbgerUiProperty->inputBuf <= '9' ) {
 
-				pKdbgerUiProperty->kdbgerDumpPanel.editingBuf |=
+				pKdbgerUiProperty->kdbgerPciPanel.editingBuf |=
 					(u8)((pKdbgerUiProperty->inputBuf - 0x30) & 0x0F);
 			}
 			else if( pKdbgerUiProperty->inputBuf > 'F' ) {
 
-				pKdbgerUiProperty->kdbgerDumpPanel.editingBuf |=
+				pKdbgerUiProperty->kdbgerPciPanel.editingBuf |=
 					(u8)((pKdbgerUiProperty->inputBuf - 0x60 + 9) & 0x0F);
 			}
 			else {
 
-				pKdbgerUiProperty->kdbgerDumpPanel.editingBuf |=
+				pKdbgerUiProperty->kdbgerPciPanel.editingBuf |=
 					(u8)((pKdbgerUiProperty->inputBuf - 0x40 + 9) & 0x0F);
 			}
 		}
@@ -365,55 +365,55 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 		case KBPRS_UP:
 
-			if( (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset - KDBGER_DUMP_BYTE_PER_LINE) >= 0 )
-				pKdbgerUiProperty->kdbgerDumpPanel.byteOffset -= KDBGER_DUMP_BYTE_PER_LINE;
+			if( (pKdbgerUiProperty->kdbgerPciPanel.byteOffset - KDBGER_DUMP_BYTE_PER_LINE) >= 0 )
+				pKdbgerUiProperty->kdbgerPciPanel.byteOffset -= KDBGER_DUMP_BYTE_PER_LINE;
 			else
-				pKdbgerUiProperty->kdbgerDumpPanel.byteOffset = KDBGER_BYTE_PER_SCREEN - (KDBGER_DUMP_BYTE_PER_LINE - pKdbgerUiProperty->kdbgerDumpPanel.byteOffset);
+				pKdbgerUiProperty->kdbgerPciPanel.byteOffset = KDBGER_BYTE_PER_SCREEN - (KDBGER_DUMP_BYTE_PER_LINE - pKdbgerUiProperty->kdbgerPciPanel.byteOffset);
             break;
 
 		case KBPRS_DOWN:
 
-			if( (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset + KDBGER_DUMP_BYTE_PER_LINE) < KDBGER_BYTE_PER_SCREEN )
-				pKdbgerUiProperty->kdbgerDumpPanel.byteOffset += KDBGER_DUMP_BYTE_PER_LINE;
+			if( (pKdbgerUiProperty->kdbgerPciPanel.byteOffset + KDBGER_DUMP_BYTE_PER_LINE) < KDBGER_BYTE_PER_SCREEN )
+				pKdbgerUiProperty->kdbgerPciPanel.byteOffset += KDBGER_DUMP_BYTE_PER_LINE;
 			else
-				pKdbgerUiProperty->kdbgerDumpPanel.byteOffset %= KDBGER_DUMP_BYTE_PER_LINE;
+				pKdbgerUiProperty->kdbgerPciPanel.byteOffset %= KDBGER_DUMP_BYTE_PER_LINE;
             break;
 
 		case KBPRS_LEFT:
 
-			if( (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset - 1) >= 0 && (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset % KDBGER_DUMP_BYTE_PER_LINE) > 0 )
-				pKdbgerUiProperty->kdbgerDumpPanel.byteOffset--;
+			if( (pKdbgerUiProperty->kdbgerPciPanel.byteOffset - 1) >= 0 && (pKdbgerUiProperty->kdbgerPciPanel.byteOffset % KDBGER_DUMP_BYTE_PER_LINE) > 0 )
+				pKdbgerUiProperty->kdbgerPciPanel.byteOffset--;
 			else
-				pKdbgerUiProperty->kdbgerDumpPanel.byteOffset += (KDBGER_DUMP_BYTE_PER_LINE - 1);
+				pKdbgerUiProperty->kdbgerPciPanel.byteOffset += (KDBGER_DUMP_BYTE_PER_LINE - 1);
             break;
 
 		case KBPRS_RIGHT:
 
-			if( (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset + 1) < KDBGER_BYTE_PER_SCREEN 
-				&& ((pKdbgerUiProperty->kdbgerDumpPanel.byteOffset + 1) % KDBGER_DUMP_BYTE_PER_LINE) )
-				pKdbgerUiProperty->kdbgerDumpPanel.byteOffset++;
+			if( (pKdbgerUiProperty->kdbgerPciPanel.byteOffset + 1) < KDBGER_BYTE_PER_SCREEN 
+				&& ((pKdbgerUiProperty->kdbgerPciPanel.byteOffset + 1) % KDBGER_DUMP_BYTE_PER_LINE) )
+				pKdbgerUiProperty->kdbgerPciPanel.byteOffset++;
 			else
-				pKdbgerUiProperty->kdbgerDumpPanel.byteOffset -= (KDBGER_DUMP_BYTE_PER_LINE - 1);
+				pKdbgerUiProperty->kdbgerPciPanel.byteOffset -= (KDBGER_DUMP_BYTE_PER_LINE - 1);
             break;
 
 		case KBPRS_PGUP:
 
-			pKdbgerUiProperty->kdbgerDumpPanel.byteBase -= KDBGER_BYTE_PER_SCREEN;
+			pKdbgerUiProperty->kdbgerPciPanel.byteBase -= KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_PGDN:
 
-			pKdbgerUiProperty->kdbgerDumpPanel.byteBase += KDBGER_BYTE_PER_SCREEN;
+			pKdbgerUiProperty->kdbgerPciPanel.byteBase += KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_ENTER:
 
-			pKdbgerUiProperty->kdbgerDumpPanel.toggleEditing = 1;
+			pKdbgerUiProperty->kdbgerPciPanel.toggleEditing = 1;
 			break;
 
 		case KBPRS_SPACE:
 
-			pKdbgerUiProperty->kdbgerDumpPanel.toggleBits = !pKdbgerUiProperty->kdbgerDumpPanel.toggleBits;
+			pKdbgerUiProperty->kdbgerPciPanel.toggleBits = !pKdbgerUiProperty->kdbgerPciPanel.toggleBits;
 			break;
 
 		default:
