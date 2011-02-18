@@ -361,6 +361,12 @@ s32 main( s32 argc, s8 **argv ) {
 				kdbgerUiProperty.kdbgerHwFunc = KHF_MEM;
 				break;
 
+			// IDE
+			case KBPRS_F6:
+				kdbgerUiProperty.kdbgerPreviousHwFunc = kdbgerUiProperty.kdbgerHwFunc;
+				kdbgerUiProperty.kdbgerHwFunc = KHF_IDE;
+				break;
+
 			default:
 				kdbgerUiProperty.kdbgerPreviousHwFunc = kdbgerUiProperty.kdbgerHwFunc;
 				if( kdbgerUiProperty.kdbgerHwFunc == KHF_INIT )
@@ -402,6 +408,8 @@ s32 main( s32 argc, s8 **argv ) {
 					break;
 
 				case KHF_IDE:
+					kdbgerUiProperty.kdbgerDumpPanel.infoStr = KDBGER_INFO_IDE_BASE;
+					printDumpBasePanel( &kdbgerUiProperty );
 					break;
 			}
 		}
@@ -432,6 +440,9 @@ s32 main( s32 argc, s8 **argv ) {
 				break;
 
 			case KHF_IDE:
+				handleKeyPressForDumpPanel( &kdbgerUiProperty );
+				if( !readIde( &kdbgerUiProperty ) )
+					printDumpUpdatePanel( &kdbgerUiProperty );
 				break;
 		}
 

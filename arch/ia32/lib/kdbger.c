@@ -107,7 +107,7 @@ static s32 kdbgerIdeReadWrite( u64 addr, u32 sz, u8 *ptr, kdbgerOpCode_t op ) {
 	ideNrSector = sz / KDBGER_SECTOR_SZ;
 
 	// Unalign
-	if( ideOffset )
+	if( ideOffset || !ideNrSector )
 		ideNrSector++;
 
 	switch( op ) {
@@ -122,8 +122,14 @@ static s32 kdbgerIdeReadWrite( u64 addr, u32 sz, u8 *ptr, kdbgerOpCode_t op ) {
 				if( !i && ideOffset ) {
 
 					// First
-					CbMemCpy( ptr, ideBuf + ideOffset, KDBGER_SECTOR_SZ - ideOffset );
-					ptr += (KDBGER_SECTOR_SZ - ideOffset);
+					if( sz < KDBGER_SECTOR_SZ ) {
+						CbMemCpy( ptr, ideBuf + ideOffset, sz );
+						ptr += sz;
+					}
+					else {
+						CbMemCpy( ptr, ideBuf + ideOffset, KDBGER_SECTOR_SZ - ideOffset );
+						ptr += (KDBGER_SECTOR_SZ - ideOffset);
+					}
 				}
 				else if( i == (ideNrSector - 1) && ideOffset ) {
 
@@ -134,8 +140,14 @@ static s32 kdbgerIdeReadWrite( u64 addr, u32 sz, u8 *ptr, kdbgerOpCode_t op ) {
 				else {
 
 					// Normal
-					CbMemCpy( ptr, ideBuf, KDBGER_SECTOR_SZ );
-					ptr += KDBGER_SECTOR_SZ;
+					if( sz < KDBGER_SECTOR_SZ ) {
+						CbMemCpy( ptr, ideBuf, sz );
+						ptr += sz;
+					}
+					else {
+						CbMemCpy( ptr, ideBuf, KDBGER_SECTOR_SZ );
+						ptr += KDBGER_SECTOR_SZ;
+					}
 				}
 			}
 			break;
@@ -150,8 +162,14 @@ static s32 kdbgerIdeReadWrite( u64 addr, u32 sz, u8 *ptr, kdbgerOpCode_t op ) {
 
 					// First
 					kdbgerIDEReadSector( ideSector + i, ideBuf );
-					CbMemCpy( ideBuf + ideOffset, ptr, KDBGER_SECTOR_SZ - ideOffset );
-					ptr += (KDBGER_SECTOR_SZ - ideOffset);
+					if( sz < KDBGER_SECTOR_SZ ) {
+						CbMemCpy( ideBuf + ideOffset, ptr, sz );
+						ptr += sz;
+					}
+					else {
+						CbMemCpy( ideBuf + ideOffset, ptr, KDBGER_SECTOR_SZ - ideOffset );
+						ptr += (KDBGER_SECTOR_SZ - ideOffset);
+					}
 				}
 				else if( i == (ideNrSector - 1) && ideOffset ) {
 
@@ -163,8 +181,15 @@ static s32 kdbgerIdeReadWrite( u64 addr, u32 sz, u8 *ptr, kdbgerOpCode_t op ) {
 				else {
 
 					// Normal
-					CbMemCpy( ideBuf, ptr, KDBGER_SECTOR_SZ );
-					ptr += KDBGER_SECTOR_SZ;
+					kdbgerIDEReadSector( ideSector + i, ideBuf );
+					if( sz < KDBGER_SECTOR_SZ ) {
+						CbMemCpy( ideBuf, ptr, sz );
+						ptr += sz;
+					}
+					else {
+						CbMemCpy( ideBuf, ptr, KDBGER_SECTOR_SZ );
+						ptr += KDBGER_SECTOR_SZ;
+					}
 				}
 
 				// Read a sector into buffer

@@ -150,6 +150,34 @@ s32 writeIoByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 }
 
 
+s32 readIde( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Read ide
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_IDE_READ,
+			pKdbgerUiProperty->kdbgerDumpPanel.byteBase,
+			KDBGER_BYTE_PER_SCREEN,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 writeIdeByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Write ide
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_IDE_WRITE,
+			pKdbgerUiProperty->kdbgerDumpPanel.byteBase + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset,
+			sizeof( pKdbgerUiProperty->kdbgerDumpPanel.editingBuf ),
+			&pKdbgerUiProperty->kdbgerDumpPanel.editingBuf,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
 s32 readPci( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	kdbgerPciDev_t *pKdbgerPciDev;
@@ -194,7 +222,7 @@ s32 writePciByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			calculatePciAddress(
 				pKdbgerPciDev->bus,
 				pKdbgerPciDev->dev,
-				pKdbgerPciDev->fun ),
+				pKdbgerPciDev->fun ) + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset,
 			sizeof( pKdbgerUiProperty->kdbgerDumpPanel.editingBuf ),
 			&pKdbgerUiProperty->kdbgerDumpPanel.editingBuf,
 			pKdbgerUiProperty->pktBuf,

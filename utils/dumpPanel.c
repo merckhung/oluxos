@@ -181,6 +181,7 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	// Print base address
 	switch( pKdbgerUiProperty->kdbgerHwFunc ) {
 
+		default:
 		case KHF_MEM:
 			printWindowAt(
 				pKdbgerUiProperty->kdbgerDumpPanel,
@@ -228,9 +229,17 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			break;
 
 		case KHF_IDE:
-			break;
-
-		default:
+			printWindowAt(
+				pKdbgerUiProperty->kdbgerDumpPanel,
+				baseaddr, 
+				KDBGER_STRING_NLINE,
+				20,
+				KDBGER_DUMP_BASEADDR_LINE,
+				strlen( pKdbgerUiProperty->kdbgerDumpPanel.infoStr ),
+				WHITE_BLUE,
+				KDBGER_INFO_IDE_BASE_FMT,
+				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase >> 32),
+				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFFFFFFFULL) );
 			break;
 	}
 
@@ -354,6 +363,7 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 					break;
 
 				case KHF_IDE:
+					writeIdeByEditing( pKdbgerUiProperty );
 					break;
 
 				default:
