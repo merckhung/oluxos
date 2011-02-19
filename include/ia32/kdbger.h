@@ -107,6 +107,8 @@
 #define KDBGER_SECTOR_SZ	512
 #define KDBGER_SECTOR_SZULL	512ULL
 #define KDBGER_IDE_BUF		(KDBGER_SECTOR_SZ * 2)
+#define KDBGER_CMOS_ADDR	0x70
+#define KDBGER_CMOS_DATA	0x71
 
 
 typedef enum {
@@ -169,6 +171,12 @@ typedef enum {
 
 	KDBGER_REQ_IDE_WRITE,
 	KDBGER_RSP_IDE_WRITE,
+
+	KDBGER_REQ_CMOS_READ,
+	KDBGER_RSP_CMOS_READ,
+
+	KDBGER_REQ_CMOS_WRITE,
+	KDBGER_RSP_CMOS_WRITE,
 
 	KDBGER_REQ_PCI_LIST,
 	KDBGER_RSP_PCI_LIST,
@@ -308,6 +316,26 @@ typedef struct PACKED {
 } kdbgerRspIdeReadPkt_t, kdbgerReqIdeWritePkt_t;
 
 
+// CMOS Read/Write packets
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u8						address;
+	u8						size;
+
+} kdbgerReqCmosReadPkt_t, kdbgerRspCmosWritePkt_t;
+
+
+typedef struct PACKED {
+
+	kdbgerCommHdr_t			kdbgerCommHdr;
+	u8						address;
+	u8						size;
+	u8						*cmosContent;
+
+} kdbgerRspCmosReadPkt_t, kdbgerReqCmosWritePkt_t;
+
+
 typedef struct PACKED {
 
 	kdbgerCommHdr_t			kdbgerCommHdr;
@@ -379,6 +407,14 @@ typedef struct PACKED {
 		// IDE Write
 		kdbgerReqIdeWritePkt_t		kdbgerReqIdeWritePkt;
 		kdbgerRspIdeWritePkt_t		kdbgerRspIdeWritePkt;
+
+		// CMOS Read
+		kdbgerReqCmosReadPkt_t		kdbgerReqCmosReadPkt;
+		kdbgerRspCmosReadPkt_t		kdbgerRspCmosReadPkt;
+
+		// CMOS Write
+		kdbgerReqCmosWritePkt_t		kdbgerReqCmosWritePkt;
+		kdbgerRspCmosWritePkt_t		kdbgerRspCmosWritePkt;
 
 		// PCI List
 		kdbgerReqPciListPkt_t		kdbgerReqPciListPkt;

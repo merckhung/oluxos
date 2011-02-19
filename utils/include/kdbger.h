@@ -34,16 +34,19 @@
 #define KDBGER_INFO_PCI_FUNC		"PCI/PCI-E"
 #define KDBGER_INFO_PCIL_FUNC		"PCI/PCI-E Listing"
 #define KDBGER_INFO_IDE_FUNC		"IDE"
+#define KDBGER_INFO_CMOS_FUNC		"CMOS"
 
 #define KDBGER_INFO_MEMORY_BASE		KDBGER_INFO_BAR_FMT KDBGER_INFO_MEMORY_FUNC "    Address: "
 #define KDBGER_INFO_IO_BASE			KDBGER_INFO_BAR_FMT KDBGER_INFO_IO_FUNC "    Address: "
 #define KDBGER_INFO_PCI_BASE		KDBGER_INFO_BAR_FMT KDBGER_INFO_PCI_FUNC "    "
 #define KDBGER_INFO_IDE_BASE		KDBGER_INFO_BAR_FMT KDBGER_INFO_IDE_FUNC "    Address: "
+#define KDBGER_INFO_CMOS_BASE		KDBGER_INFO_BAR_FMT KDBGER_INFO_CMOS_FUNC "    Address: "
 
 #define KDBGER_INFO_MEMORY_BASE_FMT	"%8.8X-%8.8Xh"
 #define KDBGER_INFO_IO_BASE_FMT		"%4.4Xh"
 #define KDBGER_INFO_PCI_BASE_FMT	"Bus: %2.2Xh, Dev: %2.2Xh, Fun: %2.2Xh"
 #define KDBGER_INFO_IDE_BASE_FMT	"%8.8X-%8.8Xh"
+#define KDBGER_INFO_CMOS_BASE_FMT	"%2.2Xh"
 
 #define KDBGER_FTITLE_PCI			"Vendor"
 #define KDBGER_STITLE_PCI			"Device"
@@ -189,6 +192,7 @@ typedef enum {
 	KHF_PCI,
 	KHF_PCIL,
 	KHF_IDE,
+	KHF_CMOS,
 
 } kdbgerHwFunc_t;
 
@@ -338,6 +342,8 @@ s32 readIo( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writeIoByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 readIde( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writeIdeByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 readCmos( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 writeCmosByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 readPci( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writePciByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 u32 calculatePciAddress( u16 bus, u8 dev, u8 func );

@@ -275,6 +275,7 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 	u16 pciSz;
 	s8 restBuf[ KDBGER_FIFO_SZ ];
 	s32 restLen;
+	u8 cmosAddr, cmosSz;
 
     // Disable interrupt
     kdbgerIntrDisable();
@@ -508,9 +509,59 @@ static void kdbgerIntHandler( u8 IrqNum ) {
 					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_IDE_WRITE;
 					pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerRspIdeWritePkt_t );
 					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
-					pKdbgerCommPkt->kdbgerRspIoWritePkt.address = addr;
-					pKdbgerCommPkt->kdbgerRspIoWritePkt.size = sz;
+					pKdbgerCommPkt->kdbgerRspIdeWritePkt.address = addr;
+					pKdbgerCommPkt->kdbgerRspIdeWritePkt.size = sz;
 					break;
+
+                case KDBGER_REQ_CMOS_READ:
+
+                    // Read CMOS device
+                    ptr = (s8 *)&pKdbgerCommPkt->kdbgerRspCmosReadPkt.cmosContent;
+                    cmosAddr = pKdbgerCommPkt->kdbgerReqCmosReadPkt.address;
+                    cmosSz = pKdbgerCommPkt->kdbgerReqCmosReadPkt.size;
+
+					// Read CMOS data
+					for( i = 0 ; i < cmosSz ; i++ ) {
+
+						// Write CMOS address
+						IoOutByte( i, KDBGER_CMOS_ADDR );
+						// Read CMOS data
+						*(ptr + i) = IoInByte( KDBGER_CMOS_DATA );
+					}
+
+                    // Prepare the response packet
+                    pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_CMOS_READ;
+                    pKdbgerCommPkt->kdbgerCommHdr.pktLen =
+                        sizeof( kdbgerRspCmosReadPkt_t ) - sizeof( s8 * ) + cmosSz;
+                    pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+                    pKdbgerCommPkt->kdbgerRspCmosReadPkt.address = cmosAddr;
+                    pKdbgerCommPkt->kdbgerRspCmosReadPkt.size = cmosSz;
+                    break;
+
+				case KDBGER_REQ_CMOS_WRITE:
+
+					// Write CMOS device
+					ptr = (s8 *)&pKdbgerCommPkt->kdbgerReqCmosWritePkt.cmosContent;
+					cmosAddr = pKdbgerCommPkt->kdbgerReqCmosReadPkt.address;
+					cmosSz = pKdbgerCommPkt->kdbgerReqCmosReadPkt.size;
+
+					// Write CMOS data
+					for( i = 0 ; i < cmosSz ; i++ ) {
+
+						// Write CMOS address
+						IoOutByte( i, KDBGER_CMOS_ADDR );
+						// Write CMOS data
+						IoOutByte( *(ptr + i), KDBGER_CMOS_DATA );
+					}
+
+					// Prepare the response packet
+					pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_CMOS_WRITE;
+					pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerRspCmosWritePkt_t );
+					pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
+					pKdbgerCommPkt->kdbgerRspCmosWritePkt.address = cmosAddr;
+					pKdbgerCommPkt->kdbgerRspCmosWritePkt.size = cmosSz;
+					break;
+
 
 				case KDBGER_REQ_PCI_LIST:
 

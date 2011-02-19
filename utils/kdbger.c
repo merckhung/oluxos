@@ -374,6 +374,12 @@ s32 main( s32 argc, s8 **argv ) {
 				kdbgerUiProperty.kdbgerHwFunc = KHF_IDE;
 				break;
 
+			// CMOS
+			case KBPRS_F7:
+				kdbgerUiProperty.kdbgerPreviousHwFunc = kdbgerUiProperty.kdbgerHwFunc;
+				kdbgerUiProperty.kdbgerHwFunc = KHF_CMOS;
+				break;
+
 			default:
 				kdbgerUiProperty.kdbgerPreviousHwFunc = kdbgerUiProperty.kdbgerHwFunc;
 				if( kdbgerUiProperty.kdbgerHwFunc == KHF_INIT )
@@ -418,6 +424,11 @@ s32 main( s32 argc, s8 **argv ) {
 					kdbgerUiProperty.kdbgerDumpPanel.infoStr = KDBGER_INFO_IDE_BASE;
 					printDumpBasePanel( &kdbgerUiProperty );
 					break;
+
+				case KHF_CMOS:
+					kdbgerUiProperty.kdbgerDumpPanel.infoStr = KDBGER_INFO_CMOS_BASE;
+					printDumpBasePanel( &kdbgerUiProperty );
+					break;
 			}
 		}
 
@@ -449,6 +460,12 @@ s32 main( s32 argc, s8 **argv ) {
 			case KHF_IDE:
 				handleKeyPressForDumpPanel( &kdbgerUiProperty );
 				if( !readIde( &kdbgerUiProperty ) )
+					printDumpUpdatePanel( &kdbgerUiProperty );
+				break;
+
+			case KHF_CMOS:
+				handleKeyPressForDumpPanel( &kdbgerUiProperty );
+				if( !readCmos( &kdbgerUiProperty ) )
 					printDumpUpdatePanel( &kdbgerUiProperty );
 				break;
 		}

@@ -76,6 +76,16 @@ s32 verifyResponsePacket( kdbgerCommPkt_t *pKdbgerCommPkt, kdbgerOpCode_t op ) {
                 return 1;
 			break;
 
+		case KDBGER_RSP_CMOS_READ:
+            if( op != KDBGER_REQ_CMOS_READ )
+                return 1;
+			break;
+
+		case KDBGER_RSP_CMOS_WRITE:
+            if( op != KDBGER_REQ_CMOS_WRITE )
+                return 1;
+			break;
+
 		case KDBGER_RSP_PCI_LIST:
 			if( op != KDBGER_REQ_PCI_LIST )
 				return 1;
@@ -185,6 +195,25 @@ s32 executeFunction( s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8 *cntBuf, 
 			memcpy( &pKdbgerCommPkt->kdbgerReqIdeWritePkt.ideContent, cntBuf, size );
 			pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
 				sizeof( kdbgerReqIdeWritePkt_t ) - sizeof( s8 * ) + size; 
+			break;
+
+		case KDBGER_REQ_CMOS_READ:
+
+			pKdbgerCommPkt->kdbgerReqCmosReadPkt.address = (u8)(addr & 0xFFULL);
+			pKdbgerCommPkt->kdbgerReqCmosReadPkt.size = (u8)(size & 0xFF);
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof( kdbgerReqCmosReadPkt_t );
+			break;
+
+		case KDBGER_REQ_CMOS_WRITE:
+
+			if( !size || !cntBuf )
+				return 1;
+
+			pKdbgerCommPkt->kdbgerReqCmosWritePkt.address = (u8)(addr & 0xFFULL);
+			pKdbgerCommPkt->kdbgerReqCmosWritePkt.size = (u8)(size & 0xFF);
+			memcpy( &pKdbgerCommPkt->kdbgerReqCmosWritePkt.cmosContent, cntBuf, size );
+			pKdbgerCommPkt->kdbgerCommHdr.pktLen = 
+				sizeof( kdbgerReqCmosWritePkt_t ) - sizeof( s8 * ) + size; 
 			break;
 
 		case KDBGER_REQ_PCI_LIST:

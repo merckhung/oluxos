@@ -199,6 +199,34 @@ s32 writeIdeByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 }
 
 
+s32 readCmos( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Read cmos
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_CMOS_READ,
+			pKdbgerUiProperty->kdbgerDumpPanel.byteBase,
+			KDBGER_BYTE_PER_SCREEN,
+			NULL,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
+s32 writeCmosByEditing( kdbgerUiProperty_t *pKdbgerUiProperty ) {
+
+	// Write cmos
+	return executeFunction(
+			pKdbgerUiProperty->fd,
+			KDBGER_REQ_CMOS_WRITE,
+			pKdbgerUiProperty->kdbgerDumpPanel.byteBase + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset,
+			sizeof( pKdbgerUiProperty->kdbgerDumpPanel.editingBuf ),
+			&pKdbgerUiProperty->kdbgerDumpPanel.editingBuf,
+			pKdbgerUiProperty->pktBuf,
+			KDBGER_MAXSZ_PKT );
+}
+
+
 s32 readPci( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 	kdbgerPciDev_t *pKdbgerPciDev;

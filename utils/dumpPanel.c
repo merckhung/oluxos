@@ -99,6 +99,10 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			dataPtr = (u8 *)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIdeReadPkt.ideContent;
 			break;
 
+		case KHF_CMOS:
+			dataPtr = (u8 *)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspCmosReadPkt.cmosContent;
+			break;
+
 		default:
 		case KHF_MEM:
 			dataPtr = (u8 *)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent;
@@ -274,6 +278,21 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase >> 32),
 				(u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFFFFFFFULL) );
 			break;
+
+		case KHF_CMOS:
+
+			// Base address
+			printWindowAt(
+				pKdbgerUiProperty->kdbgerDumpPanel,
+				baseaddr, 
+				KDBGER_STRING_NLINE,
+				20,
+				KDBGER_DUMP_BASEADDR_LINE,
+				strlen( pKdbgerUiProperty->kdbgerDumpPanel.infoStr ),
+				WHITE_BLUE,
+				KDBGER_INFO_CMOS_BASE_FMT,
+				(u8)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFULL) );
+			break;
 	}
 
 
@@ -401,6 +420,10 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 					writeIdeByEditing( pKdbgerUiProperty );
 					break;
 
+				case KHF_CMOS:
+					writeCmosByEditing( pKdbgerUiProperty );
+					break;
+
 				default:
 					break;
 			}
@@ -484,6 +507,8 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 				else
 					pKdbgerUiProperty->kdbgerDumpPanel.byteBase--;
             }
+			else if( pKdbgerUiProperty->kdbgerHwFunc == KHF_CMOS )
+				pKdbgerUiProperty->kdbgerDumpPanel.byteBase = 0;
             else
 				pKdbgerUiProperty->kdbgerDumpPanel.byteBase -= KDBGER_BYTE_PER_SCREEN;
             break;
@@ -496,6 +521,8 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 				else
 					pKdbgerUiProperty->kdbgerDumpPanel.byteBase++;
 			}
+			else if( pKdbgerUiProperty->kdbgerHwFunc == KHF_CMOS )
+				pKdbgerUiProperty->kdbgerDumpPanel.byteBase = 0;
 			else
 				pKdbgerUiProperty->kdbgerDumpPanel.byteBase += KDBGER_BYTE_PER_SCREEN;
             break;
