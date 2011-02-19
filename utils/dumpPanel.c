@@ -2,7 +2,7 @@
  * Copyright (C) 2011 Olux Organization All rights reserved.
  * Author: Merck Hung <merck@olux.org>
  *
- * File: pciPanel.c
+ * File: dumpPanel.c
  * Description:
  *	OluxOS Kernel Debugger
  *

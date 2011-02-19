@@ -102,6 +102,23 @@
 #define KDBGER_STS_INTV_SECS		1
 #define KDBGER_MAX_PCINAME			75
 
+#define KDBGER_PCIL_TITLE			"PCI/PCI-E Device Listing                                   Ven  Dev  Bus Dev Fun"
+#define KDBGER_PCIL_LINE_FMT		"%-12.12s,%-45.45s %4.4X %4.4X  %2.2X  %2.2X  %2.2X"
+#define KDBGER_PCIL_TITLE_COLUMN	KDBGER_MAX_COLUMN
+#define KDBGER_PCIL_TITLE_LINE		1
+#define KDBGER_PCIL_TITLE_X_POS		1
+#define KDBGER_PCIL_TITLE_Y_POS		0
+#define KDBGER_PCIL_CON_COLUMN		KDBGER_MAX_COLUMN
+#define KDBGER_PCIL_CON_LINE		(KDBGER_MAX_LINE - 2)
+#define KDBGER_PCIL_CON_X_POS		2
+#define KDBGER_PCIL_CON_Y_POS		0
+#define KDBGER_BUF_SIZE				(KDBGER_PCIL_CON_COLUMN * KDBGER_PCIL_CON_LINE + 1)
+#define KDBGER_REC_PER_PAGE			21
+
+#define DECLARE_WINDOW( NAME ) \
+	PANEL	*panel##NAME; \
+	WINDOW	*NAME;
+
 
 #define printWindow( RESRC, NAME, LINE, COLUMN, X, Y, COLORPAIR, FORMAT, ARGS... ) {\
     RESRC.NAME = newwin( LINE, COLUMN, X, Y );\
@@ -208,6 +225,7 @@ typedef enum {
 	BLACK_GREEN,
 	BLACK_YELLOW,
 	BLACK_BLUE,
+	BLACK_CYAN,
 
     CYAN_BLUE,
 	CYAN_WHITE,
@@ -236,21 +254,51 @@ typedef struct {
 } kdbgerPciIds_t;
 
 
+typedef struct PACKED {
+
+	u16					vendorId;
+	u16					deviceId;
+	u16					command;
+	u16					status;
+	u8					revisionId;
+	u8					classCode1;
+	u16					classCode2;
+	u8					cacheLine;
+	u8					latencyTimer;
+	u8					headerType;
+	u8					bist;
+
+	u32					baseAddrReg0;
+	u32					baseAddrReg1;
+	u32					baseAddrReg2;
+	u32					baseAddrReg3;
+	u32					baseAddrReg4;
+	u32					baseAddrReg5;
+	
+	u32					cardbusCisPointer;
+	u16					subSysVendorId;
+	u16					subSysId;
+	u32					expRomBaseAddr;
+	u8					capPointer;
+	u8					reserved1;
+	u16					reserved2;
+	u32					reserved3;
+	u8					intLine;
+	u8					intPin;
+	u8					minGnt;
+	u8					maxLatency;
+
+} kdbgerPciConfig_t;
+
+
 typedef struct {
 
-    PANEL				*panelbackground;
-    PANEL				*panellogo;
-    PANEL				*panelcopyright;
-    PANEL				*panelstatus;
-    PANEL				*paneltime;
-	PANEL				*panelhelp;
-
-    WINDOW				*background;
-    WINDOW				*logo;
-    WINDOW				*copyright;
-    WINDOW				*status;
-    WINDOW				*time;
-	WINDOW				*help;
+	DECLARE_WINDOW( background );
+	DECLARE_WINDOW( logo );
+	DECLARE_WINDOW( copyright );
+	DECLARE_WINDOW( status );
+	DECLARE_WINDOW( time );
+	DECLARE_WINDOW( help );
 
 	u32					lastSecond;
 	s8					*statusStr;
@@ -262,33 +310,19 @@ typedef struct {
 
 typedef struct {
 
-	PANEL				*paneltop;
-	PANEL				*paneloffset;
-	PANEL				*panelleft;
-	PANEL				*panelrtop;
-    PANEL				*panelvalue;
-    PANEL				*panelascii;
-	PANEL				*panelinfo;
-	PANEL				*panelhighlight;
-	PANEL				*panelbits;
-	PANEL				*panelbaseaddr;
-	PANEL				*panelhlascii;
-	PANEL				*panelftitle;
-	PANEL				*panelstitle;
-
-	WINDOW				*top;
-	WINDOW				*offset;
-	WINDOW				*left;
-	WINDOW				*rtop;
-    WINDOW				*value;
-    WINDOW				*ascii;
-	WINDOW				*info;
-	WINDOW				*highlight;
-	WINDOW 				*bits;
-	WINDOW				*baseaddr;
-	WINDOW				*hlascii;
-	WINDOW				*ftitle;
-	WINDOW				*stitle;
+	DECLARE_WINDOW( top );
+	DECLARE_WINDOW( offset );
+	DECLARE_WINDOW( left );
+	DECLARE_WINDOW( rtop );
+	DECLARE_WINDOW( value );
+	DECLARE_WINDOW( ascii );
+	DECLARE_WINDOW( info );
+	DECLARE_WINDOW( highlight );
+	DECLARE_WINDOW( bits );
+	DECLARE_WINDOW( baseaddr );
+	DECLARE_WINDOW( hlascii );
+	DECLARE_WINDOW( ftitle );
+	DECLARE_WINDOW( stitle );
 
 	u64					byteBase;
 	s32					byteOffset;
@@ -298,6 +332,18 @@ typedef struct {
 	u8					editingBuf;
 
 } kdbgerDumpPanel_t;
+
+
+typedef struct {
+
+	DECLARE_WINDOW( title );
+	DECLARE_WINDOW( content );
+	DECLARE_WINDOW( highlight );
+
+	s32					hlIndex;
+	s32					pageOffset;
+
+} kdbgerPciListPanel_t;
 
 
 typedef struct {
@@ -315,6 +361,7 @@ typedef struct {
 	// Base panel
 	kdbgerBasePanel_t	kdbgerBasePanel;
 	kdbgerDumpPanel_t	kdbgerDumpPanel;
+	kdbgerPciListPanel_t kdbgerPciListPanel;
 
 	// PCI list
 	kdbgerPciDev_t		*pKdbgerPciDev;
@@ -348,6 +395,12 @@ s32 readPci( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writePciByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 u32 calculatePciAddress( u16 bus, u8 dev, u8 func );
 s32 getPciVenDevTexts( u16 venid, u16 devid, s8 *ventxt, s8 *devtxt, s8 *pciids );
+
+void printPciListBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void printPciListUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void clearPciListBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+void clearPciListUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
+s32 handleKeyPressForPciListPanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 
 void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );

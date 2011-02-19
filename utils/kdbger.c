@@ -67,6 +67,7 @@ void initColorPairs( void ) {
 	init_pair( BLACK_GREEN, COLOR_BLACK, COLOR_GREEN );
 	init_pair( BLACK_YELLOW, COLOR_BLACK, COLOR_YELLOW );
 	init_pair( BLACK_BLUE, COLOR_BLACK, COLOR_BLUE );
+	init_pair( BLACK_CYAN, COLOR_BLACK, COLOR_CYAN );
 
     init_pair( CYAN_BLUE, COLOR_CYAN, COLOR_BLUE );
 	init_pair( CYAN_WHITE, COLOR_CYAN, COLOR_WHITE );
@@ -206,7 +207,7 @@ Author: Merck Hung <merckhung@gmail.com>\n\n\
   <F5>:  CPU Memory space\n\
   <F6>:  IDE hard drive content (1st HDD)\n\
   <F7>:  CMOS content (Intel x86 arch only)\n\
-  <F8>:  I2C space\n\
+  <F8>:  TBD\n\
   <F9>:  TBD\n\
   <F10>: TBD\n\
   <F11>: TBD\n\
@@ -331,8 +332,6 @@ s32 main( s32 argc, s8 **argv ) {
 
 		// Get keyboard input
 		kdbgerUiProperty.inputBuf = getch();
-//		if( kdbgerUiProperty.inputBuf != -1 )
-//			printf( "C = 0x%8.8X\n", kdbgerUiProperty.inputBuf );
 		switch( kdbgerUiProperty.inputBuf ) {
 
 			// ESC
@@ -388,6 +387,9 @@ s32 main( s32 argc, s8 **argv ) {
 		}
 
 
+DirectTransition:
+
+
 		// Clear previous function
 		if( kdbgerUiProperty.kdbgerPreviousHwFunc 
 			!= kdbgerUiProperty.kdbgerHwFunc ) {
@@ -395,8 +397,16 @@ s32 main( s32 argc, s8 **argv ) {
 			// Clear screen & reset
 			clearDumpBasePanel( &kdbgerUiProperty );
 			clearDumpUpdatePanel( &kdbgerUiProperty );
-			kdbgerUiProperty.kdbgerDumpPanel.byteBase = 0;
+			clearPciListBasePanel( &kdbgerUiProperty );
+			clearPciListUpdatePanel( &kdbgerUiProperty );
+
+			if( (kdbgerUiProperty.kdbgerPreviousHwFunc != KHF_PCIL)
+				&& (kdbgerUiProperty.kdbgerHwFunc != KHF_PCI) )
+				kdbgerUiProperty.kdbgerDumpPanel.byteBase = 0;
+
 			kdbgerUiProperty.kdbgerDumpPanel.byteOffset = 0;
+			kdbgerUiProperty.kdbgerPciListPanel.hlIndex = 0;
+			kdbgerUiProperty.kdbgerPciListPanel.pageOffset = 0;
 
 			// Print
 			switch( kdbgerUiProperty.kdbgerHwFunc ) {
@@ -418,6 +428,7 @@ s32 main( s32 argc, s8 **argv ) {
 					break;
 
 				case KHF_PCIL:
+					printPciListBasePanel( &kdbgerUiProperty );
 					break;
 
 				case KHF_IDE:
@@ -455,6 +466,15 @@ s32 main( s32 argc, s8 **argv ) {
 				break;
 
 			case KHF_PCIL:
+				if( handleKeyPressForPciListPanel( &kdbgerUiProperty ) ) {
+
+					kdbgerUiProperty.kdbgerPreviousHwFunc = kdbgerUiProperty.kdbgerHwFunc;
+					kdbgerUiProperty.kdbgerHwFunc = KHF_PCI;
+					kdbgerUiProperty.inputBuf = KBPRS_F3;
+					goto DirectTransition;
+				}
+				else
+					printPciListUpdatePanel( &kdbgerUiProperty );
 				break;
 
 			case KHF_IDE:
