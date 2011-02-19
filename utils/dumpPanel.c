@@ -178,11 +178,13 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		"%4.4X",
 		pKdbgerUiProperty->kdbgerDumpPanel.byteOffset );
 
-	// Print base address
+	// Print base address & First/Second title
 	switch( pKdbgerUiProperty->kdbgerHwFunc ) {
 
 		default:
 		case KHF_MEM:
+
+			// Base address
 			printWindowAt(
 				pKdbgerUiProperty->kdbgerDumpPanel,
 				baseaddr, 
@@ -197,6 +199,8 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			break;
 
 		case KHF_IO:
+
+			// Base address
 			printWindowAt(
 				pKdbgerUiProperty->kdbgerDumpPanel,
 				baseaddr, 
@@ -210,6 +214,8 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 			break;
 
 		case KHF_PCI:
+
+			// Base address
 			pKdbgerPciDev = getPciDevice( pKdbgerUiProperty, 
 							pKdbgerUiProperty->kdbgerDumpPanel.byteBase );
 			if( pKdbgerPciDev )
@@ -223,12 +229,39 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 					WHITE_BLUE,
 					KDBGER_INFO_PCI_BASE_FMT,
 					pKdbgerPciDev->bus, pKdbgerPciDev->dev, pKdbgerPciDev->fun );
+
+			// PCI first/second title
+			printWindowMove(
+				pKdbgerUiProperty->kdbgerDumpPanel,
+				ftitle, 
+				KDBGER_STRING_NLINE,
+				KDBGER_MAX_PCINAME,
+				KDBGER_DUMP_FTITLE_LINE,
+				KDBGER_DUMP_FTITLE_COLUMN,
+				WHITE_BLUE,
+				"%s: %s",
+				KDBGER_FTITLE_PCI,
+				(pKdbgerUiProperty->pKdbgerPciIds + pKdbgerUiProperty->kdbgerDumpPanel.byteBase)->venTxt );
+
+			printWindowMove(
+				pKdbgerUiProperty->kdbgerDumpPanel,
+				stitle, 
+				KDBGER_STRING_NLINE,
+				KDBGER_MAX_PCINAME,
+				KDBGER_DUMP_STITLE_LINE,
+				KDBGER_DUMP_FTITLE_COLUMN,
+				WHITE_BLUE,
+				"%s: %s",
+				KDBGER_STITLE_PCI,
+				(pKdbgerUiProperty->pKdbgerPciIds + pKdbgerUiProperty->kdbgerDumpPanel.byteBase)->devTxt );
 			break;
 
 		case KHF_PCIL:
 			break;
 
 		case KHF_IDE:
+
+			// Base address
 			printWindowAt(
 				pKdbgerUiProperty->kdbgerDumpPanel,
 				baseaddr, 
@@ -338,6 +371,8 @@ void clearDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, highlight );
 	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, hlascii );
 	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, bits );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, ftitle );
+	destroyWindow( pKdbgerUiProperty->kdbgerDumpPanel, stitle );
 }
 
 

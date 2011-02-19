@@ -33,6 +33,7 @@ static void help( void ) {
     fprintf( stderr, "OluxOS Kernel Debugger, Version "KDBGER_VERSION"\n" );
     fprintf( stderr, "Author: Merck Hung <merckhung@gmail.com>\n" );
     fprintf( stderr, "help: kdbger [-d /dev/ttyS0] [-h]\n\n" );
+	fprintf( stderr, "\t-p\tPCI IDs filepath, default is " KDBGER_DEF_PCIIDS "\n" );
 	fprintf( stderr, "\t-d\tUART TTY device, default is " KDBGER_DEF_TTYDEV "\n");
     fprintf( stderr, "\t-h\tPrint help and exit\n\n");
 }
@@ -65,6 +66,7 @@ void initColorPairs( void ) {
     init_pair( BLACK_WHITE, COLOR_BLACK, COLOR_WHITE );
 	init_pair( BLACK_GREEN, COLOR_BLACK, COLOR_GREEN );
 	init_pair( BLACK_YELLOW, COLOR_BLACK, COLOR_YELLOW );
+	init_pair( BLACK_BLUE, COLOR_BLACK, COLOR_BLUE );
 
     init_pair( CYAN_BLUE, COLOR_CYAN, COLOR_BLUE );
 	init_pair( CYAN_WHITE, COLOR_CYAN, COLOR_WHITE );
@@ -241,15 +243,20 @@ s32 main( s32 argc, s8 **argv ) {
 	kdbgerUiProperty.kdbgerHwFunc = kdbgerUiProperty.kdbgerPreviousHwFunc = KHF_INIT;
 	kdbgerUiProperty.pKdbgerCommPkt = (kdbgerCommPkt_t *)kdbgerUiProperty.pktBuf;
 	kdbgerUiProperty.kdbgerBasePanel.statusStr = KDBGER_WELCOME_TXT;
+	strncpy( kdbgerUiProperty.pciIdsPath, KDBGER_DEF_PCIIDS, KDBGER_MAX_PATH );
 
 
 	// Handle parameters
-    while( (c = getopt( argc, argv, "d:h" )) != EOF ) {
+    while( (c = getopt( argc, argv, "p:d:h" )) != EOF ) {
 
         switch( c ) {
 
 			case 'd':
 				strncpy( ttyDevice, optarg, KDBGER_MAX_PATH );
+				break;
+
+			case 'p':
+				strncpy( kdbgerUiProperty.pciIdsPath, optarg, KDBGER_MAX_PATH );
 				break;
 
             case 'h':

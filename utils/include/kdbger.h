@@ -10,13 +10,15 @@
 
 
 #define KDBGER_VERSION				"0.1"
-#define KDBGER_MAX_PATH				40
+#define KDBGER_MAX_PATH				256
+#define KDBGER_DEF_PCIIDS			"/usr/share/misc/pci.ids"
 #define KDBGER_DEF_TTYDEV			"/dev/pts/0"
 
 #define KDBGER_MIN_LINE				0
 #define KDBGER_MIN_COLUMN			0
 #define KDBGER_MAX_LINE				23
 #define KDBGER_MAX_COLUMN           80
+#define KDBGER_MAX_READBUF			512
 
 #define KDBGER_STRING_NLINE			1
 #define KDBGER_MAX_TIMESTR			8
@@ -43,6 +45,9 @@
 #define KDBGER_INFO_PCI_BASE_FMT	"Bus: %2.2Xh, Dev: %2.2Xh, Fun: %2.2Xh"
 #define KDBGER_INFO_IDE_BASE_FMT	"%8.8X-%8.8Xh"
 
+#define KDBGER_FTITLE_PCI			"Vendor"
+#define KDBGER_STITLE_PCI			"Device"
+
 #define KDBGER_INFO_LINE			(KDBGER_MAX_LINE - 1)
 #define KDBGER_INFO_COLUMN			0
 
@@ -64,6 +69,10 @@
 #define KDBGER_DUMP_BITS_DIGITS		9
 
 #define KDBGER_DUMP_BASEADDR_LINE	KDBGER_INFO_LINE
+#define KDBGER_DUMP_FTITLE_LINE		1
+#define KDBGER_DUMP_FTITLE_COLUMN	1
+#define KDBGER_DUMP_STITLE_LINE		(KDBGER_DUMP_FTITLE_LINE + 1)
+#define KDBGER_DUMP_STITLE_COLUMN   KDBGER_DUMP_FTITLE_COLUMN
 
 #define KDBGER_DUMP_TOP_LINE		4
 #define KDBGER_DUMP_TOP_COLUMN		6
@@ -88,6 +97,7 @@
 
 #define KDBGER_STS_BUF_SZ			4096
 #define KDBGER_STS_INTV_SECS		1
+#define KDBGER_MAX_PCINAME			75
 
 
 #define printWindow( RESRC, NAME, LINE, COLUMN, X, Y, COLORPAIR, FORMAT, ARGS... ) {\
@@ -193,6 +203,7 @@ typedef enum {
     BLACK_WHITE,
 	BLACK_GREEN,
 	BLACK_YELLOW,
+	BLACK_BLUE,
 
     CYAN_BLUE,
 	CYAN_WHITE,
@@ -211,6 +222,14 @@ typedef enum {
 	GREEN_WHITE,
 
 } kdbgerColorPairs_t;
+
+
+typedef struct {
+
+	s8					venTxt[ KDBGER_MAX_PCINAME ];
+	s8					devTxt[ KDBGER_MAX_PCINAME ];
+
+} kdbgerPciIds_t;
 
 
 typedef struct {
@@ -250,6 +269,8 @@ typedef struct {
 	PANEL				*panelbits;
 	PANEL				*panelbaseaddr;
 	PANEL				*panelhlascii;
+	PANEL				*panelftitle;
+	PANEL				*panelstitle;
 
 	WINDOW				*top;
 	WINDOW				*offset;
@@ -262,6 +283,8 @@ typedef struct {
 	WINDOW 				*bits;
 	WINDOW				*baseaddr;
 	WINDOW				*hlascii;
+	WINDOW				*ftitle;
+	WINDOW				*stitle;
 
 	u64					byteBase;
 	s32					byteOffset;
@@ -291,7 +314,9 @@ typedef struct {
 
 	// PCI list
 	kdbgerPciDev_t		*pKdbgerPciDev;
+	kdbgerPciIds_t		*pKdbgerPciIds;
 	u32					numOfPciDevice;
+	s8					pciIdsPath[ KDBGER_MAX_PATH ];
 
 	// E820 list
 	kdbgerE820record_t	*pKdbgerE820record;
@@ -316,6 +341,7 @@ s32 writeIdeByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 readPci( kdbgerUiProperty_t *pKdbgerUiProperty );
 s32 writePciByEditing( kdbgerUiProperty_t *pKdbgerUiProperty );
 u32 calculatePciAddress( u16 bus, u8 dev, u8 func );
+s32 getPciVenDevTexts( u16 venid, u16 devid, s8 *ventxt, s8 *devtxt, s8 *pciids );
 
 void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
 void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty );
