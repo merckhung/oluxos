@@ -44,14 +44,15 @@ void printDumpBasePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		KDBGER_DUMP_TOP_BAR );
 
 	// Print Rtop bar
-	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
-		rtop, 
-		KDBGER_STRING_NLINE,
-		KDBGER_DUMP_BYTE_PER_LINE,
-		KDBGER_DUMP_RTOP_LINE,
-		KDBGER_DUMP_RTOP_COLUMN,
-		RED_BLUE,
-		KDBGER_DUMP_RTOP_BAR );
+	if( pKdbgerUiProperty->kdbgerHwFunc != KHF_PCI )
+		printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
+			rtop, 
+			KDBGER_STRING_NLINE,
+			KDBGER_DUMP_BYTE_PER_LINE,
+			KDBGER_DUMP_RTOP_LINE,
+			KDBGER_DUMP_RTOP_COLUMN,
+			RED_BLUE,
+			KDBGER_DUMP_RTOP_BAR );
 
 	// Print Left bar
 	printWindowAt( pKdbgerUiProperty->kdbgerDumpPanel,
@@ -561,30 +562,64 @@ void handleKeyPressForDumpPanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 		case KBPRS_PGUP:
 
-            if( pKdbgerUiProperty->kdbgerHwFunc == KHF_PCI ) {
-				if( !pKdbgerUiProperty->kdbgerDumpPanel.byteBase )
-					pKdbgerUiProperty->kdbgerDumpPanel.byteBase = pKdbgerUiProperty->numOfPciDevice - 1;
-				else
-					pKdbgerUiProperty->kdbgerDumpPanel.byteBase--;
-            }
-			else if( pKdbgerUiProperty->kdbgerHwFunc == KHF_CMOS )
-				pKdbgerUiProperty->kdbgerDumpPanel.byteBase = 0;
-            else
+			switch( pKdbgerUiProperty->kdbgerHwFunc ) {
+
+				case KHF_PCI:
+					if( !pKdbgerUiProperty->kdbgerDumpPanel.byteBase )
+						pKdbgerUiProperty->kdbgerDumpPanel.byteBase = pKdbgerUiProperty->numOfPciDevice - 1;
+					else
+						pKdbgerUiProperty->kdbgerDumpPanel.byteBase--;
+					break;
+
+				case KHF_MEM:
+					pKdbgerUiProperty->kdbgerDumpPanel.byteBase -= KDBGER_BYTE_PER_SCREEN;
+					if( pKdbgerUiProperty->kdbgerDumpPanel.byteBase >= KDBGER_MAXADDR_MEM )
+						pKdbgerUiProperty->kdbgerDumpPanel.byteBase =
+							(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFULL)
+							| (KDBGER_MAXADDR_MEM & ~0xFFULL);
+					break;
+
+				case KHF_IO:
+					pKdbgerUiProperty->kdbgerDumpPanel.byteBase -= KDBGER_BYTE_PER_SCREEN;
+					if( pKdbgerUiProperty->kdbgerDumpPanel.byteBase >= KDBGER_MAXADDR_IO )
+						pKdbgerUiProperty->kdbgerDumpPanel.byteBase =
+							(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFULL)
+							| (KDBGER_MAXADDR_IO & ~0xFFULL);
+					break;
+
+				default:
+					break;
+			}
 				pKdbgerUiProperty->kdbgerDumpPanel.byteBase -= KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_PGDN:
 
-			if( pKdbgerUiProperty->kdbgerHwFunc == KHF_PCI ) {
-				if( (pKdbgerUiProperty->kdbgerDumpPanel.byteBase + 1) >= pKdbgerUiProperty->numOfPciDevice )
-					pKdbgerUiProperty->kdbgerDumpPanel.byteBase = 0;
-				else
-					pKdbgerUiProperty->kdbgerDumpPanel.byteBase++;
+			switch( pKdbgerUiProperty->kdbgerHwFunc ) {
+
+				case KHF_PCI:
+					if( (pKdbgerUiProperty->kdbgerDumpPanel.byteBase + 1) 
+						>= pKdbgerUiProperty->numOfPciDevice )
+						pKdbgerUiProperty->kdbgerDumpPanel.byteBase = 0;
+					else
+						pKdbgerUiProperty->kdbgerDumpPanel.byteBase++;
+					break;
+
+				case KHF_MEM:
+					pKdbgerUiProperty->kdbgerDumpPanel.byteBase += KDBGER_BYTE_PER_SCREEN;
+					if( pKdbgerUiProperty->kdbgerDumpPanel.byteBase >= KDBGER_MAXADDR_MEM )
+						pKdbgerUiProperty->kdbgerDumpPanel.byteBase &= 0xFFULL;
+					break;
+
+				case KHF_IO:
+					pKdbgerUiProperty->kdbgerDumpPanel.byteBase += KDBGER_BYTE_PER_SCREEN;
+					if( pKdbgerUiProperty->kdbgerDumpPanel.byteBase >= KDBGER_MAXADDR_IO )
+						pKdbgerUiProperty->kdbgerDumpPanel.byteBase &= 0xFFULL;
+					break;
+
+				default:
+					break;
 			}
-			else if( pKdbgerUiProperty->kdbgerHwFunc == KHF_CMOS )
-				pKdbgerUiProperty->kdbgerDumpPanel.byteBase = 0;
-			else
-				pKdbgerUiProperty->kdbgerDumpPanel.byteBase += KDBGER_BYTE_PER_SCREEN;
             break;
 
 		case KBPRS_ENTER:
