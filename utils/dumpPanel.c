@@ -84,6 +84,8 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 	u8 *vp = valueBuf, *ap = asciiBuf;
 	u8 *dataPtr, *pDataPtr;
 	kdbgerPciDev_t *pKdbgerPciDev;
+	kdbgerPciConfig_t *pKdbgerPciConfig;
+	s8 *mem = "Mem", *io = "I/O";
 
 	switch( pKdbgerUiProperty->kdbgerHwFunc ) {
 
@@ -123,27 +125,83 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 		dataPtr[ 7 ], dataPtr[ 8 ], dataPtr[ 9 ], dataPtr[ 10 ], dataPtr[ 11 ], dataPtr[ 12 ], dataPtr[ 13 ],
 		dataPtr[ 14 ], dataPtr[ 15 ] );
 
-		ap += sprintf( (s8 *)ap,
-		"%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
-		KDBGER_DUMP_ASCII_FILTER( dataPtr[ 0 ] ),
-		KDBGER_DUMP_ASCII_FILTER( dataPtr[ 1 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 2 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 3 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 4 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 5 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 6 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 7 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 8 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 9 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 10 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 11 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 12 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 13 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 14 ] ),
-        KDBGER_DUMP_ASCII_FILTER( dataPtr[ 15 ] ) );
+		if( pKdbgerUiProperty->kdbgerHwFunc != KHF_PCI )
+			ap += sprintf( (s8 *)ap,
+			"%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
+			KDBGER_DUMP_ASCII_FILTER( dataPtr[ 0 ] ),
+			KDBGER_DUMP_ASCII_FILTER( dataPtr[ 1 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 2 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 3 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 4 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 5 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 6 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 7 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 8 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 9 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 10 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 11 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 12 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 13 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 14 ] ),
+        	KDBGER_DUMP_ASCII_FILTER( dataPtr[ 15 ] ) );
 
 		// Move to next line
 		dataPtr += KDBGER_DUMP_BYTE_PER_LINE;
+	}
+
+	if( pKdbgerUiProperty->kdbgerHwFunc == KHF_PCI ) {
+
+		pKdbgerPciConfig = (kdbgerPciConfig_t *)pDataPtr;
+		sprintf( (s8 *)ap,
+			"VEN ID: %4.4Xh\n"
+			"DEV ID: %4.4Xh\n\n"
+			"Rev ID  : %2.2Xh\n"
+			"Int Line: %2.2Xh\n"
+			"Int Pin : %2.2Xh\n\n"
+			"%s: %8.8Xh\n"
+			"%s: %8.8Xh\n"
+			"%s: %8.8Xh\n"
+			"%s: %8.8Xh\n"
+			"%s: %8.8Xh\n"
+			"%s: %8.8Xh\n\n"
+			"ROM: %8.8Xh\n",
+			pKdbgerPciConfig->vendorId,
+			pKdbgerPciConfig->deviceId,
+			pKdbgerPciConfig->revisionId,
+			pKdbgerPciConfig->intLine,
+			pKdbgerPciConfig->intPin,
+
+			(pKdbgerPciConfig->baseAddrReg0 & KDBGER_PCIBAR_IO) ? io : mem,
+			(pKdbgerPciConfig->baseAddrReg0 & KDBGER_PCIBAR_IO) ?
+				(pKdbgerPciConfig->baseAddrReg0 & KDBGER_PCIBAR_IOBA_MASK) :
+				(pKdbgerPciConfig->baseAddrReg0 & KDBGER_PCIBAR_MEMBA_MASK),
+
+			(pKdbgerPciConfig->baseAddrReg1 & KDBGER_PCIBAR_IO) ? io : mem,
+            (pKdbgerPciConfig->baseAddrReg1 & KDBGER_PCIBAR_IO) ?
+                (pKdbgerPciConfig->baseAddrReg1 & KDBGER_PCIBAR_IOBA_MASK) :
+                (pKdbgerPciConfig->baseAddrReg1 & KDBGER_PCIBAR_MEMBA_MASK),
+
+			(pKdbgerPciConfig->baseAddrReg2 & KDBGER_PCIBAR_IO) ? io : mem,
+            (pKdbgerPciConfig->baseAddrReg2 & KDBGER_PCIBAR_IO) ?
+                (pKdbgerPciConfig->baseAddrReg2 & KDBGER_PCIBAR_IOBA_MASK) :
+                (pKdbgerPciConfig->baseAddrReg2 & KDBGER_PCIBAR_MEMBA_MASK),
+
+			(pKdbgerPciConfig->baseAddrReg3 & KDBGER_PCIBAR_IO) ? io : mem,
+            (pKdbgerPciConfig->baseAddrReg3 & KDBGER_PCIBAR_IO) ?
+                (pKdbgerPciConfig->baseAddrReg3 & KDBGER_PCIBAR_IOBA_MASK) :
+                (pKdbgerPciConfig->baseAddrReg3 & KDBGER_PCIBAR_MEMBA_MASK),
+
+			(pKdbgerPciConfig->baseAddrReg4 & KDBGER_PCIBAR_IO) ? io : mem,
+            (pKdbgerPciConfig->baseAddrReg4 & KDBGER_PCIBAR_IO) ?
+                (pKdbgerPciConfig->baseAddrReg4 & KDBGER_PCIBAR_IOBA_MASK) :
+                (pKdbgerPciConfig->baseAddrReg4 & KDBGER_PCIBAR_MEMBA_MASK),
+
+			(pKdbgerPciConfig->baseAddrReg5 & KDBGER_PCIBAR_IO) ? io : mem,
+            (pKdbgerPciConfig->baseAddrReg5 & KDBGER_PCIBAR_IO) ?
+                (pKdbgerPciConfig->baseAddrReg5 & KDBGER_PCIBAR_IOBA_MASK) :
+                (pKdbgerPciConfig->baseAddrReg5 & KDBGER_PCIBAR_MEMBA_MASK),
+
+			pKdbgerPciConfig->expRomBaseAddr );
 	}
 
 	// Print value
@@ -357,18 +415,20 @@ void printDumpUpdatePanel( kdbgerUiProperty_t *pKdbgerUiProperty ) {
 
 
 	// Print ASCII highlight
-    y = (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_ASCII_LINE;
-    x = (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset % KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_ASCII_COLUMN;
-	printWindowMove(
-		pKdbgerUiProperty->kdbgerDumpPanel,
-		hlascii,
-		KDBGER_STRING_NLINE,
-		KDBGER_DUMP_HLA_DIGITS,
-		y,
-		x,
-		YELLOW_RED,
-		"%c",
-		KDBGER_DUMP_ASCII_FILTER( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset) ) );
+	if( pKdbgerUiProperty->kdbgerHwFunc != KHF_PCI ) {
+    	y = (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset / KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_ASCII_LINE;
+    	x = (pKdbgerUiProperty->kdbgerDumpPanel.byteOffset % KDBGER_DUMP_BYTE_PER_LINE) + KDBGER_DUMP_ASCII_COLUMN;
+		printWindowMove(
+			pKdbgerUiProperty->kdbgerDumpPanel,
+			hlascii,
+			KDBGER_STRING_NLINE,
+			KDBGER_DUMP_HLA_DIGITS,
+			y,
+			x,
+			YELLOW_RED,
+			"%c",
+			KDBGER_DUMP_ASCII_FILTER( *(pDataPtr + pKdbgerUiProperty->kdbgerDumpPanel.byteOffset) ) );
+	}
 }
 
 
