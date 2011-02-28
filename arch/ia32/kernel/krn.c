@@ -61,7 +61,7 @@ void krn_entry( void ) {
 
 
     // Setup Page
-    //MmPageInit();
+    MmPageInit();
 	PciDetectDevice();
 
 
@@ -83,7 +83,7 @@ void krn_entry( void ) {
 	
 
     // Init keyboard
-    //KbdInitKeyboard();
+    KbdInitKeyboard();
 
 
 	// Enable serial interrupt

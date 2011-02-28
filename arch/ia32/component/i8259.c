@@ -42,16 +42,21 @@ void i8259Init( void ) {
     //
     // Initialize Master PIC
     //
-    // 1. Let maste and slave PIC go into initialize sequence
-    //    D4 = 1, D0 = 1 : 0x11
     // 2. Remap IRQ0 to Interrupt 32
     // 3. Slave PIC connected at IRQ2, Interrupt 33
     // 4. Set to microprocessor and normal EOI mode
     //
-    IoOutByte( 0x11, PIC_MASTER_ICW1 );
-    IoOutByte( PIC_IRQ_BASE, PIC_MASTER_ICW2 );
-    IoOutByte( 1U << PIC_CASCADE_IR, PIC_MASTER_ICW3 );
-    IoOutByte( 0x01, PIC_MASTER_ICW4 );
+	// ICW1, Edge Trigger, Cascaded, ICW4
+    IoOutByte( 0x11, PIC_MASTER_CMD );
+
+	// ICW2, Remap IRQ0 to interrupt vector 32 (0x20)
+    IoOutByte( PIC_IRQ_BASE, PIC_MASTER_IMR );
+
+	// ICW3
+    IoOutByte( 1U << PIC_CASCADE_IR, PIC_MASTER_IMR );
+
+	// ICW4, 8086/88 mode
+    IoOutByte( 0x01, PIC_MASTER_IMR );
 
 
     DbgPrint( "Initialize Slave i8259\n" );
@@ -60,10 +65,10 @@ void i8259Init( void ) {
     //
     // Note: remap IRQ8 to IRQ40
     //
-    IoOutByte( 0x11, PIC_SLAVE_ICW1 );
-    IoOutByte( PIC_IRQ_SLAVE, PIC_SLAVE_ICW2 );
-    IoOutByte( 1U << PIC_CASCADE_IR, PIC_SLAVE_ICW3 );
-    IoOutByte( 0x01, PIC_SLAVE_ICW4 );
+    IoOutByte( 0x11, PIC_SLAVE_CMD );
+    IoOutByte( PIC_IRQ_SLAVE, PIC_SLAVE_IMR );
+    IoOutByte( 1U << PIC_CASCADE_IR, PIC_SLAVE_IMR );
+    IoOutByte( 0x01, PIC_SLAVE_IMR );
 
 
     // Mask all HW interrupt again
