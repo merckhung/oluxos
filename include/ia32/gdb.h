@@ -7,48 +7,40 @@
  *
  */
 
-
-
 //
 // Definitions
 //
-#define GDB_BUF_LEN     400
-#define GDB_NUM_REGS    16
-
+#define GDB_BUF_LEN 400
+#define GDB_NUM_REGS 16
 
 enum {
 
-    EAX,
-    ECX,
-    EDX,
-    EBX,
-    ESP,
-    EBP,
-    ESI,
-    EDI,
-    EIP,
-    EFLAGS,
-    CS,
-    SS,
-    DS,
-    ES,
-    FS,
-    GS
+  EAX,
+  ECX,
+  EDX,
+  EBX,
+  ESP,
+  EBP,
+  ESI,
+  EDI,
+  EIP,
+  EFLAGS,
+  CS,
+  SS,
+  DS,
+  ES,
+  FS,
+  GS
 };
-
-
 
 //
 // Prototypes
 //
-void GdbInit( void );
-void GdbPutChar( s8 c );
-s8 GdbGetChar( void );
-s8 *GdbGetPacket( s8 *buf );
-void GdbSendPacket( s8 *buf );
-u8 TranslateException( u32 ExceptionVector );
-void GdbExceptionHandler( u32 ExceptionVector );
-void GdbSerialIntHandler( u8 IrqNum );
-
-
-
+void GdbInit(void);
+void GdbPutChar(s8 c);
+s8 GdbGetChar(void);
+s8* GdbGetPacket(s8* buf);
+void GdbSendPacket(s8* buf);
+u8 TranslateException(u32 ExceptionVector);
+void GdbExceptionHandler(u32 ExceptionVector);
+void GdbSerialIntHandler(u8 IrqNum);

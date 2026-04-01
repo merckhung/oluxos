@@ -7,5 +7,3 @@
  * 	Header file generic ARM architecture
  *
  */
-
-

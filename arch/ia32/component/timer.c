@@ -8,17 +8,15 @@
  * timer.c -- OluxOS IA32 timer routines
  *
  */
-#include <types.h>
-#include <ia32/platform.h>
-#include <ia32/interrupt.h>
-#include <ia32/timer.h>
-#include <ia32/io.h>
-#include <ia32/task.h>
 #include <ia32/debug.h>
+#include <ia32/interrupt.h>
+#include <ia32/io.h>
+#include <ia32/platform.h>
+#include <ia32/task.h>
+#include <ia32/timer.h>
+#include <types.h>
 
-
-ExternIRQHandler( 0 );
-
+ExternIRQHandler(0);
 
 //
 // TmIntTimer
@@ -32,12 +30,10 @@ ExternIRQHandler( 0 );
 // Description:
 //  Initialize 8253 timer chip
 //
-void TmInitTimer( void ) {
-
-	// Register interrupt handler
-    IntRegInterrupt( IRQ_TIMER, IRQHandler( 0 ), TmIntHandler );
+void TmInitTimer(void) {
+  // Register interrupt handler
+  IntRegInterrupt(IRQ_TIMER, IRQHandler(0), TmIntHandler);
 }
-
 
 //
 // TmIntHandler
@@ -51,12 +47,9 @@ void TmInitTimer( void ) {
 // Description:
 //  8253 timer interrupt handler
 //
-void TmIntHandler( u8 IrqNum ) {
+void TmIntHandler(u8 IrqNum) {
+  // volatile u8 *videomem = (u8 *)0xB84FE;
 
-    //volatile u8 *videomem = (u8 *)0xB84FE;
-
-    //(*videomem)++;
-    //(*(videomem + 1))++;
+  //(*videomem)++;
+  //(*(videomem + 1))++;
 }
-
-

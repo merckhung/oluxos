@@ -8,7 +8,4 @@
  *
  */
 
-
-void ScPrint( const s8 *format, ... );
-
-
+void ScPrint(const s8* format, ...);

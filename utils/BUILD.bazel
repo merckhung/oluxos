@@ -1,0 +1,37 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_binary(
+    name = "krnimg",
+    srcs = ["krnimg.c"] + glob(["include/**/*.h"]),
+    copts = ["-O2", "-Wall", "-std=gnu89"],
+    includes = ["include"],
+    deps = ["//:olux_headers"],
+)
+
+cc_binary(
+    name = "instkrn",
+    srcs = [
+        "instkrn.c",
+        "libcomm.c",
+    ] + glob(["include/**/*.h"]),
+    copts = ["-O2", "-Wall", "-std=gnu89"],
+    includes = ["include"],
+    deps = ["//:olux_headers"],
+)
+
+cc_binary(
+    name = "kdbger",
+    srcs = [
+        "dumpPanel.c",
+        "kdbger.c",
+        "packet.c",
+        "pciListPanel.c",
+        "utils.c",
+    ] + glob(["include/**/*.h"]),
+    copts = ["-O2", "-Wall", "-std=gnu89"],
+    includes = ["include"],
+    linkopts = ["-lpanel", "-lncurses"],
+    deps = ["//:olux_headers"],
+)

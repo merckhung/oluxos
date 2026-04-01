@@ -146,6 +146,7 @@ _32bit_mode_start:
     movb    __KrnCodeNrSecs, %bl
     movw    $KRN_BLOCK_SZ, %ax
     mulw    %bx
+    shrl    $2, %eax
     movl    %eax, %ecx
 
 

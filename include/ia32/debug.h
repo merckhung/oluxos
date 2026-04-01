@@ -10,58 +10,51 @@
 #include <driver/console.h>
 #endif
 
-
 #ifdef KERNEL_DEBUG
-#define DbgPrint( msg, args... )    TcPrint( msg, ##args );
+#define DbgPrint(msg, args...) TcPrint(msg, ##args);
 #else
-#define DbgPrint( msg, args... )
+#define DbgPrint(msg, args...)
 #endif
 
-
 #ifdef KERNEL_DEBUG
-#define DbgStop()	__asm__ __volatile__ ( "jmp		." )
+#define DbgStop() __asm__ __volatile__("jmp		.")
 #else
 #define DbgStop()
 #endif
 
-
 #ifdef KERNEL_DEBUG
 typedef struct {
+  u32 eax;
+  u32 ebx;
+  u32 ecx;
+  u32 edx;
 
-    u32 eax;
-    u32 ebx;
-    u32 ecx;
-    u32 edx;
+  u32 esi;
+  u32 edi;
+  u32 ebp;
+  u32 esp;
 
-    u32 esi;
-    u32 edi;
-    u32 ebp;
-    u32 esp;
+  u32 efl;
 
-    u32 efl;
+  u16 cs;
+  u16 ds;
+  u16 es;
+  u16 fs;
+  u16 gs;
+  u16 ss;
 
-    u16 cs;
-    u16 ds;
-    u16 es;
-    u16 fs;
-    u16 gs;
-    u16 ss;
+  u64 gdt;
 
-    u64 gdt;
+  u64 ldt;
 
-    u64 ldt;
+  u64 idt;
 
-    u64 idt;
-
-    u32 cr0;
-    u32 cr2;
-    u32 cr3;
-    u32 cr4;
+  u32 cr0;
+  u32 cr2;
+  u32 cr3;
+  u32 cr4;
 
 } DbgRegs_t;
 
-
-void DbgDumpRegs( void );
+void DbgDumpRegs(void);
 #endif
-
-

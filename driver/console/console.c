@@ -35,20 +35,23 @@ static u8 yPos = 0;
 void TcPrint( const s8 *format, ... ) {
 
     s8 *p;
-
+    va_list args;
+    va_start(args, format);
 
     // Handle String Format
-    if( CbFmtPrint( buf, CONSOLE_BUF_LEN, format, (&format) + 1 ) ) {
-    
+    if( CbFmtPrint( buf, CONSOLE_BUF_LEN, format, args ) ) {
+
+        va_end(args);
         return;
     }
+    va_end(args);
 
-    
     // Output to console
     for( p = buf ; *p ; p++ ) {
     
         // Output to VGA Text Mode Screen
         TcPutChar( *p );
+        SrPutChar( *p );
     }
 }
 

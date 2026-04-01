@@ -8,16 +8,12 @@
  *
  */
 
-
 //
 // Prototypes
 //
-void MenuBackground( void );
-void MenuTitle( void );
-void MenuItem( void );
-void MenuHelp( void );
-void MenuCentral( void );
-void MenuInit( void );
-
-
-
+void MenuBackground(void);
+void MenuTitle(void);
+void MenuItem(void);
+void MenuHelp(void);
+void MenuCentral(void);
+void MenuInit(void);

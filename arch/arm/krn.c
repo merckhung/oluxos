@@ -9,16 +9,9 @@
  *
  */
 
+void KernelEntry(void) {
+  __asm__ __volatile__(
 
-
-void KernelEntry( void ) {
-
-    __asm__ __volatile__ (
-    
-        "ldr    fp, =0x11447766\n"
-        "b      .\n"
-    );
+      "ldr    fp, =0x11447766\n"
+      "b      .\n");
 }
-
-
-

@@ -7,8 +7,5 @@
  *
  */
 
-
-void TmInitTimer( void );
-void TmIntHandler( u8 irqnum );
-
-
+void TmInitTimer(void);
+void TmIntHandler(u8 irqnum);

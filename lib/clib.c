@@ -322,83 +322,43 @@ s8 CbBinToAscii( s8 value, s8 upper ) {
 // Return:
 //  Byte just wrote
 //
-u32 CbBinToAsciiBuf( u32 value, s8 *buf, s8 upper, u32 digit, u32 pad ) {
+u32 CbBinToAsciiBuf(u32 value, s8* buf, s8 upper, u32 digit, u32 pad) {
+  s8* orig = buf;
+  s8 tmp[16];
+  s32 i = 0;
+  u32 len;
+  s32 padding;
 
-    s32 hexdig = sizeof( value ) * 2;
-    s8 *orig = buf, tmp[ hexdig + 1 ], *p, c;
-    u32 len, i, dp;
-
-
-    // Initialization
-    p = tmp;
-    CbMemSet( tmp, 0, hexdig + 1 );
-
-
-    // Convert each half byte to ascii
-    for( hexdig--, i = 0 ; hexdig >= 0 ; hexdig-- ) {
-    
-        c = (value >> (hexdig * 4)) & 0xF;
-        if( !i && !c ) {
-        
-            continue;
-        }
-
-        *p = CbBinToAscii( c, upper );
-        p++;
-        i = 1;
+  if (value == 0) {
+    tmp[i++] = '0';
+  } else {
+    while (value > 0) {
+      u8 c = value & 0xF;
+      tmp[i++] = CbBinToAscii(c, upper);
+      value >>= 4;
     }
+  }
+  len = i;
 
+  // Compute padding
+  u32 dp = digit > pad ? digit : pad;
+  padding = dp > len ? dp - len : 0;
 
-    // If input value == 0
-    if( !i ) {
-    
-        *p = '0'; 
+  // Add padding characters
+  for (i = 0; i < padding; i++) {
+    if (digit > pad && i < (digit - pad) && pad <= len) {
+      *buf++ = ' ';
+    } else {
+      *buf++ = '0';
     }
+  }
 
+  // Reverse string and write
+  for (i = len - 1; i >= 0; i--) {
+    *buf++ = tmp[i];
+  }
 
-    // Handle digit, pad, and push into buffer
-    len = CbStrLen( tmp );
-
-
-    dp = pad;
-    if( digit > pad ) {
-    
-        dp = digit;    
-    }
-
-
-    i = dp - len;
-    if( len >= dp ) {
-    
-        i = 0;
-    }
-
-    
-    // Padding
-    for( ; i-- ; buf++ ) {
-    
-        c = '0';
-        if( digit > pad ) {
-        
-            if( i >= (pad - len)  ) {
-            
-                c = ' ';
-            }
-        }
-
-
-        *buf = c;
-    }
-
-
-    // Copy ASCII
-    for( i = 0 ; i < len ; i++, buf++ ) {
-    
-        *buf = tmp[ i ];
-    }
-
-
-    return (buf - orig);
+  return (buf - orig);
 }
 
 
@@ -481,10 +441,9 @@ u32 CbAsciiBufToBin( const s8 *buf ) {
 u32 CbBinToBcd( u32 value ) {
 
     u32 i, rs = 0;
-    u8 len = sizeof( u32 ) * 2;
-    u8 buf[ len ];
+    u8 buf[ 8 ];
 
-    for( i = 0 ; i < len ; i++ ) {
+    for( i = 0 ; i < 8 ; i++ ) {
     
         if( value ) {
 
@@ -549,20 +508,15 @@ u32 CbBcdToBin( u32 value ) {
 // Return:
 //  The value x raised to the power of y
 //
-s32 CbPower( s32 x, s32 y ) {
+s32 CbPower(s32 x, s32 y) {
+  s32 sum = 1;
 
-    s32 sum = 0;
+  while (y > 0) {
+    sum *= x;
+    y--;
+  }
 
-    if( !y ) {
-    
-        return 1;
-    } 
-    else {
-    
-        sum += x * CbPower( x, y - 1 );
-    }
-
-    return sum;
+  return sum;
 }
 
 
@@ -587,107 +541,38 @@ s32 CbPower( s32 x, s32 y ) {
 // Known Bug:
 //  %16.24d will become digit = 0x16, pad = 0x24, not decimal value
 //
-u32 CbParseFormat( const s8 *fmt, u32 *digit, u32 *pad, s8 *fc ) {
+u32 CbParseFormat(const s8* fmt, u32* digit, u32* pad, s8* fc) {
+  const s8* orig = fmt;
+  *digit = 0;
+  *pad = 0;
+  *fc = 0;
 
-    s8 buf[ FMT_MAX_DIG + 1 ];
-    u8 i, j, p;
-    s8 value[ 2 ];
-    s8 *orig = (s8 *)fmt;
+  if (*fmt != '%') return 0;
+  fmt++;
 
+  // Parse pad
+  if (*fmt == '0') {
+      fmt++;
+      while (*fmt >= '0' && *fmt <= '9') {
+        *pad = (*pad * 10) + (*fmt - '0');
+        fmt++;
+      }
+  }
 
-    // Initialization
-    *digit = 0;
-    *pad = 0;
-    *fc = 0;
-    p = 0;
-
-
-    // Check '%'
-    if( *fmt != '%' ) {
-    
-        return 0;
-    }
-
-
-    // Skip '%'
+  // Parse digit
+  while (*fmt >= '0' && *fmt <= '9') {
+    *digit = (*digit * 10) + (*fmt - '0');
     fmt++;
+  }
 
-
-    // Parsing format
-    for( j = 0 ; j < 2 ; j++ ) {
-
-
-        // Clear buffer
-        CbMemSet( buf, 0, FMT_MAX_DIG + 1 );
-
-        
-        for( i = 0 ; i < FMT_MAX_DIG ; fmt++ ) {
-
-            // Check '.' character
-            if( *fmt == '.' ) {
-
-                if( p == 1 ) {
-                
-                    return 0;
-                }
-
-                p = 1;
-                fmt++;
-                break;
-            }
-
-
-            // Check if it's ASCII
-            if( (*fmt < '0') || (*fmt > '9') ) {
-        
-                break;
-            }
-
-
-            // Push into buffer
-            buf[ i ] = *fmt;
-            i++;
-        }
-
-
-        // Convert buffer to binary
-        value[ j ] = CbAsciiBufToBin( buf );        
-    }
-
-
-    // If it's a valid format char, move to next
-    switch( *fmt ) {
-    
-        case 'd':
-        case 'x':
-        case 'X':
-        case 'p':
-            goto norexit;
-
-        case 'c':
-        case 's':
-            goto nodexit;
-
-        default:
-            return 0;
-    }
-
-
-norexit:
-
-
-    // Write result
-    *digit = value[ 0 ];
-    *pad = value[ 1 ];
-
-
-nodexit:
-
+  // Handle specific format chars
+  if (*fmt == 'd' || *fmt == 'x' || *fmt == 'X' || *fmt == 'p' || *fmt == 'c' || *fmt == 's') {
     *fc = *fmt;
     fmt++;
+    return (u32)(fmt - orig);
+  }
 
-    // Return offset 
-    return (fmt - orig);
+  return 0;
 }
 
 
@@ -705,7 +590,7 @@ nodexit:
 //  Success : 0
 //  Error   : 1
 //
-s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, const s8 **args ) {
+s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, va_list args ) {
 
     s8 *obuf = buf;
     s8 fc, upper;
@@ -722,14 +607,14 @@ s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, const s8 **args ) {
 
         // Check buffer overflow
         if( (buf - obuf) > sz ) {
-        
+
             return 1;
         }
 
 
         // Direct put char if it's not '%' char
         if( *format != '%' ) {
-        
+
             *buf = *format;
             buf++;
             format++;
@@ -739,7 +624,7 @@ s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, const s8 **args ) {
 
         // Handle '%%'
         if( *(format + 1) == '%' ) {
-        
+
             *buf = *format;
             buf++;
             format += 2;
@@ -759,55 +644,53 @@ s32 CbFmtPrint( s8 *buf, u32 sz, const s8 *format, const s8 **args ) {
         // Print Format
         switch( fc ) {
 
-                // Hexadecimal Print
-                case 'X' :
+            // Hexadecimal Print
+            case 'X' :
 
-                    upper = UPPERCASE;
+                upper = UPPERCASE;
 
-                case 'x' :
+            case 'x' :
 
-                    buf += CbBinToAsciiBuf( (u32)*args, buf, upper, digit, pad );
-                    break;
-
-
-                // Character Print
-                case 'c' :
-
-                    *buf = (s32)*args;
-                    buf++;
-                    break;
+                buf += CbBinToAsciiBuf( va_arg(args, u32), buf, upper, digit, pad );
+                break;
 
 
-                // String Print
-                case 's' :
+            // Character Print
+            case 'c' :
 
-                    for( ; **args ; (*args)++, buf++ ) {
+                *buf = (s32)va_arg(args, s32);
+                buf++;
+                break;
 
-                        *buf = (s8)**args;
+
+            // String Print
+            case 's' :
+                {
+                    s8* str_arg = va_arg(args, s8*);
+                    for( ; *str_arg ; str_arg++, buf++ ) {
+
+                        *buf = (s8)*str_arg;
                     }
-                    break;
+                }
+                break;
 
 
-                // Decimal Print
-                case 'd' :
+            // Decimal Print
+            case 'd' :
 
-                    buf += CbBinToAsciiBuf( CbBinToBcd( (u32)*args ), buf, upper, digit, pad );   
-                    break;
+                buf += CbBinToAsciiBuf( CbBinToBcd( va_arg(args, u32) ), buf, upper, digit, pad );   
+                break;
 
 
-                // Bad syntax
-                default :
-                    return 1;
-            }
+            // Bad syntax
+            default :
+                return 1;
+        }
 
-            
-            // Move to next argsument
-            args++;
     }
 
 
     return 0;
 }
-
 
 

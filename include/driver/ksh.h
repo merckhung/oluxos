@@ -8,37 +8,29 @@
  *
  */
 
-
 //
 // Definitions
 //
-#define KSH_PROMPT				"OluxOS > "
-#define LEN_CMDBUF				256
-
-
+#define KSH_PROMPT "OluxOS > "
+#define LEN_CMDBUF 256
 
 //
 // Structures
 //
 typedef struct _CmdPair {
-
-    s8                  *CmdStr;
-    s32                 CmdCode;
+  s8* CmdStr;
+  s32 CmdCode;
 
 } CmdPair;
-
-
 
 //
 // Prototypes
 //
-void KshStart( void );
-void KshInsertCharacter( KbdAsciiPair *in );
-bool KshParseOneParameter( s8 *buf, u32 *first );
-void KshHandleCmd( void );
-u32 KshParseCmd( s8 *CmdBuf, s8 **Param );
-void KshExecCmd( s32 CmdCode, s8 *Param );
-void KshUsage( void );
-void KshDumpMemory( u8 *Data, u32 Length, u32 BaseAddr );
-
-
+void KshStart(void);
+void KshInsertCharacter(KbdAsciiPair* in);
+bool KshParseOneParameter(s8* buf, u32* first);
+void KshHandleCmd(void);
+u32 KshParseCmd(s8* CmdBuf, s8** Param);
+void KshExecCmd(s32 CmdCode, s8* Param);
+void KshUsage(void);
+void KshDumpMemory(u8* Data, u32 Length, u32 BaseAddr);

@@ -1,0 +1,139 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+COMMON_COPTS = [
+    "-m32",
+    "-Wall",
+    "-Wstrict-prototypes",
+    "-O2",
+    "-fomit-frame-pointer",
+    "-nostdinc",
+    "-fno-stack-protector",
+    "-fno-pie",
+    "-fno-pic",
+    "-ffreestanding",
+    "-fno-builtin",
+    "-std=gnu89",
+    "-include", "include/types.h",
+]
+
+COMMON_DEFINES = [
+    "KERNEL_DEBUG",
+    "CONFIG_ARCH_IA32=1",
+    "CONFIG_MENU=1",
+    "CONFIG_SERIAL_CONSOLE=1",
+    "CONFIG_SERIAL=1",
+    "CONFIG_KERNEL_GDB=1",
+    "CONFIG_FS_FAT=1",
+    "CONFIG_KDBGER=1",
+]
+
+cc_library(
+    name = "olux_headers",
+    hdrs = glob(["include/**/*.h"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "kernel_lib",
+    srcs = [
+        "fs/fat.c",
+        "driver/input/kbd.c",
+        "driver/ide/ide.c",
+        "driver/pci/pci.c",
+        "driver/serial/serial.c",
+        "driver/console/menu.c",
+        "driver/console/ksh.c",
+        "driver/console/sercon.c",
+        "driver/console/console.c",
+        "driver/resource/resource.c",
+        "arch/ia32/kernel/setup.S",
+        "arch/ia32/kernel/handler.S",
+        "arch/ia32/kernel/page.c",
+        "arch/ia32/kernel/interrupt.c",
+        "arch/ia32/kernel/krn.c",
+        "arch/ia32/kernel/task.c",
+        "arch/ia32/component/timer.c",
+        "arch/ia32/component/i8259.c",
+        "arch/ia32/lib/kdbger.c",
+        "arch/ia32/lib/debug.c",
+        "arch/ia32/lib/gdb.c",
+        "arch/ia32/lib/io.c",
+        "lib/clib.c",
+        "lib/crc.c",
+    ] + glob(["**/*.h"]),
+    copts = COMMON_COPTS,
+    local_defines = COMMON_DEFINES,
+    includes = ["include"],
+    deps = [":olux_headers"],
+    linkstatic = True,
+)
+cc_library(
+    name = "bootsect_lib",
+    srcs = [
+        "arch/ia32/boot/boot.S",
+        "arch/ia32/boot/info.S",
+        "arch/ia32/boot/pm.S",
+    ] + glob(["**/*.h"]),
+    copts = COMMON_COPTS,
+    local_defines = COMMON_DEFINES,
+    includes = ["include"],
+    deps = [":olux_headers"],
+    linkstatic = True,
+)
+
+genrule(
+    name = "kernel_elf",
+    srcs = [":kernel_lib", "arch/ia32/kernel.lds"],
+    outs = ["kernel.elf"],
+    cmd = "ld -m elf_i386 -nostdlib -static -n -N -T $(location arch/ia32/kernel.lds) $(locations :kernel_lib) -o $@",
+)
+
+genrule(
+    name = "bootsect_elf",
+    srcs = [":bootsect_lib", "arch/ia32/boot/boot.lds"],
+    outs = ["bootsect.elf"],
+    cmd = "ld -m elf_i386 -nostdlib -static -n -N -T $(location arch/ia32/boot/boot.lds) $(locations :bootsect_lib) -o $@",
+)
+
+genrule(
+    name = "kernel_bin",
+    srcs = [":kernel_elf"],
+    outs = ["kernel"],
+    cmd = "cp $< $@",
+)
+
+genrule(
+    name = "bootsect_bin",
+    srcs = [":bootsect_elf"],
+    outs = ["bootsect"],
+    cmd = "cp $< $@",
+)
+
+genrule(
+    name = "OluxOS_krn",
+    srcs = [
+        ":bootsect_bin",
+        ":kernel_bin",
+    ],
+    outs = ["OluxOS.krn"],
+    tools = ["//utils:krnimg"],
+    cmd = "$(location //utils:krnimg) -b $(location :bootsect_bin) -k $(location :kernel_bin) -o $@",
+)
+
+genrule(
+    name = "OluxOS_img",
+    srcs = [":OluxOS_krn"],
+    outs = ["OluxOS.img"],
+    cmd = "dd if=/dev/zero of=$@ bs=1474560 count=1 && dd if=$(location :OluxOS_krn) of=$@ bs=1474560 count=1 conv=notrunc",
+)
+
+sh_binary(
+    name = "run_qemu",
+    srcs = ["run_qemu.sh"],
+    data = [":OluxOS_img"],
+    args = ["$(location :OluxOS_img)"],
+)

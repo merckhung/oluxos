@@ -180,9 +180,8 @@ void MmEnablePaging( volatile u32 *Ptr ) {
         "movl   %%cr0, %%eax\n"
         "orl    $0x80000000, %%eax\n"
         "movl   %%eax, %%cr0\n"
-		"jmp	_FlushTLB\n"
-		"_FlushTLB:\n"
-        :: "m" (PtrAddr)
+		"jmp	1f\n"
+		"1:\n" ::"m"(PtrAddr)
         : "eax"
     );
 }
