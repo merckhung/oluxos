@@ -1,2 +1,6 @@
 MODULE.bazel.lock
 bazel-*
+fat.img
+hello.txt
+qemu_serial.log
+test_qemu.log

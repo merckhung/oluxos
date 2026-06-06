@@ -1,34 +1,14 @@
-#define ANY_THREAD 0xFFFFFFFF
-#define UART_DRIVER_TID 1
-#define RAMDISK_DRIVER_TID 2
-#define FS_SERVER_TID 3
-#define SHELL_TID 4
+#include "string.h"
+#include "stdio.h"
+#include "syscall.h"
+#include "unistd.h"
+#include "dirent.h"
 
 #define UART_BASE 0x09000000ULL
 #define UART_DR   ((volatile unsigned int *)(UART_BASE + 0x00))
 #define UART_FR   ((volatile unsigned int *)(UART_BASE + 0x18))
 #define TXFF (1 << 5)
 #define RXFE (1 << 4)
-
-// Simple helpers
-void user_memcpy(void *dest, const void *src, unsigned int n) {
-    char *d = dest;
-    const char *s = src;
-    while (n--) *d++ = *s++;
-}
-
-void user_memset(void *dest, int val, unsigned int n) {
-    char *d = dest;
-    while (n--) *d++ = val;
-}
-
-int user_strcmp(const char *s1, const char *s2) {
-    while (*s1 && (*s1 == *s2)) {
-        s1++;
-        s2++;
-    }
-    return *(unsigned char *)s1 - *(unsigned char *)s2;
-}
 
 void user_uart_putc(char c) {
     while (*UART_FR & TXFF);
@@ -44,76 +24,6 @@ void user_uart_puts(const char *s) {
     }
 }
 
-int sys_gettid(void) {
-    register long x0 __asm__("x0");
-    register long x8 __asm__("x8") = 4;
-    __asm__ volatile("svc #0" : "=r"(x0) : "r"(x8) : "memory");
-    return x0;
-}
-
-int sys_send(int dest, const void *buf, int size) {
-    register long x0 __asm__("x0") = dest;
-    register long x1 __asm__("x1") = (long)buf;
-    register long x2 __asm__("x2") = size;
-    register long x8 __asm__("x8") = 2;
-    __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x8) : "memory");
-    return x0;
-}
-
-int sys_recv(int src, void *buf, int size) {
-    register long x0 __asm__("x0") = src;
-    register long x1 __asm__("x1") = (long)buf;
-    register long x2 __asm__("x2") = size;
-    register long x8 __asm__("x8") = 3;
-    __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x8) : "memory");
-    return x0;
-}
-
-void* sys_map_mmio(unsigned long phys_addr) {
-    register long x0 __asm__("x0") = phys_addr;
-    register long x8 __asm__("x8") = 5;
-    __asm__ volatile("svc #0" : "+r"(x0) : "r"(x8) : "memory");
-    return (void*)x0;
-}
-
-// Redefine puts to use IPC to UART driver
-void puts(const char *s) {
-    struct {
-        unsigned int sender;
-        unsigned int cmd;
-        char data[64];
-    } req;
-    req.sender = sys_gettid();
-    req.cmd = 0; // Write
-    
-    int len = 0;
-    while (s[len] && len < 63) {
-        req.data[len] = s[len];
-        len++;
-    }
-    req.data[len] = '\0';
-    
-    sys_send(UART_DRIVER_TID, &req, 8 + len + 1);
-}
-
-void putc(char c) {
-    char buf[2] = {c, '\0'};
-    puts(buf);
-}
-
-char getch(void) {
-    struct {
-        unsigned int sender;
-        unsigned int cmd;
-    } req;
-    req.sender = sys_gettid();
-    req.cmd = 1; // Read
-    
-    sys_send(UART_DRIVER_TID, &req, 8);
-    char c;
-    sys_recv(UART_DRIVER_TID, &c, 1);
-    return c;
-}
 
 // --- Ramdisk Client Helpers ---
 int ramdisk_read_sector(unsigned int sector, void *buf) {
@@ -206,7 +116,18 @@ unsigned int get_next_cluster(unsigned int cluster) {
     return next & 0x0FFFFFFF;
 }
 
-int fat32_read_file(const char *filename, unsigned char *out_buf, unsigned int max_size) {
+#define MAX_OPEN_FILES 8
+typedef struct {
+    int used;
+    unsigned int first_cluster;
+    unsigned int current_cluster;
+    unsigned int offset;
+    unsigned int size;
+} OpenFileEntry;
+
+OpenFileEntry open_file_table[MAX_OPEN_FILES];
+
+int fat32_open_file(const char *filename) {
     unsigned char sector_buf[512];
     unsigned int current_cluster = BPB_RootClus;
     
@@ -241,36 +162,77 @@ int fat32_read_file(const char *filename, unsigned char *out_buf, unsigned int m
                 }
                 
                 if (match) {
-                    unsigned int file_cluster = entry[i].first_cluster_low | (entry[i].first_cluster_high << 16);
-                    unsigned int file_size = entry[i].file_size;
-                    
-                    unsigned int bytes_to_read = file_size < max_size ? file_size : max_size;
-                    unsigned int bytes_read = 0;
-                    unsigned int fc = file_cluster;
-                    
-                    while (fc < 0x0FFFFFF8 && bytes_read < bytes_to_read) {
-                        unsigned int fsector = cluster_to_sector(fc);
-                        unsigned int fs;
-                        for (fs = 0; fs < BPB_SecPerClus && bytes_read < bytes_to_read; fs++) {
-                            unsigned char file_buf[512];
-                            if (ramdisk_read_sector(fsector + fs, file_buf) < 0) {
-                                return -1;
-                            }
-                            unsigned int chunk = bytes_to_read - bytes_read;
-                            if (chunk > 512) chunk = 512;
-                            
-                            user_memcpy(out_buf + bytes_read, file_buf, chunk);
-                            bytes_read += chunk;
+                    int h;
+                    for (h = 0; h < MAX_OPEN_FILES; h++) {
+                        if (!open_file_table[h].used) {
+                            open_file_table[h].used = 1;
+                            open_file_table[h].first_cluster = entry[i].first_cluster_low | (entry[i].first_cluster_high << 16);
+                            open_file_table[h].current_cluster = open_file_table[h].first_cluster;
+                            open_file_table[h].offset = 0;
+                            open_file_table[h].size = entry[i].file_size;
+                            return h;
                         }
-                        fc = get_next_cluster(fc);
                     }
-                    return bytes_read;
+                    return -1;
                 }
             }
         }
         current_cluster = get_next_cluster(current_cluster);
     }
     return -1;
+}
+
+int fat32_read_file_handle(int handle, unsigned char *out_buf, unsigned int count) {
+    if (handle < 0 || handle >= MAX_OPEN_FILES) return -1;
+    OpenFileEntry *f = &open_file_table[handle];
+    if (!f->used) return -1;
+    
+    unsigned int remaining = f->size - f->offset;
+    if (remaining == 0) return 0;
+    
+    unsigned int bytes_to_read = count < remaining ? count : remaining;
+    unsigned int bytes_read = 0;
+    
+    unsigned int bytes_per_clus = BPB_SecPerClus * 512;
+    
+    while (bytes_read < bytes_to_read) {
+        unsigned int clus_offset = f->offset % bytes_per_clus;
+        unsigned int sec_in_clus = clus_offset / 512;
+        unsigned int sec_offset = clus_offset % 512;
+        
+        unsigned int sector = cluster_to_sector(f->current_cluster) + sec_in_clus;
+        
+        unsigned char sector_buf[512];
+        if (ramdisk_read_sector(sector, sector_buf) < 0) {
+            return -1;
+        }
+        
+        unsigned int chunk = 512 - sec_offset;
+        if (chunk > (bytes_to_read - bytes_read)) {
+            chunk = bytes_to_read - bytes_read;
+        }
+        
+        memcpy(out_buf + bytes_read, sector_buf + sec_offset, chunk);
+        bytes_read += chunk;
+        f->offset += chunk;
+        
+        if ((f->offset % bytes_per_clus) == 0) {
+            unsigned int next = get_next_cluster(f->current_cluster);
+            if (next >= 0x0FFFFFF8) {
+                if (f->offset < f->size) {
+                    return -1;
+                }
+            }
+            f->current_cluster = next;
+        }
+    }
+    return bytes_read;
+}
+
+int fat32_close_file(int handle) {
+    if (handle < 0 || handle >= MAX_OPEN_FILES) return -1;
+    open_file_table[handle].used = 0;
+    return 0;
 }
 
 int fat32_list_dir(char *out_buf, unsigned int max_size) {
@@ -330,28 +292,6 @@ int fat32_list_dir(char *out_buf, unsigned int max_size) {
     return offset;
 }
 
-// Helper to format filename to 8.3
-void format_filename(const char* src, char* dest) {
-    user_memset(dest, ' ', 11);
-    int i = 0;
-    int d = 0;
-    while (src[i] && src[i] != '.' && d < 8) {
-        char c = src[i];
-        if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
-        dest[d++] = c;
-        i++;
-    }
-    while (src[i] && src[i] != '.') i++;
-    if (src[i] == '.') i++;
-    d = 8;
-    while (src[i] && d < 11) {
-        char c = src[i];
-        if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
-        dest[d++] = c;
-        i++;
-    }
-}
-
 int cmd_match(const char *cmd, const char *input) {
     int i = 0;
     while (cmd[i] && input[i] && cmd[i] == input[i]) i++;
@@ -372,14 +312,15 @@ void main(void) {
         struct {
             unsigned int sender;
             unsigned int cmd;
+            unsigned int size;
             char data[64];
         } req;
         
         while (1) {
             int n = sys_recv(ANY_THREAD, &req, sizeof(req));
             if (n >= 8) {
-                if (req.cmd == 0) {
-                    req.data[n - 8] = '\0';
+                if (req.cmd == 0 && n >= 12) {
+                    req.data[req.size] = '\0';
                     user_uart_puts(req.data);
                 } else if (req.cmd == 1) {
                     char c;
@@ -428,7 +369,14 @@ void main(void) {
         struct {
             unsigned int sender;
             unsigned int cmd;
-            char filename[11];
+            union {
+                char filename[11];
+                struct {
+                    unsigned int handle;
+                    unsigned int count;
+                } read;
+                unsigned int handle;
+            } args;
         } req;
         
         struct {
@@ -436,17 +384,33 @@ void main(void) {
             unsigned char data[512];
         } reply;
         
+        int i;
+        for (i = 0; i < MAX_OPEN_FILES; i++) {
+            open_file_table[i].used = 0;
+        }
+        
         while (1) {
             int n = sys_recv(ANY_THREAD, &req, sizeof(req));
             if (n >= 8) {
-                if (req.cmd == 0) { // Read File
-                    int read_bytes = fat32_read_file(req.filename, reply.data, 512);
-                    reply.size = read_bytes;
-                    sys_send(req.sender, &reply, sizeof(reply.size) + (read_bytes > 0 ? read_bytes : 0));
-                } else if (req.cmd == 1) { // List Dir
+                if (req.cmd == 1) { // List Dir
                     int read_bytes = fat32_list_dir((char*)reply.data, 512);
                     reply.size = read_bytes;
                     sys_send(req.sender, &reply, sizeof(reply.size) + (read_bytes > 0 ? read_bytes : 0));
+                }
+                else if (req.cmd == 2) { // Open File
+                    int handle = fat32_open_file(req.args.filename);
+                    reply.size = handle;
+                    sys_send(req.sender, &reply, 4);
+                }
+                else if (req.cmd == 3) { // Read File Handle
+                    int read_bytes = fat32_read_file_handle(req.args.read.handle, reply.data, req.args.read.count);
+                    reply.size = read_bytes;
+                    sys_send(req.sender, &reply, sizeof(reply.size) + (read_bytes > 0 ? read_bytes : 0));
+                }
+                else if (req.cmd == 4) { // Close File
+                    int status = fat32_close_file(req.args.handle);
+                    reply.size = status;
+                    sys_send(req.sender, &reply, 4);
                 }
             }
         }
@@ -481,26 +445,16 @@ void main(void) {
                         puts("  cat <file> - Show file content\n");
                     } 
                     else if (cmd_match("ls", cmd_buf)) {
-                        struct {
-                            unsigned int sender;
-                            unsigned int cmd;
-                        } fs_req;
-                        fs_req.sender = sys_gettid();
-                        fs_req.cmd = 1; // List Dir
-                        
-                        sys_send(FS_SERVER_TID, &fs_req, sizeof(fs_req));
-                        
-                        struct {
-                            int size;
-                            char data[512];
-                        } fs_reply;
-                        
-                        int n = sys_recv(FS_SERVER_TID, &fs_reply, sizeof(fs_reply));
-                        if (n > 4 && fs_reply.size > 0) {
-                            fs_reply.data[fs_reply.size] = '\0';
-                            puts(fs_reply.data);
+                        DIR *dir = opendir(".");
+                        if (!dir) {
+                            puts("Failed to open directory\n");
                         } else {
-                            puts("Failed to list directory\n");
+                            struct dirent *entry;
+                            while ((entry = readdir(dir)) != NULL) {
+                                puts(entry->d_name);
+                                puts("\n");
+                            }
+                            closedir(dir);
                         }
                     } 
                     else if (cmd_match("cat", cmd_buf)) {
@@ -517,32 +471,17 @@ void main(void) {
                             }
                             raw_filename[r] = '\0';
                             
-                            char formatted[11];
-                            format_filename(raw_filename, formatted);
-                            
-                            struct {
-                                unsigned int sender;
-                                unsigned int cmd;
-                                char filename[11];
-                            } fs_req;
-                            fs_req.sender = sys_gettid();
-                            fs_req.cmd = 0; // Read File
-                            user_memcpy(fs_req.filename, formatted, 11);
-                            
-                            sys_send(FS_SERVER_TID, &fs_req, sizeof(fs_req));
-                            
-                            struct {
-                                int size;
-                                char data[512];
-                            } fs_reply;
-                            
-                            int n = sys_recv(FS_SERVER_TID, &fs_reply, sizeof(fs_reply));
-                            if (n > 4 && fs_reply.size > 0) {
-                                fs_reply.data[fs_reply.size] = '\0';
-                                puts(fs_reply.data);
-                                puts("\n");
-                            } else {
+                            int fd = open(raw_filename, 0);
+                            if (fd < 0) {
                                 puts("File not found or read failed\n");
+                            } else {
+                                char file_buf[512];
+                                ssize_t n;
+                                while ((n = read(fd, file_buf, 512)) > 0) {
+                                    write(1, file_buf, n);
+                                }
+                                puts("\n");
+                                close(fd);
                             }
                         }
                     } 

@@ -140,9 +140,22 @@ sh_binary(
 
 genrule(
     name = "user_shell_elf",
-    srcs = ["user/shell.c", "user/start.S", "user/user.lds"],
+    srcs = [
+        "user/shell.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+    ],
     outs = ["user_shell.elf"],
-    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) -o $@",
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) -Iuser/ulib -o $@",
 )
 
 genrule(

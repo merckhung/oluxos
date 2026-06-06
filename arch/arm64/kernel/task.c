@@ -186,7 +186,7 @@ int thread_create_userspace(const unsigned char *bin, u32 size) {
             
             // Flags for user code: PXN=1, UXN=0, AP=01 (RW EL1/EL0), SH=11, AF=1, Attr=1, Type=3
             u64 code_flags = 0x0020000000000747ULL;
-            u32 num_pages = (size + 4095) / 4096;
+            u32 num_pages = USER_CODE_SIZE / 4096;
             u32 p;
             for (p = 0; p < num_pages; p++) {
                 u64 vaddr = 0x00100000 + p * 4096;
