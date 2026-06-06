@@ -127,6 +127,8 @@ void syscall_handler(ARM64Registers* regs) {
     regs->x[0] = thread_get_current_tid();
   } else if (syscall_num == 5) {  // SYS_MAP_MMIO
     regs->x[0] = (uint64_t)thread_map_mmio(arg0);
+  } else if (syscall_num == 6) {  // SYS_MAP_FB
+    regs->x[0] = (uint64_t)thread_map_fb();
   } else {
     pl011_puts("Unknown syscall: ");
     print_hex(syscall_num);

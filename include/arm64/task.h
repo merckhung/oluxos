@@ -57,5 +57,6 @@ void thread_set_current_regs(ARM64Registers* regs);
 int thread_ipc_send(uint32_t dest, void* buf, uint32_t size);
 int thread_ipc_recv(uint32_t src, void* buf, uint32_t size);
 void* thread_map_mmio(uint64_t phys_addr);
+void* thread_map_fb(void);
 
 #endif  // __ARM64_TASK_H__

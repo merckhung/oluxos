@@ -2,7 +2,9 @@
 #define _STRING_H_
 
 typedef unsigned long size_t;
+#ifndef NULL
 #define NULL ((void*)0)
+#endif
 
 void* memcpy(void* dest, const void* src, size_t n);
 void* memset(void* dest, int val, size_t n);

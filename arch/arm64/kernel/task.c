@@ -149,6 +149,8 @@ static uint8_t user_code_pages[MAX_THREADS][USER_CODE_SIZE]
     __attribute__((aligned(4096)));
 static uint8_t user_stack_pages[MAX_THREADS][4096]
     __attribute__((aligned(4096)));
+static uint64_t thread_fb_l3_tables[MAX_THREADS][512]
+    __attribute__((aligned(4096)));
 
 extern void userspace_entry_wrapper(void);
 
@@ -169,10 +171,12 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
       uint64_t* l1 = thread_l1_tables[i];
       uint64_t* l2 = thread_l2_tables[i];
       uint64_t* l3 = thread_l3_tables[i];
+      uint64_t* fb_l3 = thread_fb_l3_tables[i];
 
       CbMemSet((int8_t*)l1, 0, 4096);
       CbMemSet((int8_t*)l2, 0, 4096);
       CbMemSet((int8_t*)l3, 0, 4096);
+      CbMemSet((int8_t*)fb_l3, 0, 4096);
 
       // L1[0] -> L2
       l1[0] = ((uint64_t)l2 & ~0xFFF) | 0x3;
@@ -181,6 +185,8 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
 
       // L2[0] -> L3
       l2[0] = ((uint64_t)l3 & ~0xFFF) | 0x3;
+      // L2[16] -> FB L3
+      l2[16] = ((uint64_t)fb_l3 & ~0xFFF) | 0x3;
       // L2[64] -> GIC
       l2[64] = 0x0060000008000401ULL;
       // L2[72] -> UART
@@ -459,4 +465,40 @@ void* thread_map_mmio(uint64_t phys_addr) {
   print_hex(phys_addr);
   pl011_puts("\n");
   return NULL;
+}
+
+extern uint8_t fb_mem[];
+#define FB_WIDTH 640
+#define FB_HEIGHT 480
+#define FB_BPP 3
+
+void* thread_map_fb(void) {
+  uint64_t phys_base = (uint64_t)fb_mem;
+  uint64_t virt_base = 0x02000000;
+  uint32_t num_pages = (FB_WIDTH * FB_HEIGHT * FB_BPP + 4095) / 4096;
+
+  uint64_t* fb_l3 = thread_fb_l3_tables[current_thread->tid];
+
+  // Flags for user RAM: PXN=1, UXN=1, AP=01 (RW EL1/EL0), SH=11, AF=1, Attr=1
+  // (Normal), Type=3 (Page)
+  uint64_t flags = 0x0060000000000747ULL;
+  uint32_t i;
+  for (i = 0; i < num_pages; i++) {
+    uint64_t paddr = phys_base + i * 4096;
+    fb_l3[i] = paddr | flags;
+  }
+
+  __asm__ volatile(
+      "tlbi vmalle1is\n"
+      "dsb sy\n"
+      "isb\n" ::
+          : "memory");
+
+  pl011_puts("Mapped FB to virtual ");
+  print_hex(virt_base);
+  pl011_puts(" for tid ");
+  print_hex(current_thread->tid);
+  pl011_puts("\n");
+
+  return (void*)virt_base;
 }

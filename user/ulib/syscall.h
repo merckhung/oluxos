@@ -39,4 +39,11 @@ static inline void* sys_map_mmio(unsigned long phys_addr) {
   return (void*)x0;
 }
 
+static inline void* sys_map_fb(void) {
+  register long x0 __asm__("x0");
+  register long x8 __asm__("x8") = 6;
+  __asm__ volatile("svc #0" : "=r"(x0) : "r"(x8) : "memory");
+  return (void*)x0;
+}
+
 #endif

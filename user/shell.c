@@ -3,6 +3,8 @@
 #include "string.h"
 #include "syscall.h"
 #include "unistd.h"
+#include "gles.h"
+#include "gui.h"
 
 #define UART_BASE 0x09000000ULL
 #define UART_DR ((volatile unsigned int*)(UART_BASE + 0x00))
@@ -511,6 +513,61 @@ void cmd_cat(int argc, char* argv[]) {
   close(fd);
 }
 
+void draw_win1_content(Window* win) {
+  draw_button(win->x + 20, win->y + 40, 100, 30, "Button");
+  draw_scrollbar(win->x + win->w - 25, win->y + 30, 15, win->h - 40, 30, 40);
+  gui_draw_string("Win 1 Label", win->x + 20, win->y + 90, 1, 0, 0, 0);
+}
+
+void draw_win2_content(Window* win) {
+  glViewport(win->x + 10, win->y + 30, win->w - 20, win->h - 40);
+
+  GLfixed vertices[] = {
+      0, GL_ONE / 2,
+      -GL_ONE / 2, -GL_ONE / 2,
+      GL_ONE / 2, -GL_ONE / 2
+  };
+  GLubyte colors[] = {
+      255, 0, 0, 255,
+      0, 255, 0, 255,
+      0, 0, 255, 255
+  };
+  glEnableClientState(GL_VERTEX_ARRAY);
+  glEnableClientState(GL_COLOR_ARRAY);
+  glVertexPointer(2, GL_FIXED, 0, vertices);
+  glColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
+  glDrawArrays(GL_TRIANGLES, 0, 3);
+  glDisableClientState(GL_VERTEX_ARRAY);
+  glDisableClientState(GL_COLOR_ARRAY);
+
+  glViewport(0, 0, FB_WIDTH, FB_HEIGHT);
+}
+
+void cmd_gui(int argc, char** argv) {
+  puts("Initializing GUI...\n");
+  void* fb = sys_map_fb();
+  if (!fb) {
+    puts("Failed to map framebuffer!\n");
+    return;
+  }
+
+  glInit(fb, FB_WIDTH, FB_HEIGHT);
+
+  glClearColorx(INT_TO_FIXED(40) / 255, INT_TO_FIXED(80) / 255,
+                INT_TO_FIXED(120) / 255, GL_ONE);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  static Window win1, win2;
+  win_init(&win1, 1, 50, 50, 300, 200, "Window 1", draw_win1_content);
+  win_init(&win2, 2, 180, 120, 300, 200, "Window 2", draw_win2_content);
+  win2.active = true;
+
+  win_draw(&win1);
+  win_draw(&win2);
+
+  puts("GUI Rendered successfully. Check framebuffer dump.\n");
+}
+
 // --- Main ---
 void main(void) {
   int tid = sys_gettid();
@@ -622,6 +679,7 @@ void main(void) {
         }
       }
     }
+
   } else if (tid == SHELL_TID) {
     // Interactive Shell
     volatile int d;
@@ -658,6 +716,7 @@ void main(void) {
               puts("  wc <file>           - Count lines, words, and bytes\n");
               puts("  head [-n N] <file>  - Show first N lines\n");
               puts("  grep <pattern> <file>- Search for pattern in file\n");
+              puts("  gui                 - Launch GUI system\n");
             } else if (strcmp(argv[0], "ls") == 0) {
               cmd_ls(argc, argv);
             } else if (strcmp(argv[0], "cat") == 0) {
@@ -674,6 +733,8 @@ void main(void) {
               cmd_head(argc, argv);
             } else if (strcmp(argv[0], "grep") == 0) {
               cmd_grep(argc, argv);
+            } else if (strcmp(argv[0], "gui") == 0) {
+              cmd_gui(argc, argv);
             } else {
               puts("Unknown command: ");
               puts(argv[0]);

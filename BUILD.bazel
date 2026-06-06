@@ -153,9 +153,14 @@ genrule(
         "user/ulib/unistd.c",
         "user/ulib/dirent.h",
         "user/ulib/dirent.c",
-    ],
+        "user/ulib/gles.h",
+        "user/ulib/gles.c",
+        "user/ulib/gui.h",
+        "user/ulib/gui.c",
+        "user/ulib/gui_font.h",
+    ] + glob(["include/**/*.h"]),
     outs = ["user_shell.elf"],
-    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) -Iuser/ulib -o $@",
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) $(location user/ulib/gles.c) $(location user/ulib/gui.c) -Iuser/ulib -Iinclude -o $@",
 )
 
 genrule(
