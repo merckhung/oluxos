@@ -3,6 +3,7 @@
 #include <driver/arm_timer.h>
 #include <driver/gicv2.h>
 #include <types.h>
+#include <driver/fb.h>
 
 // Include generated userspace binary
 #include "user_shell_bin.h"
@@ -141,6 +142,7 @@ void krn_entry(void) {
   pl011_puts(" OluxOS ARM64 Starting...\n");
   pl011_puts("====================================\n");
   pl011_puts("Booted successfully to EL1.\n");
+  fb_init();
 
   gicv2_init();
   gicv2_enable_irq(30);
