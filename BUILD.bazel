@@ -137,3 +137,69 @@ sh_binary(
     data = [":OluxOS_img"],
     args = ["$(location :OluxOS_img)"],
 )
+
+genrule(
+    name = "user_shell_elf",
+    srcs = ["user/shell.c", "user/start.S", "user/user.lds"],
+    outs = ["user_shell.elf"],
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) -o $@",
+)
+
+genrule(
+    name = "user_shell_bin",
+    srcs = [":user_shell_elf"],
+    outs = ["user_shell.bin"],
+    cmd = "aarch64-linux-gnu-objcopy -O binary $< $@",
+)
+
+genrule(
+    name = "user_shell_h",
+    srcs = [":user_shell_bin"],
+    outs = ["user_shell_bin.h"],
+    cmd = "python3 -c \"import sys; data=open(sys.argv[1],'rb').read(); open(sys.argv[2],'w').write('const unsigned char user_shell_bin[] = {' + ','.join(hex(b) for b in data) + '};\\nconst unsigned int user_shell_bin_len = ' + str(len(data)) + ';\\n')\" $< $@",
+)
+
+genrule(
+    name = "arm64_kernel_elf",
+    srcs = [
+        "arch/arm64/boot.S",
+        "arch/arm64/kernel/vector.S",
+        "arch/arm64/kernel/switch.S",
+        "arch/arm64/kernel/interrupt.c",
+        "arch/arm64/kernel/task.c",
+        "arch/arm64/kernel/krn.c",
+        "driver/serial/pl011.c",
+        "driver/interrupt/gicv2.c",
+        "driver/timer/arm_timer.c",
+        "lib/clib.c",
+        "arch/arm64/kernel.lds",
+        ":user_shell_h",
+    ] + glob(["include/**/*.h"]),
+    outs = ["arm64_kernel.elf"],
+    cmd = """
+        aarch64-linux-gnu-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
+            -std=gnu89 \
+            -mgeneral-regs-only \
+            -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
+            -T $(location arch/arm64/kernel.lds) \
+            $(location arch/arm64/boot.S) \
+            $(location arch/arm64/kernel/vector.S) \
+            $(location arch/arm64/kernel/switch.S) \
+            $(location arch/arm64/kernel/interrupt.c) \
+            $(location arch/arm64/kernel/task.c) \
+            $(location arch/arm64/kernel/krn.c) \
+            $(location driver/serial/pl011.c) \
+            $(location driver/interrupt/gicv2.c) \
+            $(location driver/timer/arm_timer.c) \
+            $(location lib/clib.c) \
+            -o $@
+    """,
+)
+
+sh_binary(
+    name = "run_qemu_arm64",
+    srcs = ["run_qemu_arm64.sh"],
+    data = [":arm64_kernel_elf"],
+    args = ["$(location :arm64_kernel_elf)"],
+)
+
