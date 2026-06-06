@@ -1,5 +1,8 @@
 #include "gles.h"
 #include <types.h>
+#include "stdio.h"
+
+bool gl_debug = false;
 
 static void* gl_fb_addr = NULL;
 static int gl_fb_width = 0;
@@ -168,8 +171,8 @@ static void draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2,
 
   int area = edge_function(x0, y0, x1, y1, x2, y2);
   if (area == 0) return;
-
   int abs_area = area < 0 ? -area : area;
+  int pixels_drawn = 0;
 
   int x, y;
   for (y = min_y; y <= max_y; y++) {
@@ -186,6 +189,7 @@ static void draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2,
       }
 
       if (inside) {
+        pixels_drawn++;
         if (interpolate_color) {
           int abs_w0 = w0 < 0 ? -w0 : w0;
           int abs_w1 = w1 < 0 ? -w1 : w1;
@@ -204,6 +208,7 @@ static void draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2,
       }
     }
   }
+
 }
 
 void glDrawArrays(GLenum mode, GLint first, GLsizei count) {

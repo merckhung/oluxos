@@ -144,7 +144,7 @@ void map_page_thread(Thread* t, uint64_t vaddr, uint64_t paddr,
   l3[idx] = (paddr & ~0xFFF) | flags;
 }
 
-#define USER_CODE_SIZE 32768
+#define USER_CODE_SIZE 65536
 static uint8_t user_code_pages[MAX_THREADS][USER_CODE_SIZE]
     __attribute__((aligned(4096)));
 static uint8_t user_stack_pages[MAX_THREADS][4096]
@@ -481,7 +481,7 @@ void* thread_map_fb(void) {
 
   // Flags for user RAM: PXN=1, UXN=1, AP=01 (RW EL1/EL0), SH=11, AF=1, Attr=1
   // (Normal), Type=3 (Page)
-  uint64_t flags = 0x0060000000000747ULL;
+  uint64_t flags = 0x0060000000000743ULL;
   uint32_t i;
   for (i = 0; i < num_pages; i++) {
     uint64_t paddr = phys_base + i * 4096;

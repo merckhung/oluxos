@@ -33,4 +33,13 @@ void win_draw(Window* win);
 void draw_button(int x, int y, int w, int h, const char* label);
 void draw_scrollbar(int x, int y, int w, int h, int slider_y, int slider_h);
 
+extern Window* z_list_head;
+extern Window* z_list_tail;
+
+void z_list_remove(Window* win);
+void z_list_add_to_front(Window* win);
+void gui_draw_windows(void);
+void draw_cursor(int mx, int my);
+void print_z_list(void);
+
 #endif

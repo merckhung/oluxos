@@ -3,6 +3,7 @@
 #include <types.h>
 #include "gles.h"
 #include "gui_font.h"
+#include "stdio.h"
 
 static GLfixed pixel_to_ndc_x(int px, int width) {
   return (GLfixed)((((int64_t)(px * 2 - width)) << 16) / width);
@@ -118,3 +119,77 @@ void draw_scrollbar(int x, int y, int w, int h, int slider_y, int slider_h) {
   draw_rect_px(x + 1, y + 1, w - 2, h - 2, 180, 180, 180);
   draw_rect_px(x + 1, y + slider_y, w - 2, slider_h, 240, 240, 240);
 }
+
+Window* z_list_head = NULL;
+Window* z_list_tail = NULL;
+
+void z_list_remove(Window* win) {
+  if (win->prev) win->prev->next = win->next;
+  if (win->next) win->next->prev = win->prev;
+  if (win == z_list_head) z_list_head = win->next;
+  if (win == z_list_tail) z_list_tail = win->prev;
+  win->next = NULL;
+  win->prev = NULL;
+}
+
+void z_list_add_to_front(Window* win) {
+  z_list_remove(win);
+  if (!z_list_head) {
+    z_list_head = win;
+    z_list_tail = win;
+  } else {
+    z_list_tail->next = win;
+    win->prev = z_list_tail;
+    win->next = NULL;
+    z_list_tail = win;
+  }
+}
+
+void gui_draw_windows(void) {
+  Window* curr = z_list_head;
+  while (curr) {
+    win_draw(curr);
+    curr = curr->next;
+  }
+}
+
+static const char cursor_bitmap[11][12] = {
+    "B...........",
+    "BB..........",
+    "BWB.........",
+    "BWWB........",
+    "BWWWB.......",
+    "BWWWWB......",
+    "BWWWWWB.....",
+    "BWWWWBBBB...",
+    "BWBWB.......",
+    "BB.BWB......",
+    "....BB......"
+};
+
+void draw_cursor(int mx, int my) {
+  int r, c;
+  for (r = 0; r < 11; r++) {
+    for (c = 0; c < 12; c++) {
+      char p = cursor_bitmap[r][c];
+      if (p == 'B') {
+        draw_rect_px(mx + c, my + r, 1, 1, 0, 0, 0);
+      } else if (p == 'W') {
+        draw_rect_px(mx + c, my + r, 1, 1, 255, 255, 255);
+      }
+    }
+  }
+}
+
+void print_z_list(void) {
+  Window* curr = z_list_head;
+  printf("Z-List: ");
+  while (curr) {
+    printf("%s(%d)[x=%d,y=%d,w=%d,h=%d] -> ", curr->title, (long)curr->active,
+           (long)curr->x, (long)curr->y, (long)curr->w, (long)curr->h);
+    curr = curr->next;
+  }
+  printf("NULL (head=%x, tail=%x)\n", (unsigned long)z_list_head,
+         (unsigned long)z_list_tail);
+}
+

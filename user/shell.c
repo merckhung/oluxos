@@ -553,19 +553,118 @@ void cmd_gui(int argc, char** argv) {
 
   glInit(fb, FB_WIDTH, FB_HEIGHT);
 
-  glClearColorx(INT_TO_FIXED(40) / 255, INT_TO_FIXED(80) / 255,
-                INT_TO_FIXED(120) / 255, GL_ONE);
-  glClear(GL_COLOR_BUFFER_BIT);
-
   static Window win1, win2;
   win_init(&win1, 1, 50, 50, 300, 200, "Window 1", draw_win1_content);
   win_init(&win2, 2, 180, 120, 300, 200, "Window 2", draw_win2_content);
+
+  // Setup Z-order
+  z_list_head = NULL;
+  z_list_tail = NULL;
+  z_list_add_to_front(&win1);
+  z_list_add_to_front(&win2);
+  win1.active = false;
   win2.active = true;
+  print_z_list();
 
-  win_draw(&win1);
-  win_draw(&win2);
+  int mx = 320;
+  int my = 240;
 
-  puts("GUI Rendered successfully. Check framebuffer dump.\n");
+  puts("Entering interactive GUI mode.\n");
+  puts("Controls: i (up), k (down), j (left), l (right), f (click), q (quit)\n");
+
+  // Initial draw
+  glClearColorx(INT_TO_FIXED(40) / 255, INT_TO_FIXED(80) / 255,
+                INT_TO_FIXED(120) / 255, GL_ONE);
+  glClear(GL_COLOR_BUFFER_BIT);
+  gui_draw_windows();
+  draw_cursor(mx, my);
+
+  while (1) {
+    char c = getch();
+    if (c == 'q') {
+      break;
+    }
+
+    bool moved = false;
+    bool clicked = false;
+
+    if (c == 'i') {
+      my -= 15;
+      if (my < 0) my = 0;
+      moved = true;
+    } else if (c == 'k') {
+      my += 15;
+      if (my >= FB_HEIGHT) my = FB_HEIGHT - 1;
+      moved = true;
+    } else if (c == 'j') {
+      mx -= 15;
+      if (mx < 0) mx = 0;
+      moved = true;
+    } else if (c == 'l') {
+      mx += 15;
+      if (mx >= FB_WIDTH) mx = FB_WIDTH - 1;
+      moved = true;
+    } else if (c == 'f') {
+      clicked = true;
+    }
+
+    if (moved || clicked) {
+      if (clicked) {
+        Window* curr = z_list_tail;
+        while (curr) {
+          if (mx >= curr->x && mx < curr->x + curr->w &&
+              my >= curr->y && my < curr->y + curr->h) {
+
+            // Check close button click
+            if (mx >= curr->x + curr->w - 16 && mx < curr->x + curr->w - 4 &&
+                my >= curr->y + 4 && my < curr->y + 16) {
+              puts("Window Close Clicked!\n");
+              z_list_remove(curr);
+              break;
+            }
+
+            // Bring to front if not active
+            if (!curr->active) {
+              Window* w = z_list_head;
+              while (w) {
+                w->active = false;
+                w = w->next;
+              }
+              curr->active = true;
+              z_list_add_to_front(curr);
+              print_z_list();
+              puts("Window activated: ");
+              puts(curr->title);
+              puts("\n");
+              break;
+            }
+
+            // Check button click inside Win1
+            if (curr->id == 1) {
+              int bx = curr->x + 20;
+              int by = curr->y + 40;
+              int bw = 100;
+              int bh = 30;
+              if (mx >= bx && mx < bx + bw && my >= by && my < by + bh) {
+                puts("Button Clicked!\n");
+              }
+            }
+            break; // Stop propagation
+          }
+          curr = curr->prev;
+        }
+      }
+
+      glClear(GL_COLOR_BUFFER_BIT);
+      gui_draw_windows();
+      draw_cursor(mx, my);
+      if (clicked) {
+        puts("Redraw after click completed.\n");
+      }
+    }
+  }
+
+  puts("Exiting GUI mode.\n");
 }
 
 // --- Main ---

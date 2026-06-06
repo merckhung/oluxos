@@ -35,6 +35,7 @@ typedef void GLvoid;
 #define INT_TO_FIXED(i) ((GLfixed)((i) << 16))
 #define FIXED_TO_INT(f) ((int)((f) >> 16))
 #define GL_ONE 65536
+extern bool gl_debug;
 
 void glInit(void* fb_addr, int width, int height);
 
