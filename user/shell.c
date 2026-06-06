@@ -292,13 +292,222 @@ int fat32_list_dir(char *out_buf, unsigned int max_size) {
     return offset;
 }
 
-int cmd_match(const char *cmd, const char *input) {
-    int i = 0;
-    while (cmd[i] && input[i] && cmd[i] == input[i]) i++;
-    if (cmd[i] == '\0' && (input[i] == '\0' || input[i] == ' ')) {
-        return 1;
+int parse_args(char *cmdline, char *argv[]) {
+    int argc = 0;
+    char *p = cmdline;
+    while (*p) {
+        while (*p == ' ') {
+            *p = '\0';
+            p++;
+        }
+        if (*p == '\0') break;
+        
+        argv[argc++] = p;
+        
+        while (*p && *p != ' ') {
+            p++;
+        }
     }
-    return 0;
+    return argc;
+}
+
+void cmd_echo(int argc, char *argv[]) {
+    int i;
+    for (i = 1; i < argc; i++) {
+        puts(argv[i]);
+        if (i < argc - 1) {
+            puts(" ");
+        }
+    }
+    puts("\n");
+}
+
+void cmd_pwd(int argc, char *argv[]) {
+    puts("/\n");
+}
+
+void cmd_clear(int argc, char *argv[]) {
+    puts("\033[2J\033[H");
+}
+
+void cmd_wc(int argc, char *argv[]) {
+    if (argc < 2) {
+        puts("Usage: wc <filename>\n");
+        return;
+    }
+    int fd = open(argv[1], 0);
+    if (fd < 0) {
+        puts("wc: cannot open ");
+        puts(argv[1]);
+        puts("\n");
+        return;
+    }
+    
+    char buf[512];
+    ssize_t n;
+    int lines = 0;
+    int words = 0;
+    int bytes = 0;
+    int in_word = 0;
+    
+    while ((n = read(fd, buf, 512)) > 0) {
+        int i;
+        for (i = 0; i < n; i++) {
+            bytes++;
+            char c = buf[i];
+            if (c == '\n') {
+                lines++;
+            }
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                in_word = 0;
+            } else if (!in_word) {
+                in_word = 1;
+                words++;
+            }
+        }
+    }
+    close(fd);
+    
+    printf(" %d  %d %d %s\n", lines, words, bytes, argv[1]);
+}
+
+void cmd_head(int argc, char *argv[]) {
+    char *filename = NULL;
+    int lines_to_print = 10;
+    
+    int i = 1;
+    while (i < argc) {
+        if (strcmp(argv[i], "-n") == 0) {
+            if (i + 1 < argc) {
+                lines_to_print = 0;
+                char *p = argv[i+1];
+                while (*p >= '0' && *p <= '9') {
+                    lines_to_print = lines_to_print * 10 + (*p - '0');
+                    p++;
+                }
+                i += 2;
+            } else {
+                puts("head: option requires an argument -- n\n");
+                return;
+            }
+        } else {
+            filename = argv[i];
+            i++;
+        }
+    }
+    
+    if (!filename) {
+        puts("Usage: head [-n lines] <filename>\n");
+        return;
+    }
+    
+    int fd = open(filename, 0);
+    if (fd < 0) {
+        puts("head: cannot open ");
+        puts(filename);
+        puts("\n");
+        return;
+    }
+    
+    char buf[512];
+    ssize_t n;
+    int lines = 0;
+    while (lines < lines_to_print && (n = read(fd, buf, 512)) > 0) {
+        int i;
+        for (i = 0; i < n; i++) {
+            write(1, &buf[i], 1);
+            if (buf[i] == '\n') {
+                lines++;
+                if (lines >= lines_to_print) {
+                    break;
+                }
+            }
+        }
+    }
+    close(fd);
+}
+
+void cmd_grep(int argc, char *argv[]) {
+    if (argc < 3) {
+        puts("Usage: grep <pattern> <filename>\n");
+        return;
+    }
+    
+    char *pattern = argv[1];
+    char *filename = argv[2];
+    
+    int fd = open(filename, 0);
+    if (fd < 0) {
+        puts("grep: cannot open ");
+        puts(filename);
+        puts("\n");
+        return;
+    }
+    
+    char line_buf[256];
+    int line_idx = 0;
+    char c;
+    
+    while (read(fd, &c, 1) > 0) {
+        if (c == '\n' || c == '\r') {
+            line_buf[line_idx] = '\0';
+            if (line_idx > 0) {
+                if (strstr(line_buf, pattern) != NULL) {
+                    puts(line_buf);
+                    puts("\n");
+                }
+            }
+            line_idx = 0;
+        } else {
+            if (line_idx < 255) {
+                line_buf[line_idx++] = c;
+            }
+        }
+    }
+    if (line_idx > 0) {
+        line_buf[line_idx] = '\0';
+        if (strstr(line_buf, pattern) != NULL) {
+            puts(line_buf);
+            puts("\n");
+        }
+    }
+    
+    close(fd);
+}
+
+void cmd_ls(int argc, char *argv[]) {
+    DIR *dir = opendir(".");
+    if (!dir) {
+        puts("Failed to open directory\n");
+    } else {
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            puts(entry->d_name);
+            puts("\n");
+        }
+        closedir(dir);
+    }
+}
+
+void cmd_cat(int argc, char *argv[]) {
+    if (argc < 2) {
+        puts("Usage: cat <filename>\n");
+        return;
+    }
+    int fd = open(argv[1], 0);
+    if (fd < 0) {
+        puts("cat: cannot open ");
+        puts(argv[1]);
+        puts("\n");
+        return;
+    }
+    char file_buf[512];
+    ssize_t n;
+    while ((n = read(fd, file_buf, 512)) > 0) {
+        write(1, file_buf, n);
+    }
+    puts("\n");
+    close(fd);
 }
 
 // --- Main ---
@@ -437,58 +646,50 @@ void main(void) {
                 puts("\n");
                 
                 if (cmd_idx > 0) {
-                    // Handle command
-                    if (cmd_match("help", cmd_buf)) {
-                        puts("Commands:\n");
-                        puts("  help       - Show this help\n");
-                        puts("  ls         - List files\n");
-                        puts("  cat <file> - Show file content\n");
-                    } 
-                    else if (cmd_match("ls", cmd_buf)) {
-                        DIR *dir = opendir(".");
-                        if (!dir) {
-                            puts("Failed to open directory\n");
-                        } else {
-                            struct dirent *entry;
-                            while ((entry = readdir(dir)) != NULL) {
-                                puts(entry->d_name);
-                                puts("\n");
-                            }
-                            closedir(dir);
+                    char *argv[16];
+                    int argc = parse_args(cmd_buf, argv);
+                    if (argc > 0) {
+                        if (strcmp(argv[0], "help") == 0) {
+                            puts("Commands:\n");
+                            puts("  help                - Show this help\n");
+                            puts("  ls                  - List files\n");
+                            puts("  cat <file>          - Show file content\n");
+                            puts("  echo [args...]      - Print arguments\n");
+                            puts("  pwd                 - Print working directory\n");
+                            puts("  clear               - Clear screen\n");
+                            puts("  wc <file>           - Count lines, words, and bytes\n");
+                            puts("  head [-n N] <file>  - Show first N lines\n");
+                            puts("  grep <pattern> <file>- Search for pattern in file\n");
+                        } 
+                        else if (strcmp(argv[0], "ls") == 0) {
+                            cmd_ls(argc, argv);
+                        } 
+                        else if (strcmp(argv[0], "cat") == 0) {
+                            cmd_cat(argc, argv);
+                        } 
+                        else if (strcmp(argv[0], "echo") == 0) {
+                            cmd_echo(argc, argv);
+                        } 
+                        else if (strcmp(argv[0], "pwd") == 0) {
+                            cmd_pwd(argc, argv);
+                        } 
+                        else if (strcmp(argv[0], "clear") == 0) {
+                            cmd_clear(argc, argv);
+                        } 
+                        else if (strcmp(argv[0], "wc") == 0) {
+                            cmd_wc(argc, argv);
+                        } 
+                        else if (strcmp(argv[0], "head") == 0) {
+                            cmd_head(argc, argv);
+                        } 
+                        else if (strcmp(argv[0], "grep") == 0) {
+                            cmd_grep(argc, argv);
+                        } 
+                        else {
+                            puts("Unknown command: ");
+                            puts(argv[0]);
+                            puts("\n");
                         }
-                    } 
-                    else if (cmd_match("cat", cmd_buf)) {
-                        // Find parameter
-                        int p = 3;
-                        while (cmd_buf[p] == ' ') p++;
-                        if (cmd_buf[p] == '\0') {
-                            puts("Usage: cat <filename>\n");
-                        } else {
-                            char raw_filename[32];
-                            int r = 0;
-                            while (cmd_buf[p] && cmd_buf[p] != ' ' && r < 31) {
-                                raw_filename[r++] = cmd_buf[p++];
-                            }
-                            raw_filename[r] = '\0';
-                            
-                            int fd = open(raw_filename, 0);
-                            if (fd < 0) {
-                                puts("File not found or read failed\n");
-                            } else {
-                                char file_buf[512];
-                                ssize_t n;
-                                while ((n = read(fd, file_buf, 512)) > 0) {
-                                    write(1, file_buf, n);
-                                }
-                                puts("\n");
-                                close(fd);
-                            }
-                        }
-                    } 
-                    else {
-                        puts("Unknown command: ");
-                        puts(cmd_buf);
-                        puts("\n");
                     }
                 }
                 
