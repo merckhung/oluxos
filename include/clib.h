@@ -36,7 +36,8 @@ int8_t* CbIndex(const int8_t* buf, const int8_t ch);
 // ASCII Routines
 //
 int8_t CbBinToAscii(int8_t value, int8_t upper);
-uint32_t CbBinToAsciiBuf(uint32_t value, int8_t* buf, int8_t upper, uint32_t digit, uint32_t pad);
+uint32_t CbBinToAsciiBuf(uint32_t value, int8_t* buf, int8_t upper,
+                         uint32_t digit, uint32_t pad);
 int8_t CbAsciiToBin(int8_t value);
 uint32_t CbAsciiBufToBin(const int8_t* buf);
 uint32_t CbBinToBcd(uint32_t value);
@@ -50,13 +51,15 @@ int32_t CbPower(int32_t x, int32_t y);
 //
 // General Routines
 //
-uint32_t CbParseFormat(const int8_t* fmt, uint32_t* digit, uint32_t* pad, int8_t* fc);
+uint32_t CbParseFormat(const int8_t* fmt, uint32_t* digit, uint32_t* pad,
+                       int8_t* fc);
 typedef __builtin_va_list va_list;
-#define va_start(v,l)   __builtin_va_start(v,l)
-#define va_end(v)       __builtin_va_end(v)
-#define va_arg(v,l)     __builtin_va_arg(v,l)
+#define va_start(v, l) __builtin_va_start(v, l)
+#define va_end(v) __builtin_va_end(v)
+#define va_arg(v, l) __builtin_va_arg(v, l)
 
-int32_t CbFmtPrint(int8_t* buf, uint32_t sz, const int8_t* format, va_list args);
+int32_t CbFmtPrint(int8_t* buf, uint32_t sz, const int8_t* format,
+                   va_list args);
 
 //
 // CRC Routines

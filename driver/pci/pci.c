@@ -140,8 +140,8 @@ void PciWriteConfigDWord(uint32_t address, uint8_t offset, uint32_t value) {
 //  Calculate Pci base address by bus, device, and function numbers
 //
 uint32_t PciCalBaseAddr(uint16_t bus, uint8_t dev, uint8_t func) {
-  return PCI_ENABLE_BIT | (((uint32_t)bus) << 16) | ((((uint32_t)dev) & 0x1F) << 11) |
-         ((((uint32_t)func) & 0x07) << 8);
+  return PCI_ENABLE_BIT | (((uint32_t)bus) << 16) |
+         ((((uint32_t)dev) & 0x1F) << 11) | ((((uint32_t)func) & 0x07) << 8);
 }
 
 //
@@ -160,6 +160,6 @@ void PciDetectDevice(void) {
   uint32_t value;
   uint16_t bus;
   uint8_t dev, func;
-  
+
   // Disabled to isolate crash
 }

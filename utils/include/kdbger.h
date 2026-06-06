@@ -10,6 +10,7 @@
 
 #include <ncurses.h>
 #include <panel.h>
+
 #include "otypes.h"
 #include "packet.h"
 
@@ -395,12 +396,15 @@ typedef struct {
 } kdbgerUiProperty_t;
 
 // Prototypes
-int32_t verifyResponsePacket(kdbgerCommPkt_t* pKdbgerCommPkt, kdbgerOpCode_t op);
-int32_t executeFunction(int32_t fd, kdbgerOpCode_t op, uint64_t addr, uint32_t size, uint8_t* cntBuf,
-                    uint8_t* pktBuf, int32_t lenPktBuf);
+int32_t verifyResponsePacket(kdbgerCommPkt_t* pKdbgerCommPkt,
+                             kdbgerOpCode_t op);
+int32_t executeFunction(int32_t fd, kdbgerOpCode_t op, uint64_t addr,
+                        uint32_t size, uint8_t* cntBuf, uint8_t* pktBuf,
+                        int32_t lenPktBuf);
 int32_t connectToOluxOSKernel(kdbgerUiProperty_t* pKdbgerUiProperty);
 int32_t readPciList(kdbgerUiProperty_t* pKdbgerUiProperty);
-kdbgerPciDev_t* getPciDevice(kdbgerUiProperty_t* pKdbgerUiProperty, int32_t num);
+kdbgerPciDev_t* getPciDevice(kdbgerUiProperty_t* pKdbgerUiProperty,
+                             int32_t num);
 int32_t readE820List(kdbgerUiProperty_t* pKdbgerUiProperty);
 int32_t readMemory(kdbgerUiProperty_t* pKdbgerUiProperty);
 int32_t writeMemoryByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
@@ -413,7 +417,8 @@ int32_t writeCmosByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
 int32_t readPci(kdbgerUiProperty_t* pKdbgerUiProperty);
 int32_t writePciByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
 uint32_t calculatePciAddress(uint16_t bus, uint8_t dev, uint8_t func);
-int32_t getPciVenDevTexts(uint16_t venid, uint16_t devid, int8_t* ventxt, int8_t* devtxt, int8_t* pciids);
+int32_t getPciVenDevTexts(uint16_t venid, uint16_t devid, int8_t* ventxt,
+                          int8_t* devtxt, int8_t* pciids);
 
 void printPciListBasePanel(kdbgerUiProperty_t* pKdbgerUiProperty);
 void printPciListUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty);

@@ -72,7 +72,8 @@ void kdbgerIDEWriteSector(uint32_t sector, uint8_t* buf) {
   }
 }
 
-static int32_t kdbgerIdeReadWrite(uint64_t addr, uint32_t sz, uint8_t* ptr, kdbgerOpCode_t op) {
+static int32_t kdbgerIdeReadWrite(uint64_t addr, uint32_t sz, uint8_t* ptr,
+                                  kdbgerOpCode_t op) {
   uint8_t ideBuf[KDBGER_SECTOR_SZ];
   uint32_t ideSector, ideNrSector, ideOffset;
   uint32_t i;

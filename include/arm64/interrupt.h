@@ -4,4 +4,4 @@
 void IntDisable(void);
 void IntEnable(void);
 
-#endif // __ARM64_INTERRUPT_H__
+#endif  // __ARM64_INTERRUPT_H__

@@ -60,29 +60,29 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
 
   switch (pKdbgerUiProperty->kdbgerHwFunc) {
     case KHF_PCI:
-      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspPciReadPkt
-                    .pciContent;
+      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt
+                    ->kdbgerRspPciReadPkt.pciContent;
       break;
 
     case KHF_IO:
-      dataPtr =
-          (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIoReadPkt.ioContent;
+      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIoReadPkt
+                    .ioContent;
       break;
 
     case KHF_IDE:
-      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIdeReadPkt
-                    .ideContent;
+      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt
+                    ->kdbgerRspIdeReadPkt.ideContent;
       break;
 
     case KHF_CMOS:
-      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspCmosReadPkt
-                    .cmosContent;
+      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt
+                    ->kdbgerRspCmosReadPkt.cmosContent;
       break;
 
     default:
     case KHF_MEM:
-      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspMemReadPkt
-                    .memContent;
+      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt
+                    ->kdbgerRspMemReadPkt.memContent;
       break;
   }
   pDataPtr = dataPtr;
@@ -205,18 +205,19 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
           strlen(pKdbgerUiProperty->kdbgerDumpPanel.infoStr), WHITE_BLUE,
           KDBGER_INFO_MEMORY_BASE_FMT,
           (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase >> 32),
-          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFFFFFFFULL));
+          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase &
+                     0xFFFFFFFFULL));
       break;
 
     case KHF_IO:
 
       // Base address
-      printWindowAt(
-          pKdbgerUiProperty->kdbgerDumpPanel, baseaddr, KDBGER_STRING_NLINE, 5,
-          KDBGER_DUMP_BASEADDR_LINE,
-          strlen(pKdbgerUiProperty->kdbgerDumpPanel.infoStr), WHITE_BLUE,
-          KDBGER_INFO_IO_BASE_FMT,
-          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0x0000FFFFULL));
+      printWindowAt(pKdbgerUiProperty->kdbgerDumpPanel, baseaddr,
+                    KDBGER_STRING_NLINE, 5, KDBGER_DUMP_BASEADDR_LINE,
+                    strlen(pKdbgerUiProperty->kdbgerDumpPanel.infoStr),
+                    WHITE_BLUE, KDBGER_INFO_IO_BASE_FMT,
+                    (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase &
+                               0x0000FFFFULL));
       break;
 
     case KHF_PCI:
@@ -261,7 +262,8 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
           strlen(pKdbgerUiProperty->kdbgerDumpPanel.infoStr), WHITE_BLUE,
           KDBGER_INFO_IDE_BASE_FMT,
           (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase >> 32),
-          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFFFFFFFULL));
+          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase &
+                     0xFFFFFFFFULL));
       break;
 
     case KHF_CMOS:

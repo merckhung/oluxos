@@ -66,7 +66,8 @@ int32_t readPciList(kdbgerUiProperty_t* pKdbgerUiProperty) {
   return 0;
 }
 
-kdbgerPciDev_t* getPciDevice(kdbgerUiProperty_t* pKdbgerUiProperty, int32_t num) {
+kdbgerPciDev_t* getPciDevice(kdbgerUiProperty_t* pKdbgerUiProperty,
+                             int32_t num) {
   if (num >= pKdbgerUiProperty->numOfPciDevice) return NULL;
 
   return pKdbgerUiProperty->pKdbgerPciDev + num;
@@ -204,8 +205,8 @@ int32_t writePciByEditing(kdbgerUiProperty_t* pKdbgerUiProperty) {
 }
 
 uint32_t calculatePciAddress(uint16_t bus, uint8_t dev, uint8_t func) {
-  return 0x80000000 | (((uint32_t)bus) << 16) | ((((uint32_t)dev) & 0x1F) << 11) |
-         ((((uint32_t)func) & 0x07) << 8);
+  return 0x80000000 | (((uint32_t)bus) << 16) |
+         ((((uint32_t)dev) & 0x1F) << 11) | ((((uint32_t)func) & 0x07) << 8);
 }
 
 static int32_t readLine(int32_t fd, int8_t* lineBuf, int32_t len) {
@@ -248,8 +249,8 @@ static int32_t compartId(uint32_t id, int8_t* lineBuf) {
   return strncmp(temp, idstr, strlen(temp));
 }
 
-int32_t getPciVenDevTexts(uint16_t venid, uint16_t devid, int8_t* ventxt, int8_t* devtxt,
-                      int8_t* pciids) {
+int32_t getPciVenDevTexts(uint16_t venid, uint16_t devid, int8_t* ventxt,
+                          int8_t* devtxt, int8_t* pciids) {
   int32_t fd, tabs, done, findven;
   int8_t lineBuf[KDBGER_MAX_READBUF];
 

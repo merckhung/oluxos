@@ -7,9 +7,9 @@
  * 	OluxOS IA32 Serial Port Driver Routines
  *
  */
-#include <driver/serial.h>
 #include <driver/kbd.h>
 #include <driver/ksh.h>
+#include <driver/serial.h>
 #include <ia32/debug.h>
 #include <ia32/interrupt.h>
 #include <ia32/io.h>

@@ -43,8 +43,8 @@
 void krn_entry(void) {
   // Initialize Serial Port
   SrInit();
-  ScPrint( COPYRIGHT_STR"\n" );
-  ScPrint( PRODUCT_NAME" version "KRN_VER"\n\n" );
+  ScPrint(COPYRIGHT_STR "\n");
+  ScPrint(PRODUCT_NAME " version " KRN_VER "\n\n");
 
   // Clear screen and print welcome message
   TcClear();
@@ -63,37 +63,37 @@ void krn_entry(void) {
   // Init CPU interrupt and i8259A
   TcPrint("IntInitInterrupt\n");
   IntInitInterrupt();
-// Initialize Kernel Debugger
-TcPrint("kdbgerInitialization\n");
-kdbgerInitialization(UART_PORT0);
+  // Initialize Kernel Debugger
+  TcPrint("kdbgerInitialization\n");
+  kdbgerInitialization(UART_PORT0);
 
-// Initialized task
-TcPrint("TskInit\n");
-// TskInit();
-TcPrint("TskStart\n");
-// TskStart();
+  // Initialized task
+  TcPrint("TskInit\n");
+  // TskInit();
+  TcPrint("TskStart\n");
+  // TskStart();
 
-// Init timer
-TcPrint("TmInitTimer\n");
-TmInitTimer();
+  // Init timer
+  TcPrint("TmInitTimer\n");
+  TmInitTimer();
 
-// Init keyboard
-TcPrint("KbdInitKeyboard\n");
-KbdInitKeyboard();
+  // Init keyboard
+  TcPrint("KbdInitKeyboard\n");
+  KbdInitKeyboard();
 
-// Enable serial interrupt
-TcPrint("SrInitInterrupt\n");
-SrInitInterrupt();
+  // Enable serial interrupt
+  TcPrint("SrInitInterrupt\n");
+  SrInitInterrupt();
 
-// Start task scheduler
-// TskScheduler();
+  // Start task scheduler
+  // TskScheduler();
 
-// FAT file system
-TcPrint("FsFatInit\n");
-FsFatInit();
+  // FAT file system
+  TcPrint("FsFatInit\n");
+  FsFatInit();
 
-TcPrint("KshStart\n");
-KshStart();
+  TcPrint("KshStart\n");
+  KshStart();
   // Initialize GDB
   // GdbInit();
 

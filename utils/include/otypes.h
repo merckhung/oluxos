@@ -11,8 +11,8 @@
 #ifndef _OTYPES_H_
 #define _OTYPES_H_
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define TRUE 1
 #define FALSE 0

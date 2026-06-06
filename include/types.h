@@ -12,9 +12,9 @@
 #define _TYPES_H_
 
 #ifndef __ASSEMBLER__
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef volatile void* PhysicalMemory;
 

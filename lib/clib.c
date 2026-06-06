@@ -7,15 +7,12 @@
  *  Kernel C library
  *
  */
-#include <types.h>
 #include <clib.h>
-
-
+#include <types.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Memory/String Routines                                                     //
 ////////////////////////////////////////////////////////////////////////////////
-
 
 //
 // CbMemSet -- Fill memory with constant byte
@@ -28,18 +25,15 @@
 // Return:
 //  Original memory pointer
 //
-void *CbMemSet( void *mem, uint8_t ch, uint32_t sz ) {
+void* CbMemSet(void* mem, uint8_t ch, uint32_t sz) {
+  uint8_t* p = (uint8_t*)mem;
 
-    uint8_t *p = (uint8_t *)mem;
+  for (; sz--; p++) {
+    *p = ch;
+  }
 
-    for( ; sz-- ; p++ ) {
-       
-        *p = ch;
-    }
-
-    return mem;
+  return mem;
 }
-
 
 //
 // CbMemCpy -- Copy memory area
@@ -52,19 +46,16 @@ void *CbMemSet( void *mem, uint8_t ch, uint32_t sz ) {
 // Return:
 //  Destination memory pointer
 //
-void *CbMemCpy( void *dest, const void *src, uint32_t sz ) {
+void* CbMemCpy(void* dest, const void* src, uint32_t sz) {
+  uint8_t* d = (uint8_t*)dest;
+  uint8_t* s = (uint8_t*)src;
 
-    uint8_t *d = (uint8_t *)dest;
-    uint8_t *s = (uint8_t *)src;
+  for (; sz--; d++, s++) {
+    *d = *s;
+  }
 
-    for( ; sz-- ; d++, s++ ) {
-    
-        *d = *s;
-    }
-
-    return dest;
+  return dest;
 }
-
 
 //
 // CbStrLen -- Calculate the length of a string
@@ -75,15 +66,13 @@ void *CbMemCpy( void *dest, const void *src, uint32_t sz ) {
 // Return:
 //  Length of string
 //
-uint32_t CbStrLen( const int8_t *str ) {
+uint32_t CbStrLen(const int8_t* str) {
+  uint32_t i;
 
-    uint32_t i;
+  for (i = 0; str[i]; i++);
 
-    for( i = 0 ; str[ i ] ; i++ );
-
-    return i;
+  return i;
 }
-
 
 //
 // CbStrCpy -- Copy a string
@@ -96,27 +85,21 @@ uint32_t CbStrLen( const int8_t *str ) {
 // Return:
 //  Destination string
 //
-int8_t *CbStrCpy( int8_t *dest, const int8_t *src, uint32_t sz ) {
+int8_t* CbStrCpy(int8_t* dest, const int8_t* src, uint32_t sz) {
+  uint32_t len, i;
 
-    uint32_t len, i;
-
-    len = CbStrLen( src );
-    for( i = 0 ; i < sz ; i++ ) {
-    
-        if( i < len ) {
-        
-            *(dest + i) = *(src + i);
-        }
-        else {
-        
-            *(dest + i) = 0;
-            break;
-        }
+  len = CbStrLen(src);
+  for (i = 0; i < sz; i++) {
+    if (i < len) {
+      *(dest + i) = *(src + i);
+    } else {
+      *(dest + i) = 0;
+      break;
     }
+  }
 
-    return dest;
+  return dest;
 }
-
 
 //
 // CbStrCat -- Concatenate a string
@@ -129,43 +112,31 @@ int8_t *CbStrCpy( int8_t *dest, const int8_t *src, uint32_t sz ) {
 // Return:
 //  Destination string
 //
-int8_t *CbStrCat( int8_t *dest, const int8_t *src, int32_t sz ) {
+int8_t* CbStrCat(int8_t* dest, const int8_t* src, int32_t sz) {
+  int32_t slen, dlen, i, rest;
 
-	int32_t slen, dlen, i, rest;
-
-
-	dlen = CbStrLen( dest ) + 1;
-	rest = sz - dlen;
-	if( rest < 1 ) {
-
-		return dest;
-	}
-
-
-    slen = CbStrLen( src );
-	if( slen > rest ) {
-
-		slen = rest;
-	}
-
-
-    for( i = 0 ; i < slen ; i++ ) {
-    
-        if( i < slen ) {
-        
-            *(dest + dlen + i) = *(src + i);
-        }
-        else {
-        
-            *(dest + dlen + i) = 0;
-            break;
-        }
-    }
-
-
+  dlen = CbStrLen(dest) + 1;
+  rest = sz - dlen;
+  if (rest < 1) {
     return dest;
-}
+  }
 
+  slen = CbStrLen(src);
+  if (slen > rest) {
+    slen = rest;
+  }
+
+  for (i = 0; i < slen; i++) {
+    if (i < slen) {
+      *(dest + dlen + i) = *(src + i);
+    } else {
+      *(dest + dlen + i) = 0;
+      break;
+    }
+  }
+
+  return dest;
+}
 
 //
 // CbStrCmp -- Compare two strings
@@ -178,32 +149,24 @@ int8_t *CbStrCat( int8_t *dest, const int8_t *src, int32_t sz ) {
 // Return:
 //  Less than: -1, Equal to: 0, More than: 1
 //
-int32_t CbStrCmp( const int8_t *dest, const int8_t *src, uint32_t sz ) {
+int32_t CbStrCmp(const int8_t* dest, const int8_t* src, uint32_t sz) {
+  int32_t sum = 0;
+  uint32_t i, len;
 
-    int32_t sum = 0;
-    uint32_t i, len;
+  len = CbStrLen(src);
+  if (len > sz) {
+    len = sz;
+  }
 
-
-    len = CbStrLen( src );
-    if( len > sz ) {
-    
-        len = sz;
+  for (i = 0; i < len; i++) {
+    sum += (dest[i] - src[i]);
+    if (sum) {
+      break;
     }
+  }
 
-
-    for( i = 0 ; i < len ; i++ ) {
-    
-        sum += (dest[ i ] - src[ i ]);
-        if( sum ) {
-            
-            break;
-        }
-    }
-
-
-    return sum;
+  return sum;
 }
-
 
 //
 // CbStrCmpL -- Legacy Compare two strings
@@ -215,33 +178,25 @@ int32_t CbStrCmp( const int8_t *dest, const int8_t *src, uint32_t sz ) {
 // Return:
 //  Less than: -1, Equal to: 0, More than: 1
 //
-int32_t CbStrCmpL( const int8_t *dest, const int8_t *src ) {
+int32_t CbStrCmpL(const int8_t* dest, const int8_t* src) {
+  int32_t sum = 0;
+  uint32_t slen, dlen, i;
 
-    int32_t sum = 0;
-	uint32_t slen, dlen, i;
+  slen = CbStrLen(src);
+  dlen = CbStrLen(dest);
+  if (dlen < slen) {
+    dlen = slen;
+  }
 
-
-    slen = CbStrLen( src );
-	dlen = CbStrLen( dest );
-    if( dlen < slen ) {
-    
-        dlen = slen;
+  for (i = 0; i < dlen; i++) {
+    sum += (dest[i] - src[i]);
+    if (sum) {
+      break;
     }
+  }
 
-
-    for( i = 0 ; i < dlen ; i++ ) {
-    
-        sum += (dest[ i ] - src[ i ]);
-        if( sum ) {
-            
-            break;
-        }
-    }
-
-
-    return sum;
+  return sum;
 }
-
 
 //
 // CbIndex  -- Locate character in string
@@ -253,28 +208,22 @@ int32_t CbStrCmpL( const int8_t *dest, const int8_t *src ) {
 // Return:
 //  A pointer to the matched character ot NULL
 //
-int8_t *CbIndex( const int8_t *buf, const int8_t ch ) {
+int8_t* CbIndex(const int8_t* buf, const int8_t ch) {
+  uint32_t i;
+  int8_t* p = (int8_t*)buf;
 
-    uint32_t i;
-    int8_t *p = (int8_t *)buf;
-
-    for( i = 0 ; p[ i ] ; i++ ) {
-    
-        if( p[ i ] == ch ) {
-        
-            return (p + i);
-        }
+  for (i = 0; p[i]; i++) {
+    if (p[i] == ch) {
+      return (p + i);
     }
+  }
 
-    return NULL;
+  return NULL;
 }
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // ASCII Routines                                                             //
 ////////////////////////////////////////////////////////////////////////////////
-
 
 //
 // CbBinToAscii -- Convert Binary to ASCII
@@ -286,31 +235,25 @@ int8_t *CbIndex( const int8_t *buf, const int8_t ch ) {
 // Return:
 //  ASCII code
 //
-int8_t CbBinToAscii( int8_t value, int8_t upper ) {
+int8_t CbBinToAscii(int8_t value, int8_t upper) {
+  if (value > 15) {
+    return '0';
+  }
 
-    if( value > 15 ) {
-
-        return '0';
+  if (value > 9) {
+    if (upper == UPPERCASE) {
+      return (value - 10) + 'A';
+    } else {
+      return (value - 10) + 'a';
     }
+  }
 
-    if( value > 9 ) {
-
-        if( upper == UPPERCASE ) {
-
-            return (value - 10) + 'A';
-        }
-        else {
-        
-            return (value - 10) + 'a';
-        }
-    }
-
-    return value + '0';
+  return value + '0';
 }
 
-
 //
-// CbBinToAsciiBuf  --  Convert a Binary value to Ascii code then push into buffer
+// CbBinToAsciiBuf  --  Convert a Binary value to Ascii code then push into
+// buffer
 //
 // Input:
 //  value       -- Binary value to do convert
@@ -322,7 +265,8 @@ int8_t CbBinToAscii( int8_t value, int8_t upper ) {
 // Return:
 //  Byte just wrote
 //
-uint32_t CbBinToAsciiBuf(uint32_t value, int8_t* buf, int8_t upper, uint32_t digit, uint32_t pad) {
+uint32_t CbBinToAsciiBuf(uint32_t value, int8_t* buf, int8_t upper,
+                         uint32_t digit, uint32_t pad) {
   int8_t* orig = buf;
   int8_t tmp[16];
   int32_t i = 0;
@@ -361,8 +305,6 @@ uint32_t CbBinToAsciiBuf(uint32_t value, int8_t* buf, int8_t upper, uint32_t dig
   return (buf - orig);
 }
 
-
-
 //
 // CbAsciiToBin -- Convert ASCII Byte to Binary
 //
@@ -372,31 +314,21 @@ uint32_t CbBinToAsciiBuf(uint32_t value, int8_t* buf, int8_t upper, uint32_t dig
 // Return:
 //  Binary value
 //
-int8_t CbAsciiToBin( int8_t value ) {
+int8_t CbAsciiToBin(int8_t value) {
+  if ((value >= '0') && (value <= '9')) {
+    return (value - '0');
+  }
 
+  if ((value >= 'A') && (value <= 'F')) {
+    return (value - 'A') + 10;
+  }
 
-    if( (value >= '0') && (value <= '9') ) {
-    
-        return (value - '0');
-    }
+  if ((value >= 'a') && (value <= 'f')) {
+    return (value - 'a') + 10;
+  }
 
-    
-    if( (value >= 'A') && (value <= 'F')  ) {
-    
-        return (value - 'A') + 10;
-    }
-
-
-    if( (value >= 'a') && (value <= 'f')  ) {
-    
-        return (value - 'a') + 10;
-    }
-
-
-    return 0;
+  return 0;
 }
-
-
 
 //
 // CbAsciiBufToBin  -- Convert ASCII Buffer to Binary
@@ -407,27 +339,20 @@ int8_t CbAsciiToBin( int8_t value ) {
 // Return:
 //  Binary value
 //
-uint32_t CbAsciiBufToBin( const int8_t *buf ) {
+uint32_t CbAsciiBufToBin(const int8_t* buf) {
+  uint32_t i, size, cal = 0;
 
-    uint32_t i, size, cal = 0;
+  if (!buf) {
+    return 0;
+  }
 
+  size = CbStrLen(buf);
+  for (i = 0; buf[i]; i++) {
+    cal += (CbAsciiToBin(buf[i]) * CbPower(16, size - i - 1));
+  }
 
-    if( !buf ) {
-    
-        return 0;
-    }
-
-
-    size = CbStrLen( buf );
-    for( i = 0 ; buf[ i ] ; i++ ) {
-
-        cal += (CbAsciiToBin( buf[ i ] ) * CbPower( 16, size - i - 1 ));
-    }
-
-
-    return cal;
+  return cal;
 }
-
 
 //
 // CbBinToBcd   -- Convert Binary to BCD
@@ -438,32 +363,25 @@ uint32_t CbAsciiBufToBin( const int8_t *buf ) {
 // Return:
 //  BCD value
 //
-uint32_t CbBinToBcd( uint32_t value ) {
+uint32_t CbBinToBcd(uint32_t value) {
+  uint32_t i, rs = 0;
+  uint8_t buf[8];
 
-    uint32_t i, rs = 0;
-    uint8_t buf[ 8 ];
-
-    for( i = 0 ; i < 8 ; i++ ) {
-    
-        if( value ) {
-
-            buf[ i ] = value % 10;
-            value /= 10;
-        }
-        else {
-        
-            break;
-        }
+  for (i = 0; i < 8; i++) {
+    if (value) {
+      buf[i] = value % 10;
+      value /= 10;
+    } else {
+      break;
     }
+  }
 
-    for( ; i ; i-- ) {
-    
-        rs += (CbPower( 16, i - 1 ) * buf[ i - 1 ]);
-    }
+  for (; i; i--) {
+    rs += (CbPower(16, i - 1) * buf[i - 1]);
+  }
 
-    return rs;
+  return rs;
 }
-
 
 //
 // CbBcdToBin   -- Convert BCD to Binary
@@ -474,29 +392,23 @@ uint32_t CbBinToBcd( uint32_t value ) {
 // Return:
 //  Binary value
 //
-uint32_t CbBcdToBin( uint32_t value ) {
+uint32_t CbBcdToBin(uint32_t value) {
+  uint32_t i, j, rs;
 
-    uint32_t i, j, rs;
-
-    for( i = 0, j = 0, rs = 0 ; ; i += 4, j++ ) {
-
-        if( !(value >> i) ) {
-        
-            break;
-        }
-
-        rs += (CbPower( 10, j ) * ((value >> i) & 0xF));
+  for (i = 0, j = 0, rs = 0;; i += 4, j++) {
+    if (!(value >> i)) {
+      break;
     }
 
-    return rs;
+    rs += (CbPower(10, j) * ((value >> i) & 0xF));
+  }
+
+  return rs;
 }
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Mathematics Routines                                                       //
 ////////////////////////////////////////////////////////////////////////////////
-
 
 //
 // CbPower      -- Power function
@@ -519,12 +431,9 @@ int32_t CbPower(int32_t x, int32_t y) {
   return sum;
 }
 
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // General Routines                                                           //
 ////////////////////////////////////////////////////////////////////////////////
-
 
 //
 // CbParseFormat-- Parsing format digit
@@ -541,7 +450,8 @@ int32_t CbPower(int32_t x, int32_t y) {
 // Known Bug:
 //  %16.24d will become digit = 0x16, pad = 0x24, not decimal value
 //
-uint32_t CbParseFormat(const int8_t* fmt, uint32_t* digit, uint32_t* pad, int8_t* fc) {
+uint32_t CbParseFormat(const int8_t* fmt, uint32_t* digit, uint32_t* pad,
+                       int8_t* fc) {
   const int8_t* orig = fmt;
   *digit = 0;
   *pad = 0;
@@ -552,11 +462,11 @@ uint32_t CbParseFormat(const int8_t* fmt, uint32_t* digit, uint32_t* pad, int8_t
 
   // Parse pad
   if (*fmt == '0') {
+    fmt++;
+    while (*fmt >= '0' && *fmt <= '9') {
+      *pad = (*pad * 10) + (*fmt - '0');
       fmt++;
-      while (*fmt >= '0' && *fmt <= '9') {
-        *pad = (*pad * 10) + (*fmt - '0');
-        fmt++;
-      }
+    }
   }
 
   // Parse digit
@@ -566,7 +476,8 @@ uint32_t CbParseFormat(const int8_t* fmt, uint32_t* digit, uint32_t* pad, int8_t
   }
 
   // Handle specific format chars
-  if (*fmt == 'd' || *fmt == 'x' || *fmt == 'X' || *fmt == 'p' || *fmt == 'c' || *fmt == 's') {
+  if (*fmt == 'd' || *fmt == 'x' || *fmt == 'X' || *fmt == 'p' || *fmt == 'c' ||
+      *fmt == 's') {
     *fc = *fmt;
     fmt++;
     return (uint32_t)(fmt - orig);
@@ -574,8 +485,6 @@ uint32_t CbParseFormat(const int8_t* fmt, uint32_t* digit, uint32_t* pad, int8_t
 
   return 0;
 }
-
-
 
 //
 // CbFmtPrint   -- Format print format
@@ -590,107 +499,84 @@ uint32_t CbParseFormat(const int8_t* fmt, uint32_t* digit, uint32_t* pad, int8_t
 //  Success : 0
 //  Error   : 1
 //
-int32_t CbFmtPrint( int8_t *buf, uint32_t sz, const int8_t *format, va_list args ) {
+int32_t CbFmtPrint(int8_t* buf, uint32_t sz, const int8_t* format,
+                   va_list args) {
+  int8_t* obuf = buf;
+  int8_t fc, upper;
+  uint32_t digit, pad;
 
-    int8_t *obuf = buf;
-    int8_t fc, upper;
-    uint32_t digit, pad;
+  // Clear memory first
+  CbMemSet(buf, 0, sz);
 
-
-    // Clear memory first
-    CbMemSet( buf, 0, sz );
-
-
-    // Manipulate String
-    for( ; *format ; ) {
-
-
-        // Check buffer overflow
-        if( (buf - obuf) > sz ) {
-
-            return 1;
-        }
-
-
-        // Direct put char if it's not '%' char
-        if( *format != '%' ) {
-
-            *buf = *format;
-            buf++;
-            format++;
-            continue;
-        }
-
-
-        // Handle '%%'
-        if( *(format + 1) == '%' ) {
-
-            *buf = *format;
-            buf++;
-            format += 2;
-            continue;
-        }
-
-
-        // Get digit, pad, offset from format string
-        // Then offset to the end of format string
-        format += CbParseFormat( format, &digit, &pad, &fc );
-
-
-        // Initialization
-        upper = LOWERCASE;
-
-
-        // Print Format
-        switch( fc ) {
-
-            // Hexadecimal Print
-            case 'X' :
-
-                upper = UPPERCASE;
-
-            case 'x' :
-
-                buf += CbBinToAsciiBuf( va_arg(args, uint32_t), buf, upper, digit, pad );
-                break;
-
-
-            // Character Print
-            case 'c' :
-
-                *buf = (int32_t)va_arg(args, int32_t);
-                buf++;
-                break;
-
-
-            // String Print
-            case 's' :
-                {
-                    int8_t* str_arg = va_arg(args, int8_t*);
-                    for( ; *str_arg ; str_arg++, buf++ ) {
-
-                        *buf = (int8_t)*str_arg;
-                    }
-                }
-                break;
-
-
-            // Decimal Print
-            case 'd' :
-
-                buf += CbBinToAsciiBuf( CbBinToBcd( va_arg(args, uint32_t) ), buf, upper, digit, pad );   
-                break;
-
-
-            // Bad syntax
-            default :
-                return 1;
-        }
-
+  // Manipulate String
+  for (; *format;) {
+    // Check buffer overflow
+    if ((buf - obuf) > sz) {
+      return 1;
     }
 
+    // Direct put char if it's not '%' char
+    if (*format != '%') {
+      *buf = *format;
+      buf++;
+      format++;
+      continue;
+    }
 
-    return 0;
+    // Handle '%%'
+    if (*(format + 1) == '%') {
+      *buf = *format;
+      buf++;
+      format += 2;
+      continue;
+    }
+
+    // Get digit, pad, offset from format string
+    // Then offset to the end of format string
+    format += CbParseFormat(format, &digit, &pad, &fc);
+
+    // Initialization
+    upper = LOWERCASE;
+
+    // Print Format
+    switch (fc) {
+      // Hexadecimal Print
+      case 'X':
+
+        upper = UPPERCASE;
+
+      case 'x':
+
+        buf += CbBinToAsciiBuf(va_arg(args, uint32_t), buf, upper, digit, pad);
+        break;
+
+      // Character Print
+      case 'c':
+
+        *buf = (int32_t)va_arg(args, int32_t);
+        buf++;
+        break;
+
+      // String Print
+      case 's': {
+        int8_t* str_arg = va_arg(args, int8_t*);
+        for (; *str_arg; str_arg++, buf++) {
+          *buf = (int8_t)*str_arg;
+        }
+      } break;
+
+      // Decimal Print
+      case 'd':
+
+        buf += CbBinToAsciiBuf(CbBinToBcd(va_arg(args, uint32_t)), buf, upper,
+                               digit, pad);
+        break;
+
+      // Bad syntax
+      default:
+        return 1;
+    }
+  }
+
+  return 0;
 }
-
-
