@@ -27,8 +27,8 @@
 
 #define IDE_SZ_SECTOR 512
 
-void IDEReadData(s8* buf);
-void IDEReadSector(u32 sector, s8* buf);
-void IDEWriteSector(u32 sector, s8* buf);
+void IDEReadData(int8_t* buf);
+void IDEReadSector(uint32_t sector, int8_t* buf);
+void IDEWriteSector(uint32_t sector, int8_t* buf);
 void IDEGetIdentify(void);
 void IDEInit(void);

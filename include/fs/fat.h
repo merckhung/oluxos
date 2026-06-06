@@ -8,47 +8,47 @@
  */
 
 typedef struct {
-  s8 BS_jmpBoot[3];
-  s8 BS_OEMName[8];
-  u16 BPB_BytePerSec;
-  u8 BPB_SecPerClus;
-  u16 BPB_RsvdSecCnt;
-  u8 BPB_NumFATs;
-  u16 BPB_RootEntCnt;
-  u16 BPB_TotSec16;
-  u8 BPB_Media;
-  u16 BPB_FATSz16;
-  u16 BPB_SecPerTrk;
-  u16 BPB_NumHeads;
-  u32 BPB_HiddSec;
-  u32 BPB_TotSec32;
+  int8_t BS_jmpBoot[3];
+  int8_t BS_OEMName[8];
+  uint16_t BPB_BytePerSec;
+  uint8_t BPB_SecPerClus;
+  uint16_t BPB_RsvdSecCnt;
+  uint8_t BPB_NumFATs;
+  uint16_t BPB_RootEntCnt;
+  uint16_t BPB_TotSec16;
+  uint8_t BPB_Media;
+  uint16_t BPB_FATSz16;
+  uint16_t BPB_SecPerTrk;
+  uint16_t BPB_NumHeads;
+  uint32_t BPB_HiddSec;
+  uint32_t BPB_TotSec32;
 
 } __attribute__((packed)) FsFatBPB_t;
 
 typedef struct {
-  u8 BS_DrvNum;
-  u8 BS_Reserved1;
-  u8 BS_BootSig;
-  u32 BS_VolID;
-  s8 BS_VolLab[11];
-  s8 BS_FilSysType[8];
+  uint8_t BS_DrvNum;
+  uint8_t BS_Reserved1;
+  uint8_t BS_BootSig;
+  uint32_t BS_VolID;
+  int8_t BS_VolLab[11];
+  int8_t BS_FilSysType[8];
 
 } __attribute__((packed)) FsFatBPBFat16_t;
 
 typedef struct {
-  u32 BPB_FATSz32;
-  u16 BPB_ExtFlags;
-  u16 BPB_FSVer;
-  u32 BPB_RootClus;
-  u16 BPB_FSInfo;
-  u16 BPB_BkBootSec;
-  s8 BPB_Reserved[12];
-  u8 BS_DrvNum;
-  u8 BS_Reserved1;
-  u8 BS_BootSig;
-  u32 BS_VolID;
-  s8 BS_VolLab[11];
-  s8 BS_FilSysType[8];
+  uint32_t BPB_FATSz32;
+  uint16_t BPB_ExtFlags;
+  uint16_t BPB_FSVer;
+  uint32_t BPB_RootClus;
+  uint16_t BPB_FSInfo;
+  uint16_t BPB_BkBootSec;
+  int8_t BPB_Reserved[12];
+  uint8_t BS_DrvNum;
+  uint8_t BS_Reserved1;
+  uint8_t BS_BootSig;
+  uint32_t BS_VolID;
+  int8_t BS_VolLab[11];
+  int8_t BS_FilSysType[8];
 
 } __attribute__((packed)) FsFatBPBFat32_t;
 

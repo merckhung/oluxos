@@ -37,10 +37,10 @@ enum {
 // Prototypes
 //
 void GdbInit(void);
-void GdbPutChar(s8 c);
-s8 GdbGetChar(void);
-s8* GdbGetPacket(s8* buf);
-void GdbSendPacket(s8* buf);
-u8 TranslateException(u32 ExceptionVector);
-void GdbExceptionHandler(u32 ExceptionVector);
-void GdbSerialIntHandler(u8 IrqNum);
+void GdbPutChar(int8_t c);
+int8_t GdbGetChar(void);
+int8_t* GdbGetPacket(int8_t* buf);
+void GdbSendPacket(int8_t* buf);
+uint8_t TranslateException(uint32_t ExceptionVector);
+void GdbExceptionHandler(uint32_t ExceptionVector);
+void GdbSerialIntHandler(uint8_t IrqNum);

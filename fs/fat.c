@@ -15,14 +15,14 @@
 #include <types.h>
 
 void FsFatInit(void) {
-  s8 buf[512], buf1[512], tmp[12];
+  int8_t buf[512], buf1[512], tmp[12];
   FsFatBPB_t* p;
 
   IDEReadSector(0, buf);
   p = (FsFatBPB_t*)buf;
 
 #if 0
-    s32 i;
+    int32_t i;
 
     for( i = 0 ; i < 512 ; i++ ) {
 
@@ -72,7 +72,7 @@ void FsFatInit(void) {
       tmp[sizeof(p16->BS_FilSysType)] = 0;
       DbgPrint("BS_FilSysType  = %s\n", tmp);
 
-      u32 RootDirSectors =
+      uint32_t RootDirSectors =
           ((p->BPB_RootEntCnt * 32) + (p->BPB_BytePerSec - 1)) /
           p->BPB_BytePerSec;
 
@@ -82,7 +82,7 @@ void FsFatInit(void) {
       IDEReadSector(1, buf1);
 
 #if 1
-      s32 i;
+      int32_t i;
 
       for (i = 0; i < 512; i++) {
         if (!(i % 26)) {

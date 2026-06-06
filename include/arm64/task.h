@@ -12,34 +12,34 @@ typedef enum {
 } ThreadState;
 
 typedef struct {
-    u64 x19;
-    u64 x20;
-    u64 x21;
-    u64 x22;
-    u64 x23;
-    u64 x24;
-    u64 x25;
-    u64 x26;
-    u64 x27;
-    u64 x28;
-    u64 fp; // x29
-    u64 lr; // x30
-    u64 sp;
+    uint64_t x19;
+    uint64_t x20;
+    uint64_t x21;
+    uint64_t x22;
+    uint64_t x23;
+    uint64_t x24;
+    uint64_t x25;
+    uint64_t x26;
+    uint64_t x27;
+    uint64_t x28;
+    uint64_t fp; // x29
+    uint64_t lr; // x30
+    uint64_t sp;
 } CpuContext;
 
 typedef struct _Thread {
     CpuContext context;
     ThreadState state;
-    u32 tid;
+    uint32_t tid;
     void *stack_base;
-    u32 stack_size;
-    u64 pg_dir_phys;
+    uint32_t stack_size;
+    uint64_t pg_dir_phys;
     ARM64Registers *regs; // Saved registers pointer
     
     // IPC State
-    u32 ipc_partner;
+    uint32_t ipc_partner;
     void *ipc_buf;
-    u32 ipc_size;
+    uint32_t ipc_size;
 } Thread;
 
 #define MAX_THREADS 8
@@ -49,13 +49,13 @@ typedef struct _Thread {
 
 void thread_init(void);
 int thread_create(void (*entry)(void));
-int thread_create_userspace(const unsigned char *bin, u32 size);
+int thread_create_userspace(const unsigned char *bin, uint32_t size);
 void cpu_switch_to(CpuContext *current, CpuContext *next);
 void schedule(void);
-u32 thread_get_current_tid(void);
+uint32_t thread_get_current_tid(void);
 void thread_set_current_regs(ARM64Registers *regs);
-int thread_ipc_send(u32 dest, void *buf, u32 size);
-int thread_ipc_recv(u32 src, void *buf, u32 size);
-void* thread_map_mmio(u64 phys_addr);
+int thread_ipc_send(uint32_t dest, void *buf, uint32_t size);
+int thread_ipc_recv(uint32_t src, void *buf, uint32_t size);
+void* thread_map_mmio(uint64_t phys_addr);
 
 #endif // __ARM64_TASK_H__

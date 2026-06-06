@@ -22,10 +22,10 @@
 #include <types.h>
 #include <version.h>
 
-static s8 InputBuf[LEN_CMDBUF];
-static u32 InputIndex;
-static s8* Param = NULL;
-static s8 SectorBuf[IDE_SZ_SECTOR];
+static int8_t InputBuf[LEN_CMDBUF];
+static uint32_t InputIndex;
+static int8_t* Param = NULL;
+static int8_t SectorBuf[IDE_SZ_SECTOR];
 
 enum {
 
@@ -69,7 +69,7 @@ void KshInsertCharacter(KbdAsciiPair* in) {
   }
 }
 
-bool KshParseOneParameter(s8* buf, u32* first) {
+bool KshParseOneParameter(int8_t* buf, uint32_t* first) {
   // Check length
   if (CbStrLen(buf) > 10) {
     return FALSE;
@@ -97,7 +97,7 @@ bool KshParseOneParameter(s8* buf, u32* first) {
 //	Handle Keyboard Command
 //
 void KshHandleCmd(void) {
-  u32 CmdCode;
+  uint32_t CmdCode;
 
   // Terminate string
   InputBuf[InputIndex] = 0;
@@ -114,9 +114,9 @@ void KshHandleCmd(void) {
   TcPrint(KSH_PROMPT);
 }
 
-u32 KshParseCmd(s8* CmdBuf, s8** Param) {
-  u32 i;
-  s8* var;
+uint32_t KshParseCmd(int8_t* CmdBuf, int8_t** Param) {
+  uint32_t i;
+  int8_t* var;
 
   // Handle parameter
   var = CbIndex(CmdBuf, ' ');
@@ -136,7 +136,7 @@ u32 KshParseCmd(s8* CmdBuf, s8** Param) {
   return OLUX_CMD_UNKNOWN;
 }
 
-void KshExecCmd(s32 CmdCode, s8* Param) {
+void KshExecCmd(int32_t CmdCode, int8_t* Param) {
   switch (CmdCode) {
     case OLUX_CMD_LSPCI:
 
@@ -221,10 +221,10 @@ void KshUsage(void) {
 }
 
 #if 0
-void KshDumpMemory( u8 *Data, u32 Length, u32 BaseAddr ) {
+void KshDumpMemory( uint8_t *Data, uint32_t Length, uint32_t BaseAddr ) {
 
-    u32 i, j;
-    u32 c;
+    uint32_t i, j;
+    uint32_t c;
 
 
     TcPrint( "\n\n== Dump Memory Start ==\n\n" );

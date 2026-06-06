@@ -277,43 +277,43 @@ typedef enum {
 } kdbgerColorPairs_t;
 
 typedef struct {
-  s8 venTxt[KDBGER_MAX_PCINAME];
-  s8 devTxt[KDBGER_MAX_PCINAME];
+  int8_t venTxt[KDBGER_MAX_PCINAME];
+  int8_t devTxt[KDBGER_MAX_PCINAME];
 
 } kdbgerPciIds_t;
 
 typedef struct PACKED {
-  u16 vendorId;
-  u16 deviceId;
-  u16 command;
-  u16 status;
-  u8 revisionId;
-  u8 classCode1;
-  u16 classCode2;
-  u8 cacheLine;
-  u8 latencyTimer;
-  u8 headerType;
-  u8 bist;
+  uint16_t vendorId;
+  uint16_t deviceId;
+  uint16_t command;
+  uint16_t status;
+  uint8_t revisionId;
+  uint8_t classCode1;
+  uint16_t classCode2;
+  uint8_t cacheLine;
+  uint8_t latencyTimer;
+  uint8_t headerType;
+  uint8_t bist;
 
-  u32 baseAddrReg0;
-  u32 baseAddrReg1;
-  u32 baseAddrReg2;
-  u32 baseAddrReg3;
-  u32 baseAddrReg4;
-  u32 baseAddrReg5;
+  uint32_t baseAddrReg0;
+  uint32_t baseAddrReg1;
+  uint32_t baseAddrReg2;
+  uint32_t baseAddrReg3;
+  uint32_t baseAddrReg4;
+  uint32_t baseAddrReg5;
 
-  u32 cardbusCisPointer;
-  u16 subSysVendorId;
-  u16 subSysId;
-  u32 expRomBaseAddr;
-  u8 capPointer;
-  u8 reserved1;
-  u16 reserved2;
-  u32 reserved3;
-  u8 intLine;
-  u8 intPin;
-  u8 minGnt;
-  u8 maxLatency;
+  uint32_t cardbusCisPointer;
+  uint16_t subSysVendorId;
+  uint16_t subSysId;
+  uint32_t expRomBaseAddr;
+  uint8_t capPointer;
+  uint8_t reserved1;
+  uint16_t reserved2;
+  uint32_t reserved3;
+  uint8_t intLine;
+  uint8_t intPin;
+  uint8_t minGnt;
+  uint8_t maxLatency;
 
 } kdbgerPciConfig_t;
 
@@ -325,10 +325,10 @@ typedef struct {
   DECLARE_WINDOW(time);
   DECLARE_WINDOW(help);
 
-  u32 lastSecond;
-  s8* statusStr;
-  s32 strIdx;
-  u8 toggleHelp;
+  uint32_t lastSecond;
+  int8_t* statusStr;
+  int32_t strIdx;
+  uint8_t toggleHelp;
 
 } kdbgerBasePanel_t;
 
@@ -347,12 +347,12 @@ typedef struct {
   DECLARE_WINDOW(ftitle);
   DECLARE_WINDOW(stitle);
 
-  u64 byteBase;
-  s32 byteOffset;
-  s8* infoStr;
-  u8 toggleBits;
-  u8 toggleEditing;
-  u8 editingBuf;
+  uint64_t byteBase;
+  int32_t byteOffset;
+  int8_t* infoStr;
+  uint8_t toggleBits;
+  uint8_t toggleEditing;
+  uint8_t editingBuf;
 
 } kdbgerDumpPanel_t;
 
@@ -361,20 +361,20 @@ typedef struct {
   DECLARE_WINDOW(content);
   DECLARE_WINDOW(highlight);
 
-  s32 hlIndex;
-  s32 pageOffset;
+  int32_t hlIndex;
+  int32_t pageOffset;
 
 } kdbgerPciListPanel_t;
 
 typedef struct {
   // General
-  s32 fd;
-  s32 inputBuf;
+  int32_t fd;
+  int32_t inputBuf;
   kdbgerHwFunc_t kdbgerHwFunc;
   kdbgerHwFunc_t kdbgerPreviousHwFunc;
 
   // Packet
-  u8 pktBuf[KDBGER_MAXSZ_PKT];
+  uint8_t pktBuf[KDBGER_MAXSZ_PKT];
   kdbgerCommPkt_t* pKdbgerCommPkt;
 
   // Base panel
@@ -385,41 +385,41 @@ typedef struct {
   // PCI list
   kdbgerPciDev_t* pKdbgerPciDev;
   kdbgerPciIds_t* pKdbgerPciIds;
-  u32 numOfPciDevice;
-  s8 pciIdsPath[KDBGER_MAX_PATH];
+  uint32_t numOfPciDevice;
+  int8_t pciIdsPath[KDBGER_MAX_PATH];
 
   // E820 list
   kdbgerE820record_t* pKdbgerE820record;
-  u32 numOfE820Record;
+  uint32_t numOfE820Record;
 
 } kdbgerUiProperty_t;
 
 // Prototypes
-s32 verifyResponsePacket(kdbgerCommPkt_t* pKdbgerCommPkt, kdbgerOpCode_t op);
-s32 executeFunction(s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8* cntBuf,
-                    u8* pktBuf, s32 lenPktBuf);
-s32 connectToOluxOSKernel(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 readPciList(kdbgerUiProperty_t* pKdbgerUiProperty);
-kdbgerPciDev_t* getPciDevice(kdbgerUiProperty_t* pKdbgerUiProperty, s32 num);
-s32 readE820List(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 readMemory(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 writeMemoryByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 readIo(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 writeIoByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 readIde(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 writeIdeByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 readCmos(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 writeCmosByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 readPci(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 writePciByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
-u32 calculatePciAddress(u16 bus, u8 dev, u8 func);
-s32 getPciVenDevTexts(u16 venid, u16 devid, s8* ventxt, s8* devtxt, s8* pciids);
+int32_t verifyResponsePacket(kdbgerCommPkt_t* pKdbgerCommPkt, kdbgerOpCode_t op);
+int32_t executeFunction(int32_t fd, kdbgerOpCode_t op, uint64_t addr, uint32_t size, uint8_t* cntBuf,
+                    uint8_t* pktBuf, int32_t lenPktBuf);
+int32_t connectToOluxOSKernel(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t readPciList(kdbgerUiProperty_t* pKdbgerUiProperty);
+kdbgerPciDev_t* getPciDevice(kdbgerUiProperty_t* pKdbgerUiProperty, int32_t num);
+int32_t readE820List(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t readMemory(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t writeMemoryByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t readIo(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t writeIoByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t readIde(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t writeIdeByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t readCmos(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t writeCmosByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t readPci(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t writePciByEditing(kdbgerUiProperty_t* pKdbgerUiProperty);
+uint32_t calculatePciAddress(uint16_t bus, uint8_t dev, uint8_t func);
+int32_t getPciVenDevTexts(uint16_t venid, uint16_t devid, int8_t* ventxt, int8_t* devtxt, int8_t* pciids);
 
 void printPciListBasePanel(kdbgerUiProperty_t* pKdbgerUiProperty);
 void printPciListUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty);
 void clearPciListBasePanel(kdbgerUiProperty_t* pKdbgerUiProperty);
 void clearPciListUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty);
-s32 handleKeyPressForPciListPanel(kdbgerUiProperty_t* pKdbgerUiProperty);
+int32_t handleKeyPressForPciListPanel(kdbgerUiProperty_t* pKdbgerUiProperty);
 
 void printDumpBasePanel(kdbgerUiProperty_t* pKdbgerUiProperty);
 void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty);

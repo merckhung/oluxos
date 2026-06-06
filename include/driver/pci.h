@@ -16,12 +16,12 @@
 #define PCI_PORT_ADDR 0x0CF8
 #define PCI_PORT_DATA 0x0CFC
 
-u8 PciReadConfigByte(u32 address, u8 offset);
-void PciWriteConfigByte(u32 address, u8 offset, u8 value);
-u16 PciReadConfigWord(u32 address, u8 offset);
-void PciWriteConfigWord(u32 address, u8 offset, u16 value);
-u32 PciReadConfigDWord(u32 address, u8 offset);
-void PciWriteConfigDWord(u32 address, u8 offset, u32 value);
-u32 PciCalBaseAddr(u16 bus, u8 dev, u8 func);
+uint8_t PciReadConfigByte(uint32_t address, uint8_t offset);
+void PciWriteConfigByte(uint32_t address, uint8_t offset, uint8_t value);
+uint16_t PciReadConfigWord(uint32_t address, uint8_t offset);
+void PciWriteConfigWord(uint32_t address, uint8_t offset, uint16_t value);
+uint32_t PciReadConfigDWord(uint32_t address, uint8_t offset);
+void PciWriteConfigDWord(uint32_t address, uint8_t offset, uint32_t value);
+uint32_t PciCalBaseAddr(uint16_t bus, uint8_t dev, uint8_t func);
 
 void PciDetectDevice(void);

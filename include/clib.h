@@ -11,7 +11,7 @@
 //
 // Definitions
 //
-#define NULL 0
+#include <types.h>
 #define FMT_MAX_DIG 8
 
 enum {
@@ -23,43 +23,43 @@ enum {
 //
 // Memory/String Routines
 //
-void* CbMemSet(void* mem, u8 ch, u32 sz);
-void* CbMemCpy(void* dest, const void* src, u32 sz);
-u32 CbStrLen(const s8* str);
-s8* CbStrCpy(s8* dest, const s8* src, u32 sz);
-s32 CbStrCmp(const s8* dest, const s8* src, u32 sz);
-s32 CbStrCmpL(const s8* dest, const s8* src);
-s8* CbStrCat(s8* dest, const s8* src, s32 sz);
-s8* CbIndex(const s8* buf, const s8 ch);
+void* CbMemSet(void* mem, uint8_t ch, uint32_t sz);
+void* CbMemCpy(void* dest, const void* src, uint32_t sz);
+uint32_t CbStrLen(const int8_t* str);
+int8_t* CbStrCpy(int8_t* dest, const int8_t* src, uint32_t sz);
+int32_t CbStrCmp(const int8_t* dest, const int8_t* src, uint32_t sz);
+int32_t CbStrCmpL(const int8_t* dest, const int8_t* src);
+int8_t* CbStrCat(int8_t* dest, const int8_t* src, int32_t sz);
+int8_t* CbIndex(const int8_t* buf, const int8_t ch);
 
 //
 // ASCII Routines
 //
-s8 CbBinToAscii(s8 value, s8 upper);
-u32 CbBinToAsciiBuf(u32 value, s8* buf, s8 upper, u32 digit, u32 pad);
-s8 CbAsciiToBin(s8 value);
-u32 CbAsciiBufToBin(const s8* buf);
-u32 CbBinToBcd(u32 value);
-u32 CbBcdToBin(u32 value);
+int8_t CbBinToAscii(int8_t value, int8_t upper);
+uint32_t CbBinToAsciiBuf(uint32_t value, int8_t* buf, int8_t upper, uint32_t digit, uint32_t pad);
+int8_t CbAsciiToBin(int8_t value);
+uint32_t CbAsciiBufToBin(const int8_t* buf);
+uint32_t CbBinToBcd(uint32_t value);
+uint32_t CbBcdToBin(uint32_t value);
 
 //
 // Math Routines
 //
-s32 CbPower(s32 x, s32 y);
+int32_t CbPower(int32_t x, int32_t y);
 
 //
 // General Routines
 //
-u32 CbParseFormat(const s8* fmt, u32* digit, u32* pad, s8* fc);
+uint32_t CbParseFormat(const int8_t* fmt, uint32_t* digit, uint32_t* pad, int8_t* fc);
 typedef __builtin_va_list va_list;
 #define va_start(v,l)   __builtin_va_start(v,l)
 #define va_end(v)       __builtin_va_end(v)
 #define va_arg(v,l)     __builtin_va_arg(v,l)
 
-s32 CbFmtPrint(s8* buf, u32 sz, const s8* format, va_list args);
+int32_t CbFmtPrint(int8_t* buf, uint32_t sz, const int8_t* format, va_list args);
 
 //
 // CRC Routines
 //
-u32 CRC32(s8* Buf, u32 Len);
-u16 CRC16(s8* Buf, u32 Len);
+uint32_t CRC32(int8_t* Buf, uint32_t Len);
+uint16_t CRC16(int8_t* Buf, uint32_t Len);

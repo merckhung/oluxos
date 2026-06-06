@@ -194,112 +194,112 @@ typedef enum _kdbgErrorCode {
 } kdbgErrorCode_t;
 
 typedef struct PACKED {
-  u16 bus;
-  u8 dev;
-  u8 fun;
-  u16 vendorId;
-  u16 deviceId;
+  uint16_t bus;
+  uint8_t dev;
+  uint8_t fun;
+  uint16_t vendorId;
+  uint16_t deviceId;
 
 } kdbgerPciDev_t;
 
 typedef struct PACKED {
-  u64 baseAddr;
-  u64 length;
-  u32 type;
-  u32 attr;
+  uint64_t baseAddr;
+  uint64_t length;
+  uint32_t type;
+  uint32_t attr;
 
 } kdbgerE820record_t;
 
 // Common packet
 typedef struct PACKED _kdbgerCommHdr {
-  u16 opCode;
+  uint16_t opCode;
 
   union {
-    u16 pad;
-    u16 errorCode;
+    uint16_t pad;
+    uint16_t errorCode;
   };
 
-  u32 pktLen;
+  uint32_t pktLen;
 
 } kdbgerCommHdr_t;
 
 // Memory space Read/Write packets
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u64 address;
-  u32 size;
+  uint64_t address;
+  uint32_t size;
 
 } kdbgerReqMemReadPkt_t, kdbgerRspMemWritePkt_t;
 
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u64 address;
-  u32 size;
-  u8* memContent;
+  uint64_t address;
+  uint32_t size;
+  uint8_t* memContent;
 
 } kdbgerRspMemReadPkt_t, kdbgerReqMemWritePkt_t;
 
 // IO space Read/Write packets
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u16 address;
-  u32 size;
+  uint16_t address;
+  uint32_t size;
 
 } kdbgerReqIoReadPkt_t, kdbgerRspIoWritePkt_t;
 
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u16 address;
-  u32 size;
-  u8* ioContent;
+  uint16_t address;
+  uint32_t size;
+  uint8_t* ioContent;
 
 } kdbgerRspIoReadPkt_t, kdbgerReqIoWritePkt_t;
 
 // PCI config Read/Write packets
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u32 address;
-  u16 size;
+  uint32_t address;
+  uint16_t size;
 
 } kdbgerReqPciReadPkt_t, kdbgerRspPciWritePkt_t;
 
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u32 address;
-  u16 size;
-  u8* pciContent;
+  uint32_t address;
+  uint16_t size;
+  uint8_t* pciContent;
 
 } kdbgerRspPciReadPkt_t, kdbgerReqPciWritePkt_t;
 
 // IDE Read/Write packets
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u64 address;
-  u32 size;
+  uint64_t address;
+  uint32_t size;
 
 } kdbgerReqIdeReadPkt_t, kdbgerRspIdeWritePkt_t;
 
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u64 address;
-  u32 size;
-  u8* ideContent;
+  uint64_t address;
+  uint32_t size;
+  uint8_t* ideContent;
 
 } kdbgerRspIdeReadPkt_t, kdbgerReqIdeWritePkt_t;
 
 // CMOS Read/Write packets
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u8 address;
-  u8 size;
+  uint8_t address;
+  uint8_t size;
 
 } kdbgerReqCmosReadPkt_t, kdbgerRspCmosWritePkt_t;
 
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u8 address;
-  u8 size;
-  u8* cmosContent;
+  uint8_t address;
+  uint8_t size;
+  uint8_t* cmosContent;
 
 } kdbgerRspCmosReadPkt_t, kdbgerReqCmosWritePkt_t;
 
@@ -310,21 +310,21 @@ typedef struct PACKED {
 
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u32 numOfPciDevice;
+  uint32_t numOfPciDevice;
   kdbgerPciDev_t* pciListContent;
 
 } kdbgerRspPciListPkt_t;
 
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u32 numOfE820Record;
+  uint32_t numOfE820Record;
   kdbgerE820record_t e820ListContent[1];
 
 } kdbgerRspE820ListPkt_t;
 
 typedef struct PACKED {
   kdbgerCommHdr_t kdbgerCommHdr;
-  u32 exNum;
+  uint32_t exNum;
 
 } kdbgerRspCpuExceptionPkt_t;
 

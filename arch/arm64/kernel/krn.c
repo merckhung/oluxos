@@ -11,7 +11,7 @@ void pl011_init(void);
 void pl011_puts(const char *s);
 void pl011_putc(char c);
 
-void print_hex(u64 val) {
+void print_hex(uint64_t val) {
     char hex[17];
     int i;
     for (i = 15; i >= 0; i--) {
@@ -24,14 +24,14 @@ void print_hex(u64 val) {
     pl011_puts(hex);
 }
 
-void exception_handler_dump(u64 lr, const char *msg) {
+void exception_handler_dump(uint64_t lr, const char *msg) {
     pl011_puts("\n!!! EXCEPTION !!!\n");
     pl011_puts(msg);
     pl011_puts("\nLR: ");
     print_hex(lr);
     pl011_puts("\n");
     
-    u64 esr, far;
+    uint64_t esr, far;
     __asm__ volatile("mrs %0, esr_el1" : "=r"(esr));
     __asm__ volatile("mrs %0, far_el1" : "=r"(far));
     
@@ -45,7 +45,7 @@ void exception_handler_dump(u64 lr, const char *msg) {
 }
 
 void irq_handler_el1(ARM64Registers *regs) {
-    u32 irq = gicv2_acknowledge_irq();
+    uint32_t irq = gicv2_acknowledge_irq();
     
     if (irq == 30) {
         arm_timer_reset(100);
@@ -59,7 +59,7 @@ void irq_handler_el1(ARM64Registers *regs) {
 }
 
 void irq_handler_el0(ARM64Registers *regs) {
-    u32 irq = gicv2_acknowledge_irq();
+    uint32_t irq = gicv2_acknowledge_irq();
     
     if (irq == 30) {
         arm_timer_reset(100);
@@ -77,9 +77,9 @@ void irq_handler_el0(ARM64Registers *regs) {
 
 
 void syscall_handler(ARM64Registers *regs) {
-    u64 esr;
+    uint64_t esr;
     __asm__ volatile("mrs %0, esr_el1" : "=r"(esr));
-    u32 ec = (esr >> 26) & 0x3F;
+    uint32_t ec = (esr >> 26) & 0x3F;
     
     if (ec != 0x15) { // 0x15 is SVC in AArch64
         pl011_puts("\n!!! EL0 SYNC EXCEPTION (not syscall) !!!\n");
@@ -93,10 +93,10 @@ void syscall_handler(ARM64Registers *regs) {
 
     thread_set_current_regs(regs);
 
-    u64 syscall_num = regs->x[8];
-    u64 arg0 = regs->x[0];
-    u64 arg1 = regs->x[1];
-    u64 arg2 = regs->x[2];
+    uint64_t syscall_num = regs->x[8];
+    uint64_t arg0 = regs->x[0];
+    uint64_t arg1 = regs->x[1];
+    uint64_t arg2 = regs->x[2];
     
     /*
     pl011_puts("SC ");
@@ -114,19 +114,19 @@ void syscall_handler(ARM64Registers *regs) {
         pl011_putc((char)arg0);
         regs->x[0] = 0; // Success
     } else if (syscall_num == 2) { // SYS_SEND
-        int ret = thread_ipc_send((u32)arg0, (void *)arg1, (u32)arg2);
+        int ret = thread_ipc_send((uint32_t)arg0, (void *)arg1, (uint32_t)arg2);
         if (ret != IPC_BLOCKED) {
             regs->x[0] = ret;
         }
     } else if (syscall_num == 3) { // SYS_RECV
-        int ret = thread_ipc_recv((u32)arg0, (void *)arg1, (u32)arg2);
+        int ret = thread_ipc_recv((uint32_t)arg0, (void *)arg1, (uint32_t)arg2);
         if (ret != IPC_BLOCKED) {
             regs->x[0] = ret;
         }
     } else if (syscall_num == 4) { // SYS_GETTID
         regs->x[0] = thread_get_current_tid();
     } else if (syscall_num == 5) { // SYS_MAP_MMIO
-        regs->x[0] = (u64)thread_map_mmio(arg0);
+        regs->x[0] = (uint64_t)thread_map_mmio(arg0);
     } else {
         pl011_puts("Unknown syscall: ");
         print_hex(syscall_num);

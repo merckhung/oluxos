@@ -39,7 +39,7 @@ static void usage(void) {
   fprintf(stderr, "\n");
 }
 
-u32 CalNrSectors(u32 bufsz) {
+uint32_t CalNrSectors(uint32_t bufsz) {
   if (bufsz % HDDBLK) {
     return (bufsz / HDDBLK) + 1;
   } else {
@@ -47,13 +47,13 @@ u32 CalNrSectors(u32 bufsz) {
   }
 }
 
-s32 main(s32 argc, s8** argv) {
-  s32 kfd, bfd, ifd;
-  s8 krn_name[LENNAME], boot_name[LENNAME], img_name[LENNAME];
-  s32 krn_sz, boot_sz;
-  s32 set = 0, err = 1;
-  s32 i;
-  s8 c, *kbuf, *bbuf;
+int32_t main(int32_t argc, int8_t** argv) {
+  int32_t kfd, bfd, ifd;
+  int8_t krn_name[LENNAME], boot_name[LENNAME], img_name[LENNAME];
+  int32_t krn_sz, boot_sz;
+  int32_t set = 0, err = 1;
+  int32_t i;
+  int8_t c, *kbuf, *bbuf;
 
   //
   // Apply default values

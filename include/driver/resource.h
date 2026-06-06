@@ -12,22 +12,22 @@
 #define SMBIOS_ANCH "_SM_"
 
 struct smbios_entry {
-  u32 AnchorStr;
-  u8 Checksum;
-  u8 Length;
-  u8 MajorVer;
-  u8 MinorVer;
-  u16 MaxSize;
-  u8 Revision;
-  u8 FormattedArea[5];
-  u8 ImdAnchorStr[5];
-  u8 ImdChecksum[5];
-  u16 STblLength;
-  u32 STblAddr;
-  u16 NRStruct;
-  u8 BCDRev;
+  uint32_t AnchorStr;
+  uint8_t Checksum;
+  uint8_t Length;
+  uint8_t MajorVer;
+  uint8_t MinorVer;
+  uint16_t MaxSize;
+  uint8_t Revision;
+  uint8_t FormattedArea[5];
+  uint8_t ImdAnchorStr[5];
+  uint8_t ImdChecksum[5];
+  uint16_t STblLength;
+  uint32_t STblAddr;
+  uint16_t NRStruct;
+  uint8_t BCDRev;
 };
 
-s8 ChkCpuidSup(void);
-s8 ChkMSRSup(void);
-u8 ChkSMBIOSSup(void);
+int8_t ChkCpuidSup(void);
+int8_t ChkMSRSup(void);
+uint8_t ChkSMBIOSSup(void);

@@ -82,8 +82,8 @@ void i8259Init(void) {
 // Description:
 //  Enable i8259A IRQ line
 //
-void i8259EnableIRQ(u8 IrqNum) {
-  u8 reg = PIC_MASTER_IMR;
+void i8259EnableIRQ(uint8_t IrqNum) {
+  uint8_t reg = PIC_MASTER_IMR;
 
   if (IrqNum >= 8) {
     reg = PIC_SLAVE_IMR;
@@ -105,8 +105,8 @@ void i8259EnableIRQ(u8 IrqNum) {
 // Description:
 //  Disable i8259A IRQ line
 //
-void i8259DisableIRQ(u8 IrqNum) {
-  u8 reg = PIC_MASTER_IMR;
+void i8259DisableIRQ(uint8_t IrqNum) {
+  uint8_t reg = PIC_MASTER_IMR;
 
   if (IrqNum & 0x8) {
     reg = PIC_SLAVE_IMR;

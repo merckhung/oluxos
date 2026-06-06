@@ -13,7 +13,7 @@
 //
 // POLY = 0x04C11DB7
 //
-u32 CRC32Table[256] = {
+uint32_t CRC32Table[256] = {
 
     0x00000000UL, 0x77073096UL, 0xEE0E612CUL, 0x990951BAUL, 0x076DC419UL,
     0x706AF48FUL, 0xE963A535UL, 0x9E6495A3UL, 0x0EDB8832UL, 0x79DCB8A4UL,
@@ -71,7 +71,7 @@ u32 CRC32Table[256] = {
 //
 // POLY = 0x8005
 //
-u16 CRC16Table[256] = {
+uint16_t CRC16Table[256] = {
 
     0x0000, 0xC0C1, 0xC181, 0x0140, 0xC301, 0x03C0, 0x0280, 0xC241, 0xC601,
     0x06C0, 0x0780, 0xC741, 0x0500, 0xC5C1, 0xC481, 0x0440, 0xCC01, 0x0CC0,
@@ -103,8 +103,8 @@ u16 CRC16Table[256] = {
     0x4540, 0x8701, 0x47C0, 0x4680, 0x8641, 0x8201, 0x42C0, 0x4380, 0x8341,
     0x4100, 0x81C1, 0x8081, 0x4040};
 
-u32 CRC32(s8* Buf, u32 Len) {
-  u32 i, Res;
+uint32_t CRC32(int8_t* Buf, uint32_t Len) {
+  uint32_t i, Res;
 
   Res = 0xFFFFFFFFUL;
   for (i = 0; i < Len; i++, Buf++) {
@@ -114,9 +114,9 @@ u32 CRC32(s8* Buf, u32 Len) {
   return (Res ^ 0xFFFFFFFFUL);
 }
 
-u16 CRC16(s8* Buf, u32 Len) {
-  u32 i;
-  u16 Res;
+uint16_t CRC16(int8_t* Buf, uint32_t Len) {
+  uint32_t i;
+  uint16_t Res;
 
   Res = 0xFFFF;
   for (i = 0; i < Len; i++, Buf++) {

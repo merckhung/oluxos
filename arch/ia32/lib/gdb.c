@@ -18,13 +18,13 @@
 
 ExternIRQHandler(4);
 
-static s8 GdbInBuf[GDB_BUF_LEN];
-static s8 GdbOutBuf[GDB_BUF_LEN];
+static int8_t GdbInBuf[GDB_BUF_LEN];
+static int8_t GdbOutBuf[GDB_BUF_LEN];
 
-extern u32 SavedAllRegs[GDB_NUM_REGS];
-extern u32 SavedErrorCode;
+extern uint32_t SavedAllRegs[GDB_NUM_REGS];
+extern uint32_t SavedErrorCode;
 
-static s8* ExcStr[] = {
+static int8_t* ExcStr[] = {
 
     "Divide Error",                   // 0
     "Debug Error",                    // 1
@@ -48,7 +48,7 @@ static s8* ExcStr[] = {
     "SIMD Floating-Point Exception",  // 19
 };
 
-static u32 ExcTranTbl[][2] = {
+static uint32_t ExcTranTbl[][2] = {
 
     {0, 8},   {1, 5},   {2, 5},   {3, 5},  {4, 16},  {5, 16},
     {6, 4},   {7, 8},   {8, 7},   {9, 11}, {10, 11}, {11, 11},
@@ -71,13 +71,13 @@ void GdbInit(void) {
   IntEnable();
 }
 
-void GdbPutChar(s8 c) {
+void GdbPutChar(int8_t c) {
 #ifdef CONFIG_SERIAL
   SrPutChar(c);
 #endif
 }
 
-s8 GdbGetChar(void) {
+int8_t GdbGetChar(void) {
 #ifdef CONFIG_SERIAL
   return SrGetChar();
 #else
@@ -85,10 +85,10 @@ s8 GdbGetChar(void) {
 #endif
 }
 
-s8* GdbGetPacket(s8* buf) {
-  s8 c;
-  u8 cksm, xcksm;
-  u32 i;
+int8_t* GdbGetPacket(int8_t* buf) {
+  int8_t c;
+  uint8_t cksm, xcksm;
+  uint32_t i;
 
   while (1) {
     do {
@@ -148,9 +148,9 @@ s8* GdbGetPacket(s8* buf) {
   }
 }
 
-void GdbSendPacket(s8* buf) {
-  u8 cksm;
-  u32 i;
+void GdbSendPacket(int8_t* buf) {
+  uint8_t cksm;
+  uint32_t i;
 
   do {
     // Header
@@ -172,8 +172,8 @@ void GdbSendPacket(s8* buf) {
   } while (GdbGetChar() != '+');
 }
 
-u8 TranslateException(u32 ExceptionVector) {
-  u8 i;
+uint8_t TranslateException(uint32_t ExceptionVector) {
+  uint8_t i;
 
   for (i = 0;; i++) {
     // Not found
@@ -185,8 +185,8 @@ u8 TranslateException(u32 ExceptionVector) {
   return 7;
 }
 
-u32 ConvertAllRegsToASCII(u32* arr, u8 count, s8* buf) {
-  s8* pbuf = buf;
+uint32_t ConvertAllRegsToASCII(uint32_t* arr, uint8_t count, int8_t* buf) {
+  int8_t* pbuf = buf;
 
   for (; count--; arr++) {
     pbuf += CbBinToAsciiBuf(*arr, pbuf, LOWERCASE, 0, 0);
@@ -195,9 +195,9 @@ u32 ConvertAllRegsToASCII(u32* arr, u8 count, s8* buf) {
   return (pbuf - buf);
 }
 
-void ConvertASCIIToAllRegs(u32* arr, u8 count, s8* buf) {
-  s8* pbuf = buf;
-  s8 tmp[9];
+void ConvertASCIIToAllRegs(uint32_t* arr, uint8_t count, int8_t* buf) {
+  int8_t* pbuf = buf;
+  int8_t tmp[9];
 
   for (; count--; arr++, pbuf += 8) {
     CbStrCpy(tmp, pbuf, 8);
@@ -205,9 +205,9 @@ void ConvertASCIIToAllRegs(u32* arr, u8 count, s8* buf) {
   }
 }
 
-void GdbExceptionHandler(u32 ExceptionVector) {
-  s8 *p = GdbOutBuf, semicolon = ';', colon = ':';
-  u8 sigval, step;
+void GdbExceptionHandler(uint32_t ExceptionVector) {
+  int8_t *p = GdbOutBuf, semicolon = ';', colon = ':';
+  uint8_t sigval, step;
 
   DbgPrint("Catched Exception No: %d\n", ExceptionVector);
   if (ExceptionVector < 20) {
@@ -334,7 +334,7 @@ void GdbExceptionHandler(u32 ExceptionVector) {
   }
 }
 
-void GdbSerialIntHandler(u8 IrqNum) {
+void GdbSerialIntHandler(uint8_t IrqNum) {
   DbgPrint("GDB Serial Int Handler\n");
   GdbExceptionHandler(0x03);
 }

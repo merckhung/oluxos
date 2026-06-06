@@ -16,7 +16,7 @@
 #include <driver/sercon.h>
 
 
-static s8 buf[ CONSOLE_BUF_LEN ];
+static int8_t buf[ CONSOLE_BUF_LEN ];
 
 
 //
@@ -29,9 +29,9 @@ static s8 buf[ CONSOLE_BUF_LEN ];
 // Return:
 //  None
 //
-void ScPrint( const s8 *format, ... ) {
+void ScPrint( const int8_t *format, ... ) {
 
-    s8 *p;
+    int8_t *p;
     va_list args;
     va_start(args, format);
 

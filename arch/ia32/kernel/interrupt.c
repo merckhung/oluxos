@@ -57,12 +57,12 @@ extern void simd_floating_point_exception(void);
 //  Initialize CPU IDT tables
 //
 void IntInitInterrupt(void) {
-  u32 i;
+  uint32_t i;
 
   // DbgPrint( "IDT Entry Size: 0x%8.8X\n", sizeof( IDTEntry ) );
 
   // Initialize IDT Tables
-  CbMemSet((s8*)IDTTable, 0, sizeof(IDTEntry) * NR_VECTOR);
+  CbMemSet((int8_t*)IDTTable, 0, sizeof(IDTEntry) * NR_VECTOR);
 
   // Setup exceptions handler
   for (i = 0; i < HW_INT_START; i++) {
@@ -92,7 +92,7 @@ void IntInitInterrupt(void) {
 
   // Setup IDT Pointer
   IDTPointer.Limit = (NR_VECTOR - 1) * sizeof(IDTEntry);
-  IDTPointer.BaseAddr = (u32)IDTTable;
+  IDTPointer.BaseAddr = (uint32_t)IDTTable;
   // DbgPrint( "IDTPointer = 0x%X, IDTTable = 0x%X\n", &IDTPointer, IDTTable );
 
   // Load IDT Pointer
@@ -128,12 +128,12 @@ void IntLoadIDTRegister(IDTPtr* Ptr) {
 // Description:
 //  Setup IDT entry for specified interrupt/exception number
 //
-void IntSetIDT(u32 Index, void* Handler, void* SegSel, u8 Flags) {
-  u32 Offset = (u32)Handler;
+void IntSetIDT(uint32_t Index, void* Handler, void* SegSel, uint8_t Flags) {
+  uint32_t Offset = (uint32_t)Handler;
 
-  IDTTable[Index].OffsetLSW = (u16)(Offset & 0xFFFF);
-  IDTTable[Index].OffsetMSW = (u16)((Offset >> 16) & 0xFFFF);
-  IDTTable[Index].SegSelect = (u32)SegSel;
+  IDTTable[Index].OffsetLSW = (uint16_t)(Offset & 0xFFFF);
+  IDTTable[Index].OffsetMSW = (uint16_t)((Offset >> 16) & 0xFFFF);
+  IDTTable[Index].SegSelect = (uint32_t)SegSel;
   IDTTable[Index].Flags = Flags;
 }
 
@@ -149,8 +149,8 @@ void IntSetIDT(u32 Index, void* Handler, void* SegSel, u8 Flags) {
 // Description:
 //  Delete IDT entry for specified interrupt/exception number
 //
-void IntDelIDT(u32 Index) {
-  CbMemSet((s8*)(&IDTTable[Index]), 0, sizeof(IDTEntry));
+void IntDelIDT(uint32_t Index) {
+  CbMemSet((int8_t*)(&IDTTable[Index]), 0, sizeof(IDTEntry));
 }
 
 //
@@ -195,10 +195,10 @@ void IntEnable(void) { __asm__("sti"); }
 // Description:
 //  Public routine for CPU interrupt register
 //
-void IntRegInterrupt(u32 IrqNum, void* IrqHandler,
-                     void (*HwIntHandler)(u8 IrqNum)) {
+void IntRegInterrupt(uint32_t IrqNum, void* IrqHandler,
+                     void (*HwIntHandler)(uint8_t IrqNum)) {
   DbgPrint("IntRegInterrupt: IRQ 0x%x, Comm 0x%x, Hw 0x%x\n", IrqNum,
-           (u32)IrqHandler, (u32)HwIntHandler);
+           (uint32_t)IrqHandler, (uint32_t)HwIntHandler);
 
   // Disable interrupt
   IntDisable();
@@ -229,7 +229,7 @@ void IntRegInterrupt(u32 IrqNum, void* IrqHandler,
 // Description:
 //  Public routine for CPU interrupt register
 //
-void IntUnregInterrupt(u32 IrqNum) {
+void IntUnregInterrupt(uint32_t IrqNum) {
   DbgPrint("IntUnregInterrupt: Index 0x%x\n", IrqNum);
 
   // Disable interrupt
@@ -260,7 +260,7 @@ void IntUnregInterrupt(u32 IrqNum) {
 // Description:
 //  IRQ handler
 //
-void IntHandleIRQ(u32 IrqNum, GeneralRegisters* Regs) {
+void IntHandleIRQ(uint32_t IrqNum, GeneralRegisters* Regs) {
   // Disable interrupt
   IntDisable();
 
@@ -289,11 +289,11 @@ void IntHandleIRQ(u32 IrqNum, GeneralRegisters* Regs) {
 void IntIssueEOI(void) { i8259IssueEOI(); }
 
 void IntShowIDTTable(void) {
-  u32 i;
-  s32* p;
+  uint32_t i;
+  int32_t* p;
 
   for (i = 0x20; i < 0x2F; i++) {
-    p = (s32*)&IDTTable[i];
+    p = (int32_t*)&IDTTable[i];
     DbgPrint("Interrupt Number: %d\n", i);
     DbgPrint("0x%8.8X%8.8X\n", *(p + 1), *p);
   }

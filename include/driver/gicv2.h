@@ -4,10 +4,10 @@
 #include <types.h>
 
 void gicv2_init(void);
-void gicv2_enable_irq(u32 irq);
-void gicv2_disable_irq(u32 irq);
-void gicv2_set_irq_priority(u32 irq, u8 priority);
-u32 gicv2_acknowledge_irq(void);
-void gicv2_end_of_irq(u32 irq);
+void gicv2_enable_irq(uint32_t irq);
+void gicv2_disable_irq(uint32_t irq);
+void gicv2_set_irq_priority(uint32_t irq, uint8_t priority);
+uint32_t gicv2_acknowledge_irq(void);
+void gicv2_end_of_irq(uint32_t irq);
 
 #endif // __GICV2_H__

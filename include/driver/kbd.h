@@ -133,17 +133,17 @@
 #define NO_ASCII 0x00
 
 typedef struct _KbdAsciiPair {
-  u8 ShiftKey;
-  u8 ScanCode;
-  u8 AsciiCode;
+  uint8_t ShiftKey;
+  uint8_t ScanCode;
+  uint8_t AsciiCode;
 
 } KbdAsciiPair;
 
 void KbdInitKeyboard(void);
-void KbdIntHandler(u8 irqnum);
+void KbdIntHandler(uint8_t irqnum);
 void KbdHandleCmd(void);
-u8 KbdGetChar(void);
-u8 KbdGetASCII(void);
+uint8_t KbdGetChar(void);
+uint8_t KbdGetASCII(void);
 
-void Kbd8042SendCmd(u8 cmd);
-void KbdSendCmd(u8 cmd);
+void Kbd8042SendCmd(uint8_t cmd);
+void KbdSendCmd(uint8_t cmd);

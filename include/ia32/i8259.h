@@ -34,6 +34,6 @@
 #define PIC_IRQ_SLAVE PIC_IRQ_BASE + 8
 
 void i8259Init(void);
-void i8259EnableIRQ(u8 IrqNum);
-void i8259DisableIRQ(u8 IrqNum);
+void i8259EnableIRQ(uint8_t IrqNum);
+void i8259DisableIRQ(uint8_t IrqNum);
 void i8259IssueEOI(void);

@@ -39,14 +39,14 @@
 //
 #ifndef __ASSEMBLER__
 typedef struct PACKED _DiskAddrPacket {
-  u8 PacketSize;
-  u8 Reserved0;
-  u8 NrSectors;
-  u8 Reserved1;
-  u16 PacketOff;
-  u16 PacketSeg;
-  u64 LBA;
-  u64 FlatAddr;
+  uint8_t PacketSize;
+  uint8_t Reserved0;
+  uint8_t NrSectors;
+  uint8_t Reserved1;
+  uint16_t PacketOff;
+  uint16_t PacketSeg;
+  uint64_t LBA;
+  uint64_t FlatAddr;
 
 } DiskAddrPacket;
 #endif

@@ -56,22 +56,22 @@
 // Structures
 //
 typedef struct PACKED _IDTEntry {
-  u16 OffsetLSW;
-  u16 SegSelect;
-  u8 Reserved;
-  u8 Flags;
-  u16 OffsetMSW;
+  uint16_t OffsetLSW;
+  uint16_t SegSelect;
+  uint8_t Reserved;
+  uint8_t Flags;
+  uint16_t OffsetMSW;
 
 } IDTEntry;
 
 typedef struct PACKED _IDTPtr {
-  u16 Limit;
-  u32 BaseAddr;
+  uint16_t Limit;
+  uint32_t BaseAddr;
 
 } IDTPtr;
 
 typedef struct PACKED _IntHandlerLst {
-  void (*IrqHandler)(u8 IrqNum);
+  void (*IrqHandler)(uint8_t IrqNum);
 
 } IntHandlerLst;
 
@@ -81,17 +81,17 @@ typedef struct PACKED _IntHandlerLst {
 void IntInitInterrupt(void);
 
 void IntLoadIDTRegister(IDTPtr* Ptr);
-void IntSetIDT(u32 Index, void* Handler, void* SegSel, u8 Flags);
-void IntDelIDT(u32 Index);
+void IntSetIDT(uint32_t Index, void* Handler, void* SegSel, uint8_t Flags);
+void IntDelIDT(uint32_t Index);
 
 void IntDisable(void);
 void IntEnable(void);
 
-void IntRegInterrupt(u32 IntNum, void* IrqHandler,
-                     void (*HwIntHandler)(u8 IrqNum));
-void IntUnregInterrupt(u32 IntNum);
+void IntRegInterrupt(uint32_t IntNum, void* IrqHandler,
+                     void (*HwIntHandler)(uint8_t IrqNum));
+void IntUnregInterrupt(uint32_t IntNum);
 
-void IntHandleIRQ(u32 IrqNum, GeneralRegisters* Regs);
+void IntHandleIRQ(uint32_t IrqNum, GeneralRegisters* Regs);
 void IntIssueEOI(void);
 
 void IntShowIDTTable(void);

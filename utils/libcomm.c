@@ -18,8 +18,8 @@
 #include <termios.h>
 #include <unistd.h>
 
-s32 CbPower(s32 x, s32 y) {
-  s32 sum = 0;
+int32_t CbPower(int32_t x, int32_t y) {
+  int32_t sum = 0;
 
   if (!y) {
     return 1;
@@ -30,7 +30,7 @@ s32 CbPower(s32 x, s32 y) {
   return sum;
 }
 
-s8 CbAsciiToBin(s8 value) {
+int8_t CbAsciiToBin(int8_t value) {
   if ((value >= '0') && (value <= '9')) {
     return (value - '0');
   }
@@ -46,8 +46,8 @@ s8 CbAsciiToBin(s8 value) {
   return 0;
 }
 
-u32 CbAsciiBufToBin(const s8* buf) {
-  u32 i, size, cal = 0;
+uint32_t CbAsciiBufToBin(const int8_t* buf) {
+  uint32_t i, size, cal = 0;
 
   if (!buf) {
     return 0;
@@ -61,7 +61,7 @@ u32 CbAsciiBufToBin(const s8* buf) {
   return cal;
 }
 
-bool ParseOneParameter(s8* buf, u32* first) {
+bool ParseOneParameter(int8_t* buf, uint32_t* first) {
   // Check length
   if (strlen(buf) > 10) {
     return FALSE;
@@ -76,8 +76,8 @@ bool ParseOneParameter(s8* buf, u32* first) {
   return TRUE;
 }
 
-bool ParseTwoParameters(s8* buf, u32* first, u32* second) {
-  s8* sec;
+bool ParseTwoParameters(int8_t* buf, uint32_t* first, uint32_t* second) {
+  int8_t* sec;
 
   // Check length
   if (strlen(buf) > 21) {
@@ -111,8 +111,8 @@ bool ParseTwoParameters(s8* buf, u32* first, u32* second) {
   return TRUE;
 }
 
-s8 ConvertDWordToByte(u32* Data, u32 Offset) {
-  u32 tmp, off, bs;
+int8_t ConvertDWordToByte(uint32_t* Data, uint32_t Offset) {
+  uint32_t tmp, off, bs;
 
   off = Offset / 4;
   bs = Offset % 4;
@@ -126,12 +126,12 @@ s8 ConvertDWordToByte(u32* Data, u32 Offset) {
   return tmp;
 }
 
-void DumpData(s8* pBuf, u32 size, u32 base) {
+void DumpData(int8_t* pBuf, uint32_t size, uint32_t base) {
 #define BYTE_PER_LINE 16
 
-  u32 i, j;
-  u8 buf[BYTE_PER_LINE];
-  s8 unalign = 0;
+  uint32_t i, j;
+  uint8_t buf[BYTE_PER_LINE];
+  int8_t unalign = 0;
 
   if (size % BYTE_PER_LINE) {
     unalign = 1;
@@ -162,7 +162,7 @@ void DumpData(s8* pBuf, u32 size, u32 base) {
       memset(buf, ' ', sizeof(buf));
     }
 
-    buf[i % BYTE_PER_LINE] = (u8)(*(pBuf + i));
+    buf[i % BYTE_PER_LINE] = (uint8_t)(*(pBuf + i));
     printf("%2.2X ", buf[i % BYTE_PER_LINE] & 0xFF);
   }
 
@@ -183,7 +183,7 @@ void DumpData(s8* pBuf, u32 size, u32 base) {
       "---\n");
 }
 
-void DisplayInBits(u32 value) {
+void DisplayInBits(uint32_t value) {
   printf(
       "\n======================================================================"
       "=========================\n");
@@ -222,12 +222,12 @@ void DisplayInBits(u32 value) {
 }
 
 void ClrScr(void) {
-  s32 ret;
+  int32_t ret;
   ret = write(OLUX_STD_OUT, OLUX_CLEAR_SCREEN, strlen(OLUX_CLEAR_SCREEN));
 }
 
-s8 NonBlockReadKey(void) {
-  s8 c;
+int8_t NonBlockReadKey(void) {
+  int8_t c;
 
   fcntl(OLUX_STD_IN, F_SETFL, O_NONBLOCK);
 
@@ -238,9 +238,9 @@ s8 NonBlockReadKey(void) {
   return c;
 }
 
-bool ReadLine(s8* Buf, u32 Length) {
-  u32 i;
-  s8 c;
+bool ReadLine(int8_t* Buf, uint32_t Length) {
+  uint32_t i;
+  int8_t c;
 
   // Clear buffer
   memset(Buf, 0, Length);
@@ -259,9 +259,9 @@ bool ReadLine(s8* Buf, u32 Length) {
   return FALSE;
 }
 
-s8 GetKey(void) {
-  s32 ret;
-  s8 c;
+int8_t GetKey(void) {
+  int32_t ret;
+  int8_t c;
   struct termios orig, new;
 
   if (tcgetattr(OLUX_STD_IN, &orig)) return 0;

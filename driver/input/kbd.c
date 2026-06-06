@@ -19,9 +19,9 @@
 
 ExternIRQHandler(1);
 
-static u8 CapsLock = 0;
-static u8 NumLock = 0;
-static u8 ScrollLock = 0;
+static uint8_t CapsLock = 0;
+static uint8_t NumLock = 0;
+static uint8_t ScrollLock = 0;
 
 KbdAsciiPair kap[] = {
 
@@ -119,9 +119,9 @@ void KbdInitKeyboard(void) {
 // Description:
 //  Keyboard interrupt handler
 //
-void KbdIntHandler(u8 IrqNum) {
-  u16 i;
-  u8 keycode;
+void KbdIntHandler(uint8_t IrqNum) {
+  uint16_t i;
+  uint8_t keycode;
 
   // Read key code
   keycode = IoInByte(0x60);
@@ -172,7 +172,7 @@ void KbdIntHandler(u8 IrqNum) {
 // Description:
 //  Send command to onboard 8042 controller
 //
-void Kbd8042SendCmd(u8 cmd) {
+void Kbd8042SendCmd(uint8_t cmd) {
   // Wait for input buffer empty
   while (IoInByte(KB8042_PORT) & 0x02);
 
@@ -194,7 +194,7 @@ void Kbd8042SendCmd(u8 cmd) {
 // Description:
 //  Send command to keyboard controller
 //
-void KbdSendCmd(u8 cmd) {
+void KbdSendCmd(uint8_t cmd) {
   // Disable keyboard
   Kbd8042SendCmd(0xad);
 

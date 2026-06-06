@@ -27,7 +27,7 @@
 // Description:
 //  Read Pci configuration space register in byte
 //
-u8 PciReadConfigByte(u32 address, u8 offset) {
+uint8_t PciReadConfigByte(uint32_t address, uint8_t offset) {
   IoOutDWord(address | offset, PCI_PORT_ADDR);
   return IoInByte(PCI_PORT_DATA);
 }
@@ -46,7 +46,7 @@ u8 PciReadConfigByte(u32 address, u8 offset) {
 // Description:
 //  Write byte to Pci configuration space register
 //
-void PciWriteConfigByte(u32 address, u8 offset, u8 value) {
+void PciWriteConfigByte(uint32_t address, uint8_t offset, uint8_t value) {
   IoOutDWord(address | offset, PCI_PORT_ADDR);
   IoOutByte(value, PCI_PORT_ADDR);
 }
@@ -64,7 +64,7 @@ void PciWriteConfigByte(u32 address, u8 offset, u8 value) {
 // Description:
 //  Read Pci configuration space register in word
 //
-u16 PciReadConfigWord(u32 address, u8 offset) {
+uint16_t PciReadConfigWord(uint32_t address, uint8_t offset) {
   IoOutDWord(address | offset, PCI_PORT_ADDR);
   return IoInWord(PCI_PORT_DATA);
 }
@@ -83,7 +83,7 @@ u16 PciReadConfigWord(u32 address, u8 offset) {
 // Description:
 //  Write word to Pci configuration space register
 //
-void PciWriteConfigWord(u32 address, u8 offset, u16 value) {
+void PciWriteConfigWord(uint32_t address, uint8_t offset, uint16_t value) {
   IoOutDWord(address | offset, PCI_PORT_ADDR);
   IoOutWord(value, PCI_PORT_ADDR);
 }
@@ -101,7 +101,7 @@ void PciWriteConfigWord(u32 address, u8 offset, u16 value) {
 // Description:
 //  Read Pci configuration space register in double word
 //
-u32 PciReadConfigDWord(u32 address, u8 offset) {
+uint32_t PciReadConfigDWord(uint32_t address, uint8_t offset) {
   IoOutDWord(address | offset, PCI_PORT_ADDR);
   return IoInDWord(PCI_PORT_DATA);
 }
@@ -120,7 +120,7 @@ u32 PciReadConfigDWord(u32 address, u8 offset) {
 // Description:
 //  Write double word to Pci configuration space register
 //
-void PciWriteConfigDWord(u32 address, u8 offset, u32 value) {
+void PciWriteConfigDWord(uint32_t address, uint8_t offset, uint32_t value) {
   IoOutDWord(address | offset, PCI_PORT_ADDR);
   IoOutDWord(value, PCI_PORT_ADDR);
 }
@@ -139,9 +139,9 @@ void PciWriteConfigDWord(u32 address, u8 offset, u32 value) {
 // Description:
 //  Calculate Pci base address by bus, device, and function numbers
 //
-u32 PciCalBaseAddr(u16 bus, u8 dev, u8 func) {
-  return PCI_ENABLE_BIT | (((u32)bus) << 16) | ((((u32)dev) & 0x1F) << 11) |
-         ((((u32)func) & 0x07) << 8);
+uint32_t PciCalBaseAddr(uint16_t bus, uint8_t dev, uint8_t func) {
+  return PCI_ENABLE_BIT | (((uint32_t)bus) << 16) | ((((uint32_t)dev) & 0x1F) << 11) |
+         ((((uint32_t)func) & 0x07) << 8);
 }
 
 //
@@ -157,9 +157,9 @@ u32 PciCalBaseAddr(u16 bus, u8 dev, u8 func) {
 //  Scaning all Pci devices on the bus
 //
 void PciDetectDevice(void) {
-  u32 value;
-  u16 bus;
-  u8 dev, func;
+  uint32_t value;
+  uint16_t bus;
+  uint8_t dev, func;
   
   // Disabled to isolate crash
 }

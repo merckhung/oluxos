@@ -104,8 +104,8 @@ void DbgDumpRegs(void) {
       DbgRegs.edi, DbgRegs.ebp, DbgRegs.esp, DbgRegs.cr0, DbgRegs.cr2,
       DbgRegs.cr3, DbgRegs.cr4, DbgRegs.cs, DbgRegs.ds, DbgRegs.es, DbgRegs.fs,
       DbgRegs.gs, DbgRegs.ss, DbgRegs.efl,
-      (u32)((DbgRegs.gdt >> 16) & 0xffffffff), (u32)(DbgRegs.gdt & 0xffff),
-      (u32)((DbgRegs.ldt >> 16) & 0xffffffff), (u16)(DbgRegs.ldt & 0xffff),
-      (u32)((DbgRegs.idt >> 16) & 0xffffffff), (u16)(DbgRegs.idt & 0xffff));
+      (uint32_t)((DbgRegs.gdt >> 16) & 0xffffffff), (uint32_t)(DbgRegs.gdt & 0xffff),
+      (uint32_t)((DbgRegs.ldt >> 16) & 0xffffffff), (uint16_t)(DbgRegs.ldt & 0xffff),
+      (uint32_t)((DbgRegs.idt >> 16) & 0xffffffff), (uint16_t)(DbgRegs.idt & 0xffff));
 }
 #endif

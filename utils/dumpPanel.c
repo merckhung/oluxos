@@ -23,7 +23,7 @@
 #include <time.h>
 #include <unistd.h>
 
-static u32 editorColorCount = 0;
+static uint32_t editorColorCount = 0;
 
 void printDumpBasePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
   // Print Top bar
@@ -49,39 +49,39 @@ void printDumpBasePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
 }
 
 void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
-  s32 i, x, y, color;
-  u8 valueBuf[KDBGER_DUMP_VBUF_SZ + 1];
-  u8 asciiBuf[KDBGER_DUMP_ABUF_SZ + 1];
-  u8 *vp = valueBuf, *ap = asciiBuf;
-  u8 *dataPtr, *pDataPtr;
+  int32_t i, x, y, color;
+  uint8_t valueBuf[KDBGER_DUMP_VBUF_SZ + 1];
+  uint8_t asciiBuf[KDBGER_DUMP_ABUF_SZ + 1];
+  uint8_t *vp = valueBuf, *ap = asciiBuf;
+  uint8_t *dataPtr, *pDataPtr;
   kdbgerPciDev_t* pKdbgerPciDev;
   kdbgerPciConfig_t* pKdbgerPciConfig;
-  s8 *mem = "Mem", *io = "I/O";
+  int8_t *mem = "Mem", *io = "I/O";
 
   switch (pKdbgerUiProperty->kdbgerHwFunc) {
     case KHF_PCI:
-      dataPtr = (u8*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspPciReadPkt
+      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspPciReadPkt
                     .pciContent;
       break;
 
     case KHF_IO:
       dataPtr =
-          (u8*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIoReadPkt.ioContent;
+          (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIoReadPkt.ioContent;
       break;
 
     case KHF_IDE:
-      dataPtr = (u8*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIdeReadPkt
+      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspIdeReadPkt
                     .ideContent;
       break;
 
     case KHF_CMOS:
-      dataPtr = (u8*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspCmosReadPkt
+      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspCmosReadPkt
                     .cmosContent;
       break;
 
     default:
     case KHF_MEM:
-      dataPtr = (u8*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspMemReadPkt
+      dataPtr = (uint8_t*)&pKdbgerUiProperty->pKdbgerCommPkt->kdbgerRspMemReadPkt
                     .memContent;
       break;
   }
@@ -93,7 +93,7 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
 
   // Format data for value & ascii
   for (i = 0; i < KDBGER_DUMP_BYTE_PER_LINE; i++) {
-    vp += sprintf((s8*)vp,
+    vp += sprintf((int8_t*)vp,
                   "%2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X "
                   "%2.2X %2.2X %2.2X %2.2X %2.2X %2.2X",
                   dataPtr[0], dataPtr[1], dataPtr[2], dataPtr[3], dataPtr[4],
@@ -102,7 +102,7 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
                   dataPtr[14], dataPtr[15]);
 
     if (pKdbgerUiProperty->kdbgerHwFunc != KHF_PCI)
-      ap += sprintf((s8*)ap, "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
+      ap += sprintf((int8_t*)ap, "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
                     KDBGER_DUMP_ASCII_FILTER(dataPtr[0]),
                     KDBGER_DUMP_ASCII_FILTER(dataPtr[1]),
                     KDBGER_DUMP_ASCII_FILTER(dataPtr[2]),
@@ -126,7 +126,7 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
 
   if (pKdbgerUiProperty->kdbgerHwFunc == KHF_PCI) {
     pKdbgerPciConfig = (kdbgerPciConfig_t*)pDataPtr;
-    sprintf((s8*)ap,
+    sprintf((int8_t*)ap,
             "VEN ID: %4.4Xh\n"
             "DEV ID: %4.4Xh\n\n"
             "Rev ID  : %2.2Xh\n"
@@ -204,8 +204,8 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
           KDBGER_DUMP_BASEADDR_LINE,
           strlen(pKdbgerUiProperty->kdbgerDumpPanel.infoStr), WHITE_BLUE,
           KDBGER_INFO_MEMORY_BASE_FMT,
-          (u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase >> 32),
-          (u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFFFFFFFULL));
+          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase >> 32),
+          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFFFFFFFULL));
       break;
 
     case KHF_IO:
@@ -216,7 +216,7 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
           KDBGER_DUMP_BASEADDR_LINE,
           strlen(pKdbgerUiProperty->kdbgerDumpPanel.infoStr), WHITE_BLUE,
           KDBGER_INFO_IO_BASE_FMT,
-          (u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0x0000FFFFULL));
+          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0x0000FFFFULL));
       break;
 
     case KHF_PCI:
@@ -260,8 +260,8 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
           KDBGER_DUMP_BASEADDR_LINE,
           strlen(pKdbgerUiProperty->kdbgerDumpPanel.infoStr), WHITE_BLUE,
           KDBGER_INFO_IDE_BASE_FMT,
-          (u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase >> 32),
-          (u32)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFFFFFFFULL));
+          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase >> 32),
+          (uint32_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFFFFFFFULL));
       break;
 
     case KHF_CMOS:
@@ -272,7 +272,7 @@ void printDumpUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
           KDBGER_DUMP_BASEADDR_LINE,
           strlen(pKdbgerUiProperty->kdbgerDumpPanel.infoStr), WHITE_BLUE,
           KDBGER_INFO_CMOS_BASE_FMT,
-          (u8)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFULL));
+          (uint8_t)(pKdbgerUiProperty->kdbgerDumpPanel.byteBase & 0xFFULL));
       break;
   }
 
@@ -405,13 +405,13 @@ void handleKeyPressForDumpPanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
 
       if (pKdbgerUiProperty->inputBuf <= '9') {
         pKdbgerUiProperty->kdbgerDumpPanel.editingBuf |=
-            (u8)((pKdbgerUiProperty->inputBuf - 0x30) & 0x0F);
+            (uint8_t)((pKdbgerUiProperty->inputBuf - 0x30) & 0x0F);
       } else if (pKdbgerUiProperty->inputBuf > 'F') {
         pKdbgerUiProperty->kdbgerDumpPanel.editingBuf |=
-            (u8)((pKdbgerUiProperty->inputBuf - 0x60 + 9) & 0x0F);
+            (uint8_t)((pKdbgerUiProperty->inputBuf - 0x60 + 9) & 0x0F);
       } else {
         pKdbgerUiProperty->kdbgerDumpPanel.editingBuf |=
-            (u8)((pKdbgerUiProperty->inputBuf - 0x40 + 9) & 0x0F);
+            (uint8_t)((pKdbgerUiProperty->inputBuf - 0x40 + 9) & 0x0F);
       }
     }
 

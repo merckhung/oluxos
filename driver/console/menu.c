@@ -14,10 +14,10 @@
 #include <ia32/io.h>
 #include <types.h>
 
-static volatile u8* ScnPtr = (u8*)VIDEO_TEXT_ADDR;
+static volatile uint8_t* ScnPtr = (uint8_t*)VIDEO_TEXT_ADDR;
 
 void MenuBackground(void) {
-  s32 i;
+  int32_t i;
 
   for (i = 0; i < COLUMN * LINE * 2; i++) {
     if (i % 2) {
@@ -29,8 +29,8 @@ void MenuBackground(void) {
 }
 
 void MenuTitle(void) {
-  s8* title = "OluxOS Setup Utility";
-  s32 i;
+  int8_t* title = "OluxOS Setup Utility";
+  int32_t i;
 
   for (i = 0; i < CbStrLen(title); i++) {
     *(ScnPtr + (i * 2) + (30 * 2)) = *(title + i);
@@ -38,10 +38,10 @@ void MenuTitle(void) {
 }
 
 void MenuItem(void) {
-  s8* item =
+  int8_t* item =
       "     Main     Advanced     Security     Power     Boot     Exit         "
       "        ";
-  s32 i, j, k;
+  int32_t i, j, k;
 
   i = COLUMN * 2 * 1;
   j = CbStrLen(item) * 2 + i;
@@ -57,12 +57,12 @@ void MenuItem(void) {
 }
 
 void MenuHelp(void) {
-  s8* help =
+  int8_t* help =
       "  F1   Help   ||  Select Item   -/+    Change Values       F9   Setup "
       "Defaults  "
       "  Esc  Exit   <>  Select Menu   Enter  Select > Sub-Menu   F10  Save "
       "and Exit   ";
-  s32 i, j, k;
+  int32_t i, j, k;
 
   i = COLUMN * 2 * 23;
   j = CbStrLen(help) * 2 + i;
@@ -76,8 +76,8 @@ void MenuHelp(void) {
 }
 
 void MenuCentral(void) {
-  s32 i = COLUMN * 2;
-  s32 j = COLUMN * 23;
+  int32_t i = COLUMN * 2;
+  int32_t j = COLUMN * 23;
 
   for (; i < j; i++) {
     *(ScnPtr + (i * 2) + 1) = 0x70;

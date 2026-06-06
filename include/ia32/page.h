@@ -83,12 +83,12 @@ typedef enum {
 } E820Type;
 
 typedef struct PACKED _E820Result {
-  u32 BaseAddrLow;
-  u32 BaseAddrHigh;
-  u32 LengthLow;
-  u32 LengthHigh;
+  uint32_t BaseAddrLow;
+  uint32_t BaseAddrHigh;
+  uint32_t LengthLow;
+  uint32_t LengthHigh;
   E820Type RecType;
-  u32 Attributes;
+  uint32_t Attributes;
 
 } E820Result;
 
@@ -97,8 +97,8 @@ typedef struct PACKED _E820Result {
 //
 void MmPageInit(void);
 void MmShowE820Info(void);
-s8* MmShowE820Type(E820Type RecType);
-void MmEnablePaging(volatile u32* Ptr);
+int8_t* MmShowE820Type(E820Type RecType);
+void MmEnablePaging(volatile uint32_t* Ptr);
 void MmDisablePaging(void);
 void MmEnablePSE(void);
 void MmDisablePSE(void);

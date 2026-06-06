@@ -26,7 +26,7 @@ extern void __utask_seg(void);
 extern void KrnTSSD(void);
 extern void UsrTSSD(void);
 
-static u32 current = -1;
+static uint32_t current = -1;
 
 extern void __KERNEL_CS(void);
 extern void __KERNEL_DS(void);
@@ -34,10 +34,10 @@ extern void __USER_CS(void);
 extern void __USER_DS(void);
 extern void __ldt_seg(void);
 
-// extern volatile u32  *usermem;
+// extern volatile uint32_t  *usermem;
 
 void TskTest1(void) {
-  u32 i, j;
+  uint32_t i, j;
 
   for (i = 0, j = 0;; i++) {
     if (!(i % 90000000)) {
@@ -48,7 +48,7 @@ void TskTest1(void) {
 }
 
 void TskTest2(void) {
-  u32 i, j;
+  uint32_t i, j;
 
   for (i = 0, j = 0;; i++) {
     if (!(i % 50000000)) {
@@ -83,16 +83,16 @@ void TskInit(void) {
   //
   p->limit0 = (0x0000ffff & sizeof(TSS_t));
   p->limit1 = (0x000f0000 & sizeof(TSS_t)) >> 16;
-  p->baseaddr0 = (0x0000ffff & (u32)&KrnTSS);
-  p->baseaddr1 = (0x00ff0000 & (u32)&KrnTSS) >> 16;
-  p->baseaddr2 = (0xff000000 & (u32)&KrnTSS) >> 24;
+  p->baseaddr0 = (0x0000ffff & (uint32_t)&KrnTSS);
+  p->baseaddr1 = (0x00ff0000 & (uint32_t)&KrnTSS) >> 16;
+  p->baseaddr2 = (0xff000000 & (uint32_t)&KrnTSS) >> 24;
   p->flag = 0x89;
 
   u->limit0 = (0x0000ffff & sizeof(TSS_t));
   u->limit1 = (0x000f0000 & sizeof(TSS_t)) >> 16;
-  u->baseaddr0 = (0x0000ffff & (u32)&UsrTSS);
-  u->baseaddr1 = (0x00ff0000 & (u32)&UsrTSS) >> 16;
-  u->baseaddr2 = (0xff000000 & (u32)&UsrTSS) >> 24;
+  u->baseaddr0 = (0x0000ffff & (uint32_t)&UsrTSS);
+  u->baseaddr1 = (0x00ff0000 & (uint32_t)&UsrTSS) >> 16;
+  u->baseaddr2 = (0xff000000 & (uint32_t)&UsrTSS) >> 24;
   u->flag = 0xe9;
 
   // DbgPrint( "usermem = 0x%8X, value = 0x%8X\n", usermem, *usermem );
@@ -119,14 +119,14 @@ void TskInit(void) {
   //
   // Fill up Task descriptors
   //
-  tsks[0].eip = (u32)TskUsr1;
-  tsks[0].cs = (u32)__USER_CS | 0x03;
-  tsks[0].ss = (u32)__USER_DS | 0x03;
-  tsks[0].ds = (u32)__USER_DS | 0x03;
-  tsks[0].es = (u32)__USER_DS | 0x03;
-  tsks[0].fs = (u32)__USER_DS | 0x03;
-  tsks[0].gs = (u32)__USER_DS | 0x03;
-  tsks[0].esp = (u32)stack_buf[0] + 1024;
+  tsks[0].eip = (uint32_t)TskUsr1;
+  tsks[0].cs = (uint32_t)__USER_CS | 0x03;
+  tsks[0].ss = (uint32_t)__USER_DS | 0x03;
+  tsks[0].ds = (uint32_t)__USER_DS | 0x03;
+  tsks[0].es = (uint32_t)__USER_DS | 0x03;
+  tsks[0].fs = (uint32_t)__USER_DS | 0x03;
+  tsks[0].gs = (uint32_t)__USER_DS | 0x03;
+  tsks[0].esp = (uint32_t)stack_buf[0] + 1024;
   tsks[0].eflags = 0x3000;
 
   UsrTSS.eip = tsks[0].eip;
@@ -139,26 +139,26 @@ void TskInit(void) {
   UsrTSS.esp = tsks[0].esp;
   UsrTSS.eflags = tsks[0].eflags;
 
-  KrnTSS.cs = (u32)__KERNEL_CS;
-  KrnTSS.ss = (u32)__KERNEL_DS;
-  KrnTSS.ds = (u32)__KERNEL_DS;
-  KrnTSS.es = (u32)__KERNEL_DS;
-  KrnTSS.fs = (u32)__KERNEL_DS;
-  KrnTSS.gs = (u32)__KERNEL_DS;
+  KrnTSS.cs = (uint32_t)__KERNEL_CS;
+  KrnTSS.ss = (uint32_t)__KERNEL_DS;
+  KrnTSS.ds = (uint32_t)__KERNEL_DS;
+  KrnTSS.es = (uint32_t)__KERNEL_DS;
+  KrnTSS.fs = (uint32_t)__KERNEL_DS;
+  KrnTSS.gs = (uint32_t)__KERNEL_DS;
 
-  tsks[1].eip = (u32)TskUsr2;
-  tsks[1].cs = (u32)__USER_CS | 0x03;
-  tsks[1].ss = (u32)__USER_DS | 0x03;
-  tsks[1].ds = (u32)__USER_DS | 0x03;
-  tsks[1].es = (u32)__USER_DS | 0x03;
-  tsks[1].fs = (u32)__USER_DS | 0x03;
-  tsks[1].gs = (u32)__USER_DS | 0x03;
-  tsks[1].esp = (u32)stack_buf[1] + 1024;
+  tsks[1].eip = (uint32_t)TskUsr2;
+  tsks[1].cs = (uint32_t)__USER_CS | 0x03;
+  tsks[1].ss = (uint32_t)__USER_DS | 0x03;
+  tsks[1].ds = (uint32_t)__USER_DS | 0x03;
+  tsks[1].es = (uint32_t)__USER_DS | 0x03;
+  tsks[1].fs = (uint32_t)__USER_DS | 0x03;
+  tsks[1].gs = (uint32_t)__USER_DS | 0x03;
+  tsks[1].esp = (uint32_t)stack_buf[1] + 1024;
   tsks[1].eflags = 0x3000;
 }
 
 void TskStart(void) {
-  u16 uts = ((u16)__utask_seg) | 0x03;
+  uint16_t uts = ((uint16_t)__utask_seg) | 0x03;
 
   //
   // Load User TSS Descriptor
@@ -212,7 +212,7 @@ void TskStart(void) {
       "g"(tsks[0].es), "g"(tsks[0].eax), "g"(tsks[0].ds));
 }
 
-void TskSwitch(u32 origtsk, u32 newtsk) {
+void TskSwitch(uint32_t origtsk, uint32_t newtsk) {
   if (origtsk >= 0) {
 #if 0
         DbgPrint( "\nCurrent Process:\n" );
@@ -261,7 +261,7 @@ void TskSwitch(u32 origtsk, u32 newtsk) {
 }
 
 void TskScheduler(void) {
-  u32 now;
+  uint32_t now;
 
   now = current;
   do {

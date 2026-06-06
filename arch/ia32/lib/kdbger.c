@@ -22,14 +22,14 @@
 
 ExternIRQHandler(4);
 
-static u16 kdbgerPortAddr = UART_PORT0;
-static u8 kdbgerState = KDBGER_UNKNOWN;
-static s8 pktBuf[KDBGER_MAXSZ_PKT];
-static s32 idxBuf;
+static uint16_t kdbgerPortAddr = UART_PORT0;
+static uint8_t kdbgerState = KDBGER_UNKNOWN;
+static int8_t pktBuf[KDBGER_MAXSZ_PKT];
+static int32_t idxBuf;
 
 static void kdbgerSetState(kdbgerState_t state) { kdbgerState = state; }
 
-static u8 kdbgerGetState(void) { return kdbgerState; }
+static uint8_t kdbgerGetState(void) { return kdbgerState; }
 
 static void kdbgerIntrEnable(void) {
   IoOutByte(UART_IER_RXRD, kdbgerPortAddr + UART_REG_IER);
@@ -39,9 +39,9 @@ static void kdbgerIntrDisable(void) {
   IoOutByte(0x00, kdbgerPortAddr + UART_REG_IER);
 }
 
-void kdbgerIDEReadSector(u32 sector, u8* buf) {
-  s32 i, j;
-  u16 tmp;
+void kdbgerIDEReadSector(uint32_t sector, uint8_t* buf) {
+  int32_t i, j;
+  uint16_t tmp;
 
   IoOutByte(0x01, IDE_NSECTOR);
   IoOutByte((sector & 0x000000FF), IDE_SECTOR);
@@ -57,8 +57,8 @@ void kdbgerIDEReadSector(u32 sector, u8* buf) {
   }
 }
 
-void kdbgerIDEWriteSector(u32 sector, u8* buf) {
-  s32 i, j;
+void kdbgerIDEWriteSector(uint32_t sector, uint8_t* buf) {
+  int32_t i, j;
 
   IoOutByte(0x01, IDE_NSECTOR);
   IoOutByte((sector & 0x000000FF), IDE_SECTOR);
@@ -72,10 +72,10 @@ void kdbgerIDEWriteSector(u32 sector, u8* buf) {
   }
 }
 
-static s32 kdbgerIdeReadWrite(u64 addr, u32 sz, u8* ptr, kdbgerOpCode_t op) {
-  u8 ideBuf[KDBGER_SECTOR_SZ];
-  u32 ideSector, ideNrSector, ideOffset;
-  u32 i;
+static int32_t kdbgerIdeReadWrite(uint64_t addr, uint32_t sz, uint8_t* ptr, kdbgerOpCode_t op) {
+  uint8_t ideBuf[KDBGER_SECTOR_SZ];
+  uint32_t ideSector, ideNrSector, ideOffset;
+  uint32_t i;
 
   if (op != KDBGER_REQ_IDE_READ && op != KDBGER_REQ_IDE_WRITE) return -1;
 
@@ -162,11 +162,11 @@ static s32 kdbgerIdeReadWrite(u64 addr, u32 sz, u8* ptr, kdbgerOpCode_t op) {
   return 0;
 }
 
-static u32 kdbgerPciDetectDevice(kdbgerPciDev_t* pKdbgerPciDev) {
-  u32 value;
-  u16 bus;
-  u8 dev, func;
-  u32 count = 0;
+static uint32_t kdbgerPciDetectDevice(kdbgerPciDev_t* pKdbgerPciDev) {
+  uint32_t value;
+  uint16_t bus;
+  uint8_t dev, func;
+  uint32_t count = 0;
 
   for (bus = 0; bus <= PCI_BUS_MAX; bus++)
     for (dev = 0; dev <= PCI_DEV_MAX; dev++)
@@ -187,21 +187,21 @@ static u32 kdbgerPciDetectDevice(kdbgerPciDev_t* pKdbgerPciDev) {
   return count;
 }
 
-static u32 kdbgerE820Copy(kdbgerE820record_t* pKdbgerE820record) {
-  s32 i;
-  u32 count = 0;
-  volatile u8* e820_count = (volatile u8*)E820_COUNT;
+static uint32_t kdbgerE820Copy(kdbgerE820record_t* pKdbgerE820record) {
+  int32_t i;
+  uint32_t count = 0;
+  volatile uint8_t* e820_count = (volatile uint8_t*)E820_COUNT;
   volatile E820Result* e820_base = (volatile E820Result*)E820_BASE;
 
   for (i = 0; i < *e820_count; i++, pKdbgerE820record++, count++) {
     pKdbgerE820record->baseAddr =
-        (((u64)(e820_base + i)->BaseAddrHigh) & 0xFFFFFFFFULL) << 32;
+        (((uint64_t)(e820_base + i)->BaseAddrHigh) & 0xFFFFFFFFULL) << 32;
     pKdbgerE820record->baseAddr |=
-        ((u64)(e820_base + i)->BaseAddrLow) & 0xFFFFFFFFULL;
+        ((uint64_t)(e820_base + i)->BaseAddrLow) & 0xFFFFFFFFULL;
     pKdbgerE820record->length =
-        (((u64)(e820_base + i)->LengthHigh) & 0xFFFFFFFFULL) << 32;
+        (((uint64_t)(e820_base + i)->LengthHigh) & 0xFFFFFFFFULL) << 32;
     pKdbgerE820record->length |=
-        ((u64)(e820_base + i)->LengthLow) & 0xFFFFFFFFULL;
+        ((uint64_t)(e820_base + i)->LengthLow) & 0xFFFFFFFFULL;
     pKdbgerE820record->type = (e820_base + i)->RecType;
     pKdbgerE820record->attr = (e820_base + i)->Attributes;
   }
@@ -215,19 +215,19 @@ static void kdbgerFifoEnable(void) {
             kdbgerPortAddr + UART_REG_FCR);
 }
 
-static void kdbgerIntHandler(u8 IrqNum) {
-  u8 lsrState;
+static void kdbgerIntHandler(uint8_t IrqNum) {
+  uint8_t lsrState;
   kdbgerCommPkt_t* pKdbgerCommPkt = (kdbgerCommPkt_t*)pktBuf;
-  s8* ptr;
-  volatile u8* phyMem;
-  u32 i, sz;
-  u64 addr;
-  u16 ioAddr;
-  u32 pciAddr;
-  u16 pciSz;
-  s8 restBuf[KDBGER_FIFO_SZ];
-  s32 restLen;
-  u8 cmosAddr, cmosSz;
+  int8_t* ptr;
+  volatile uint8_t* phyMem;
+  uint32_t i, sz;
+  uint64_t addr;
+  uint16_t ioAddr;
+  uint32_t pciAddr;
+  uint16_t pciSz;
+  int8_t restBuf[KDBGER_FIFO_SZ];
+  int32_t restLen;
+  uint8_t cmosAddr, cmosSz;
 
   // Disable interrupt
   kdbgerIntrDisable();
@@ -293,9 +293,9 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_MEM_READ:
 
           // Read memory content
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerRspMemReadPkt.memContent;
           addr = pKdbgerCommPkt->kdbgerReqMemReadPkt.address;
-          phyMem = (volatile u8*)(u32)addr;
+          phyMem = (volatile uint8_t*)(uint32_t)addr;
           sz = pKdbgerCommPkt->kdbgerReqMemReadPkt.size;
 
           for (i = 0; i < sz; i++) {
@@ -305,7 +305,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
           // Prepare the response packet
           pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_MEM_READ;
           pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-              sizeof(kdbgerRspMemReadPkt_t) - sizeof(s8*) + sz;
+              sizeof(kdbgerRspMemReadPkt_t) - sizeof(int8_t*) + sz;
           pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
           pKdbgerCommPkt->kdbgerRspMemReadPkt.address = addr;
           pKdbgerCommPkt->kdbgerRspMemReadPkt.size = sz;
@@ -314,9 +314,9 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_MEM_WRITE:
 
           // write memory content
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerReqMemWritePkt.memContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerReqMemWritePkt.memContent;
           addr = pKdbgerCommPkt->kdbgerReqMemWritePkt.address;
-          phyMem = (volatile u8*)(u32)addr;
+          phyMem = (volatile uint8_t*)(uint32_t)addr;
           sz = pKdbgerCommPkt->kdbgerReqMemWritePkt.size;
 
           for (i = 0; i < sz; i++) {
@@ -334,7 +334,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_IO_READ:
 
           // Read IO content
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerRspIoReadPkt.ioContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerRspIoReadPkt.ioContent;
           ioAddr = pKdbgerCommPkt->kdbgerReqIoReadPkt.address;
           sz = pKdbgerCommPkt->kdbgerReqIoReadPkt.size;
 
@@ -346,7 +346,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
           // Prepare the response packet
           pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_IO_READ;
           pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-              sizeof(kdbgerRspIoReadPkt_t) - sizeof(s8*) + sz;
+              sizeof(kdbgerRspIoReadPkt_t) - sizeof(int8_t*) + sz;
           pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
           pKdbgerCommPkt->kdbgerRspIoReadPkt.address = ioAddr;
           pKdbgerCommPkt->kdbgerRspIoReadPkt.size = sz;
@@ -355,7 +355,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_IO_WRITE:
 
           // Write IO content
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerReqIoWritePkt.ioContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerReqIoWritePkt.ioContent;
           ioAddr = pKdbgerCommPkt->kdbgerReqIoReadPkt.address;
           sz = pKdbgerCommPkt->kdbgerReqIoReadPkt.size;
 
@@ -375,7 +375,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_PCI_READ:
 
           // Read PCI config space
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerRspPciReadPkt.pciContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerRspPciReadPkt.pciContent;
           pciAddr = pKdbgerCommPkt->kdbgerReqPciReadPkt.address;
           pciSz = pKdbgerCommPkt->kdbgerReqPciReadPkt.size;
           for (i = 0; i < pciSz; i++) {
@@ -386,7 +386,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
           // Prepare the response packet
           pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_PCI_READ;
           pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-              sizeof(kdbgerRspPciReadPkt_t) - sizeof(s8*) + pciSz;
+              sizeof(kdbgerRspPciReadPkt_t) - sizeof(int8_t*) + pciSz;
           pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
           pKdbgerCommPkt->kdbgerRspPciReadPkt.address = pciAddr;
           pKdbgerCommPkt->kdbgerRspPciReadPkt.size = pciSz;
@@ -395,7 +395,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_PCI_WRITE:
 
           // Write PCI config space
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerReqPciWritePkt.pciContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerReqPciWritePkt.pciContent;
           pciAddr = pKdbgerCommPkt->kdbgerReqPciReadPkt.address;
           pciSz = pKdbgerCommPkt->kdbgerReqPciReadPkt.size;
 
@@ -415,17 +415,17 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_IDE_READ:
 
           // Read IDE device
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerRspIdeReadPkt.ideContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerRspIdeReadPkt.ideContent;
           addr = pKdbgerCommPkt->kdbgerReqIdeReadPkt.address;
           sz = pKdbgerCommPkt->kdbgerReqIdeReadPkt.size;
 
           // Read IDE data
-          kdbgerIdeReadWrite(addr, sz, (u8*)ptr, KDBGER_REQ_IDE_READ);
+          kdbgerIdeReadWrite(addr, sz, (uint8_t*)ptr, KDBGER_REQ_IDE_READ);
 
           // Prepare the response packet
           pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_IDE_READ;
           pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-              sizeof(kdbgerRspIdeReadPkt_t) - sizeof(s8*) + sz;
+              sizeof(kdbgerRspIdeReadPkt_t) - sizeof(int8_t*) + sz;
           pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
           pKdbgerCommPkt->kdbgerRspIdeReadPkt.address = addr;
           pKdbgerCommPkt->kdbgerRspIdeReadPkt.size = sz;
@@ -434,12 +434,12 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_IDE_WRITE:
 
           // Write IDE device
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerReqIdeWritePkt.ideContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerReqIdeWritePkt.ideContent;
           addr = pKdbgerCommPkt->kdbgerReqIdeReadPkt.address;
           sz = pKdbgerCommPkt->kdbgerReqIdeReadPkt.size;
 
           // Write IDE data
-          kdbgerIdeReadWrite(addr, sz, (u8*)ptr, KDBGER_REQ_IDE_WRITE);
+          kdbgerIdeReadWrite(addr, sz, (uint8_t*)ptr, KDBGER_REQ_IDE_WRITE);
 
           // Prepare the response packet
           pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_IDE_WRITE;
@@ -452,7 +452,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_CMOS_READ:
 
           // Read CMOS device
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerRspCmosReadPkt.cmosContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerRspCmosReadPkt.cmosContent;
           cmosAddr = pKdbgerCommPkt->kdbgerReqCmosReadPkt.address;
           cmosSz = pKdbgerCommPkt->kdbgerReqCmosReadPkt.size;
 
@@ -467,7 +467,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
           // Prepare the response packet
           pKdbgerCommPkt->kdbgerCommHdr.opCode = KDBGER_RSP_CMOS_READ;
           pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-              sizeof(kdbgerRspCmosReadPkt_t) - sizeof(s8*) + cmosSz;
+              sizeof(kdbgerRspCmosReadPkt_t) - sizeof(int8_t*) + cmosSz;
           pKdbgerCommPkt->kdbgerCommHdr.errorCode = KDBGER_SUCCESS;
           pKdbgerCommPkt->kdbgerRspCmosReadPkt.address = cmosAddr;
           pKdbgerCommPkt->kdbgerRspCmosReadPkt.size = cmosSz;
@@ -476,7 +476,7 @@ static void kdbgerIntHandler(u8 IrqNum) {
         case KDBGER_REQ_CMOS_WRITE:
 
           // Write CMOS device
-          ptr = (s8*)&pKdbgerCommPkt->kdbgerReqCmosWritePkt.cmosContent;
+          ptr = (int8_t*)&pKdbgerCommPkt->kdbgerReqCmosWritePkt.cmosContent;
           cmosAddr = pKdbgerCommPkt->kdbgerReqCmosReadPkt.address;
           cmosSz = pKdbgerCommPkt->kdbgerReqCmosReadPkt.size;
 
@@ -561,7 +561,7 @@ done:
 }
 
 static void kdbgerSetupBaudrate(kdbgerBaudrate_t baud) {
-  s8 tmp;
+  int8_t tmp;
 
   // DLAB On
   tmp = IoInByte(kdbgerPortAddr + UART_REG_LCR);

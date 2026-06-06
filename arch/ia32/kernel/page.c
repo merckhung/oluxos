@@ -14,16 +14,16 @@
 #include <ia32/debug.h>
 
 
-volatile u32 *PDEPtr = (volatile u32 *)PDE_ADDR;
-volatile u32 *PTEPtr = (volatile u32 *)PTE_ADDR;
+volatile uint32_t *PDEPtr = (volatile uint32_t *)PDE_ADDR;
+volatile uint32_t *PTEPtr = (volatile uint32_t *)PTE_ADDR;
 
 
-volatile u8 *e820_count = (volatile u8 *)E820_COUNT;
+volatile uint8_t *e820_count = (volatile uint8_t *)E820_COUNT;
 volatile E820Result *e820_base = (volatile E820Result *)E820_BASE;
-static u64 MemSize = 0;
+static uint64_t MemSize = 0;
 
 
-static s8 *AddrType[] = {
+static int8_t *AddrType[] = {
 
 	"Undefined",
 	"Memory",
@@ -49,8 +49,8 @@ static s8 *AddrType[] = {
 //
 void MmPageInit( void ) {
 
-    s32 i;
-    u32 filladdr = 0;
+    int32_t i;
+    uint32_t filladdr = 0;
 
 
     // Print E820 Information
@@ -58,8 +58,8 @@ void MmPageInit( void ) {
     
 		if( (e820_base + i)->RecType == ADDRESS_RANGE_MEMORY ) {
 
-			MemSize += (((u64)(e820_base + i)->LengthHigh) << 32ULL);
-			MemSize += ((u64)(e820_base + i)->LengthLow);
+			MemSize += (((uint64_t)(e820_base + i)->LengthHigh) << 32ULL);
+			MemSize += ((uint64_t)(e820_base + i)->LengthLow);
 		}
     }
 
@@ -68,8 +68,8 @@ void MmPageInit( void ) {
 	MmShowE820Info();
 
 
-	//DbgPrint( "PDE Start Addr: 0x%8.8X\n", (u32)PDEPtr );
-	//DbgPrint( "PTE Start Addr: 0x%8.8X\n", (u32)PTEPtr );
+	//DbgPrint( "PDE Start Addr: 0x%8.8X\n", (uint32_t)PDEPtr );
+	//DbgPrint( "PTE Start Addr: 0x%8.8X\n", (uint32_t)PTEPtr );
 
 
     // Initialize Page Directory Entries
@@ -87,7 +87,7 @@ void MmPageInit( void ) {
         }
 		*/
 
-        //DbgPrint( "PDE Addr = 0x%8.8X, Value = 0x%8.8X\n", (u32)(PDEPtr + i), *(PDEPtr + i) );
+        //DbgPrint( "PDE Addr = 0x%8.8X, Value = 0x%8.8X\n", (uint32_t)(PDEPtr + i), *(PDEPtr + i) );
     }
 
 
@@ -95,10 +95,10 @@ void MmPageInit( void ) {
     for( i = 0 ; i < NR_PTE ; i++ ) {
 
 
-        *(PTEPtr + i) = (u32)(filladdr + i * PAGE_SIZE) | P_SUP_WT_RW_4K;
+        *(PTEPtr + i) = (uint32_t)(filladdr + i * PAGE_SIZE) | P_SUP_WT_RW_4K;
 
 
-		//DbgPrint( "PTE Addr = 0x%8.8X, Value = 0x%8.8X\n", (u32)(PTEPtr + i), *(PTEPtr + i) );
+		//DbgPrint( "PTE Addr = 0x%8.8X, Value = 0x%8.8X\n", (uint32_t)(PTEPtr + i), *(PTEPtr + i) );
 
 
 		/*
@@ -129,11 +129,11 @@ void MmPageInit( void ) {
 
 void MmShowE820Info( void ) {
 
-	s32 i;
+	int32_t i;
 
 
 	// Display total memory size
-	TcPrint( "Total Memory Size: %d MB\n", (u32)(MemSize / 1024ULL / 1024ULL) );
+	TcPrint( "Total Memory Size: %d MB\n", (uint32_t)(MemSize / 1024ULL / 1024ULL) );
 
 
     // Print E820 Information
@@ -150,7 +150,7 @@ void MmShowE820Info( void ) {
 
 
 
-s8 *MmShowE820Type( E820Type RecType ) {
+int8_t *MmShowE820Type( E820Type RecType ) {
 
 	if( RecType < ADDRESS_RANGE_MEMORY || RecType > ADDRESS_RANGE_NVS ) {
 	
@@ -162,9 +162,9 @@ s8 *MmShowE820Type( E820Type RecType ) {
 
 
 
-void MmEnablePaging( volatile u32 *Ptr ) {
+void MmEnablePaging( volatile uint32_t *Ptr ) {
 
-	u32 PtrAddr = (u32)Ptr;
+	uint32_t PtrAddr = (uint32_t)Ptr;
 
 
 	DbgPrint( "Kernel PDE Pointer Addr = 0x%8.8X\n", PtrAddr );
@@ -236,7 +236,7 @@ void MmDisablePSE( void ) {
 
 
 
-void MmPageFaultHandler( u32 ErrorCode, GeneralRegisters *Regs ) {
+void MmPageFaultHandler( uint32_t ErrorCode, GeneralRegisters *Regs ) {
 
 
 	DbgPrint( "Page Fault (14)\nEIP: 0x%8.8X, CS: 0x%4.4X\n", Regs->eip, Regs->cs );

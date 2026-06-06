@@ -13,10 +13,10 @@
 #include <driver/console.h>
 
 
-static volatile u8 *VideoRamPtr = (volatile u8 *)VIDEO_TEXT_ADDR;
-static s8 buf[ CONSOLE_BUF_LEN ];
-static u8 xPos = 0;
-static u8 yPos = 0;
+static volatile uint8_t *VideoRamPtr = (volatile uint8_t *)VIDEO_TEXT_ADDR;
+static int8_t buf[ CONSOLE_BUF_LEN ];
+static uint8_t xPos = 0;
+static uint8_t yPos = 0;
 
 
 //
@@ -32,9 +32,9 @@ static u8 yPos = 0;
 // Description:
 //  Print string on console just like standard C printf() routine
 //
-void TcPrint( const s8 *format, ... ) {
+void TcPrint( const int8_t *format, ... ) {
 
-    s8 *p;
+    int8_t *p;
     va_list args;
     va_start(args, format);
 
@@ -70,7 +70,7 @@ void TcPrint( const s8 *format, ... ) {
 //
 void TcClear( void ) {
 
-    u16 i;
+    uint16_t i;
 
     for( i = 0 ; i < (COLUMN * 2 * LINE) ; i++ ) {
     
@@ -94,10 +94,10 @@ void TcClear( void ) {
 // Description:
 //  Set console cursor position
 //
-void TcCursorSet( u8 x, u8 y ) {
+void TcCursorSet( uint8_t x, uint8_t y ) {
 
 
-    u16 offset;
+    uint16_t offset;
 
 
     if( x >= COLUMN ) {
@@ -116,11 +116,11 @@ void TcCursorSet( u8 x, u8 y ) {
     offset = (yPos * COLUMN) + xPos;
 
     IoOutByte( 0x0e, CRTC_ADDR );
-    IoOutByte( (u8)((offset >> 8) & 0xff) , CRTC_DATA );
+    IoOutByte( (uint8_t)((offset >> 8) & 0xff) , CRTC_DATA );
 
 
     IoOutByte( 0x0f, CRTC_ADDR );
-    IoOutByte( (u8)(offset & 0xff) , CRTC_DATA );
+    IoOutByte( (uint8_t)(offset & 0xff) , CRTC_DATA );
 }
 
 
@@ -136,7 +136,7 @@ void TcCursorSet( u8 x, u8 y ) {
 // Description:
 //  Put one char on screen
 //
-void TcPutChar( s8 c ) {
+void TcPutChar( int8_t c ) {
 
     if( c == '\n' ) {
     
@@ -182,9 +182,9 @@ void TcPutChar( s8 c ) {
 // Description:
 //  Roll up screen
 //
-void TcRollUp( u8 lines ) {
+void TcRollUp( uint8_t lines ) {
 
-    u16 i, sp, ep;
+    uint16_t i, sp, ep;
 
 
     if( lines >= LINE ) {

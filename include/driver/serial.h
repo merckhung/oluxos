@@ -108,6 +108,6 @@
 //
 void SrInit(void);
 void SrInitInterrupt(void);
-void SrIntHandler(u8 IrqNum);
-void SrPutChar(s8 c);
-s8 SrGetChar(void);
+void SrIntHandler(uint8_t IrqNum);
+void SrPutChar(int8_t c);
+int8_t SrGetChar(void);

@@ -8,4 +8,4 @@
  *
  */
 
-void ScPrint(const s8* format, ...);
+void ScPrint(const int8_t* format, ...);

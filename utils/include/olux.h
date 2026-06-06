@@ -32,15 +32,15 @@
 //
 // Prototypes
 //
-s32 CbPower(s32 x, s32 y);
-s8 CbAsciiToBin(s8 value);
-u32 CbAsciiBufToBin(const s8* buf);
-bool ParseOneParameter(s8* buf, u32* first);
-bool ParseTwoParameters(s8* buf, u32* first, u32* second);
-s8 ConvertDWordToByte(u32* Data, u32 Offset);
-void DumpData(s8* pBuf, u32 size, u32 base);
-void DisplayInBits(u32 value);
+int32_t CbPower(int32_t x, int32_t y);
+int8_t CbAsciiToBin(int8_t value);
+uint32_t CbAsciiBufToBin(const int8_t* buf);
+bool ParseOneParameter(int8_t* buf, uint32_t* first);
+bool ParseTwoParameters(int8_t* buf, uint32_t* first, uint32_t* second);
+int8_t ConvertDWordToByte(uint32_t* Data, uint32_t Offset);
+void DumpData(int8_t* pBuf, uint32_t size, uint32_t base);
+void DisplayInBits(uint32_t value);
 void ClrScr(void);
-s8 NonBlockReadKey(void);
-bool ReadLine(s8* Buf, u32 Length);
-s8 GetKey(void);
+int8_t NonBlockReadKey(void);
+bool ReadLine(int8_t* Buf, uint32_t Length);
+int8_t GetKey(void);

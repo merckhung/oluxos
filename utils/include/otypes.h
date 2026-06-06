@@ -7,21 +7,16 @@
  *  None
  *
  */
-typedef unsigned char u8;
-typedef unsigned short int u16;
-typedef unsigned int u32;
-typedef unsigned long long int u64;
 
-typedef char s8;
-typedef short int s16;
-typedef int s32;
-typedef long long int s64;
+#ifndef _OTYPES_H_
+#define _OTYPES_H_
 
-#ifndef bool
-typedef unsigned char bool;
-#endif
+#include <stdint.h>
+#include <stdbool.h>
 
 #define TRUE 1
 #define FALSE 0
 
 #define PACKED __attribute__((packed))
+
+#endif

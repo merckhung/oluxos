@@ -18,15 +18,15 @@
 #include <time.h>
 #include <unistd.h>
 
-static s8* ErrorStr = "\nError: ";
-static s8* ErrInvParm = "Invalid Parameters";
-static s8* ErrCantOpen = "Cannot Open Device";
+static int8_t* ErrorStr = "\nError: ";
+static int8_t* ErrInvParm = "Invalid Parameters";
+static int8_t* ErrCantOpen = "Cannot Open Device";
 
-static s8 Krnname[OLUX_MAX_PATHNAME];
-static s8 Drivename[OLUX_MAX_PATHNAME];
-static s8 OldLdr[OLUX_SZ_SECTOR];
-static s8 Verbose = 0;
-static s8 Replace = 1;
+static int8_t Krnname[OLUX_MAX_PATHNAME];
+static int8_t Drivename[OLUX_MAX_PATHNAME];
+static int8_t OldLdr[OLUX_SZ_SECTOR];
+static int8_t Verbose = 0;
+static int8_t Replace = 1;
 
 static void Usage(void) {
   fprintf(stderr,
@@ -50,10 +50,10 @@ static void Usage(void) {
       "\t-r\tReplace kernel image only, don't relocate bootloader again\n\n");
 }
 
-s32 main(s32 argc, s8** argv) {
-  u32 func, c, RldrAddr;
-  s32 fd, hfd, krnsz, oldrsecno, oldroff, krnsecs, rwbytes;
-  s8* krnp;
+int32_t main(int32_t argc, int8_t** argv) {
+  uint32_t func, c, RldrAddr;
+  int32_t fd, hfd, krnsz, oldrsecno, oldroff, krnsecs, rwbytes;
+  int8_t* krnp;
 
   ////////////////////////////////////////////////////////////////////////////
   // Initialization                                                         //
@@ -155,7 +155,7 @@ s32 main(s32 argc, s8** argv) {
   }
 
   // Allocate buffer for kernel image
-  krnp = (s8*)malloc(krnsz);
+  krnp = (int8_t*)malloc(krnsz);
   if (!krnp) {
     fprintf(stderr, "Cannot allocate memory for kernel image\n");
     goto ErrExit;

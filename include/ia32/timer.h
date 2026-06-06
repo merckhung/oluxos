@@ -8,4 +8,4 @@
  */
 
 void TmInitTimer(void);
-void TmIntHandler(u8 irqnum);
+void TmIntHandler(uint8_t irqnum);

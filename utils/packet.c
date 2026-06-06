@@ -22,7 +22,7 @@
 #include <time.h>
 #include <unistd.h>
 
-s32 verifyResponsePacket(kdbgerCommPkt_t* pKdbgerCommPkt, kdbgerOpCode_t op) {
+int32_t verifyResponsePacket(kdbgerCommPkt_t* pKdbgerCommPkt, kdbgerOpCode_t op) {
   switch (pKdbgerCommPkt->kdbgerCommHdr.opCode) {
     case KDBGER_RSP_CONNECT:
       if (op != KDBGER_REQ_CONNECT) return 1;
@@ -84,10 +84,10 @@ s32 verifyResponsePacket(kdbgerCommPkt_t* pKdbgerCommPkt, kdbgerOpCode_t op) {
   return 0;
 }
 
-s32 executeFunction(s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8* cntBuf,
-                    u8* pktBuf, s32 lenPktBuf) {
+int32_t executeFunction(int32_t fd, kdbgerOpCode_t op, uint64_t addr, uint32_t size, uint8_t* cntBuf,
+                    uint8_t* pktBuf, int32_t lenPktBuf) {
   kdbgerCommPkt_t* pKdbgerCommPkt = (kdbgerCommPkt_t*)pktBuf;
-  s32 rwByte;
+  int32_t rwByte;
 
   // Clear buffer
   memset(pktBuf, 0, lenPktBuf);
@@ -114,12 +114,12 @@ s32 executeFunction(s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8* cntBuf,
       pKdbgerCommPkt->kdbgerReqMemWritePkt.size = size;
       memcpy(&pKdbgerCommPkt->kdbgerReqMemWritePkt.memContent, cntBuf, size);
       pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-          sizeof(kdbgerReqMemWritePkt_t) - sizeof(s8*) + size;
+          sizeof(kdbgerReqMemWritePkt_t) - sizeof(int8_t*) + size;
       break;
 
     case KDBGER_REQ_IO_READ:
 
-      pKdbgerCommPkt->kdbgerReqIoReadPkt.address = (u16)(addr & 0xFFFFULL);
+      pKdbgerCommPkt->kdbgerReqIoReadPkt.address = (uint16_t)(addr & 0xFFFFULL);
       pKdbgerCommPkt->kdbgerReqIoReadPkt.size = size;
       pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof(kdbgerReqIoReadPkt_t);
       break;
@@ -128,17 +128,17 @@ s32 executeFunction(s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8* cntBuf,
 
       if (!size || !cntBuf) return 1;
 
-      pKdbgerCommPkt->kdbgerReqIoWritePkt.address = (u16)(addr & 0xFFFFULL);
+      pKdbgerCommPkt->kdbgerReqIoWritePkt.address = (uint16_t)(addr & 0xFFFFULL);
       pKdbgerCommPkt->kdbgerReqIoWritePkt.size = size;
       memcpy(&pKdbgerCommPkt->kdbgerReqIoWritePkt.ioContent, cntBuf, size);
       pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-          sizeof(kdbgerReqIoWritePkt_t) - sizeof(s8*) + size;
+          sizeof(kdbgerReqIoWritePkt_t) - sizeof(int8_t*) + size;
       break;
 
     case KDBGER_REQ_PCI_READ:
 
-      pKdbgerCommPkt->kdbgerReqPciReadPkt.address = (u32)(addr & 0xFFFFFFFFULL);
-      pKdbgerCommPkt->kdbgerReqPciReadPkt.size = (u16)(size & 0xFFFF);
+      pKdbgerCommPkt->kdbgerReqPciReadPkt.address = (uint32_t)(addr & 0xFFFFFFFFULL);
+      pKdbgerCommPkt->kdbgerReqPciReadPkt.size = (uint16_t)(size & 0xFFFF);
       pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof(kdbgerReqPciReadPkt_t);
       break;
 
@@ -147,11 +147,11 @@ s32 executeFunction(s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8* cntBuf,
       if (!size || !cntBuf) return 1;
 
       pKdbgerCommPkt->kdbgerReqPciWritePkt.address =
-          (u32)(addr & 0xFFFFFFFFULL);
-      pKdbgerCommPkt->kdbgerReqPciWritePkt.size = (u16)(size & 0xFFFF);
+          (uint32_t)(addr & 0xFFFFFFFFULL);
+      pKdbgerCommPkt->kdbgerReqPciWritePkt.size = (uint16_t)(size & 0xFFFF);
       memcpy(&pKdbgerCommPkt->kdbgerReqPciWritePkt.pciContent, cntBuf, size);
       pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-          sizeof(kdbgerReqPciWritePkt_t) - sizeof(s8*) + size;
+          sizeof(kdbgerReqPciWritePkt_t) - sizeof(int8_t*) + size;
       break;
 
     case KDBGER_REQ_IDE_READ:
@@ -169,13 +169,13 @@ s32 executeFunction(s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8* cntBuf,
       pKdbgerCommPkt->kdbgerReqIdeWritePkt.size = size;
       memcpy(&pKdbgerCommPkt->kdbgerReqIdeWritePkt.ideContent, cntBuf, size);
       pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-          sizeof(kdbgerReqIdeWritePkt_t) - sizeof(s8*) + size;
+          sizeof(kdbgerReqIdeWritePkt_t) - sizeof(int8_t*) + size;
       break;
 
     case KDBGER_REQ_CMOS_READ:
 
-      pKdbgerCommPkt->kdbgerReqCmosReadPkt.address = (u8)(addr & 0xFFULL);
-      pKdbgerCommPkt->kdbgerReqCmosReadPkt.size = (u8)(size & 0xFF);
+      pKdbgerCommPkt->kdbgerReqCmosReadPkt.address = (uint8_t)(addr & 0xFFULL);
+      pKdbgerCommPkt->kdbgerReqCmosReadPkt.size = (uint8_t)(size & 0xFF);
       pKdbgerCommPkt->kdbgerCommHdr.pktLen = sizeof(kdbgerReqCmosReadPkt_t);
       break;
 
@@ -183,11 +183,11 @@ s32 executeFunction(s32 fd, kdbgerOpCode_t op, u64 addr, u32 size, u8* cntBuf,
 
       if (!size || !cntBuf) return 1;
 
-      pKdbgerCommPkt->kdbgerReqCmosWritePkt.address = (u8)(addr & 0xFFULL);
-      pKdbgerCommPkt->kdbgerReqCmosWritePkt.size = (u8)(size & 0xFF);
+      pKdbgerCommPkt->kdbgerReqCmosWritePkt.address = (uint8_t)(addr & 0xFFULL);
+      pKdbgerCommPkt->kdbgerReqCmosWritePkt.size = (uint8_t)(size & 0xFF);
       memcpy(&pKdbgerCommPkt->kdbgerReqCmosWritePkt.cmosContent, cntBuf, size);
       pKdbgerCommPkt->kdbgerCommHdr.pktLen =
-          sizeof(kdbgerReqCmosWritePkt_t) - sizeof(s8*) + size;
+          sizeof(kdbgerReqCmosWritePkt_t) - sizeof(int8_t*) + size;
       break;
 
     case KDBGER_REQ_PCI_LIST:

@@ -13,7 +13,7 @@
 #include <ia32/debug.h>
 #include <types.h>
 
-u32 pentium_msr_list[] = {
+uint32_t pentium_msr_list[] = {
 
     0x00,  // P5_MC_ADDR
     0x01,  // P5_MC_TYPE
@@ -23,7 +23,7 @@ u32 pentium_msr_list[] = {
     0x13,  // CTR1
 };
 
-u32 p6_msr_list[] = {
+uint32_t p6_msr_list[] = {
 
     0x00,   // P5_MC_ADDR
     0x01,   // P5_MC_TYPE
@@ -110,7 +110,7 @@ u32 p6_msr_list[] = {
     0x413,  // MC3_MISC
 };
 
-u32 pentiumm_msr_list[] = {
+uint32_t pentiumm_msr_list[] = {
 
     0x00,   // P5_MC_ADDR
     0x01,   // P5_MC_TYPE
@@ -159,7 +159,7 @@ u32 pentiumm_msr_list[] = {
     0x600,  // IA32_DS_AREA
 };
 
-u32 core_msr_list[] = {
+uint32_t core_msr_list[] = {
 
     0x00,        // P5_MC_ADDR
     0x01,        // P5_MC_TYPE
@@ -276,7 +276,7 @@ u32 core_msr_list[] = {
 //  True  = 0
 //  False = -1
 //
-s8 ChkCpuidSup(void) { return 0; }
+int8_t ChkCpuidSup(void) { return 0; }
 
 //
 // ChkMSRSup -- Check for MSR feature support
@@ -288,7 +288,7 @@ s8 ChkCpuidSup(void) { return 0; }
 //  True  = 0
 //  False = -1
 //
-s8 ChkMSRSup(void) { return 0; }
+int8_t ChkMSRSup(void) { return 0; }
 
 //
 // ChkSMBIOSSup -- Check for SMBIOS feature support
@@ -300,14 +300,14 @@ s8 ChkMSRSup(void) { return 0; }
 //  True  = 0
 //  False = -1
 //
-u8 ChkSMBIOSSup(void) {
-  u32 i;
-  volatile u8* memptr = (u8*)SMBIOS_BASE;
-  u8 smbios = 0;
+uint8_t ChkSMBIOSSup(void) {
+  uint32_t i;
+  volatile uint8_t* memptr = (uint8_t*)SMBIOS_BASE;
+  uint8_t smbios = 0;
 
   // Search 64kb
   for (i = 0; i < 0x10000; i++) {
-    if (!CbStrCmp((s8*)(memptr + i), SMBIOS_ANCH, 4)) {
+    if (!CbStrCmp((int8_t*)(memptr + i), SMBIOS_ANCH, 4)) {
       smbios = 1;
       break;
     }

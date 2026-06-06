@@ -60,8 +60,8 @@ void SrInitInterrupt(void) {
   IntEnable();
 }
 
-void SrIntHandler(u8 IrqNum) {
-  u8 tmp;
+void SrIntHandler(uint8_t IrqNum) {
+  uint8_t tmp;
 
   // Identify interrupt
   tmp = IoInByte(UART_DEF_IIR);
@@ -91,12 +91,12 @@ void SrIntHandler(u8 IrqNum) {
   }
 }
 
-void SrPutChar(s8 c) {
+void SrPutChar(int8_t c) {
   while ((IoInByte(UART_DEF_LSR) & UART_TEMT) == 0);
   IoOutByte(c, UART_DEF_THR);
 }
 
-s8 SrGetChar(void) {
+int8_t SrGetChar(void) {
   if (IoInByte(UART_DEF_LSR) & UART_DR) {
     return (IoInByte(UART_DEF_RBR) & 0xFF);
   }

@@ -4,18 +4,18 @@
 #include <arm64/interrupt.h>
 
 void pl011_puts(const char *s);
-void print_hex(u64 val);
+void print_hex(uint64_t val);
 void thread_entry_wrapper(void); // Assembly wrapper
 
 static Thread threads[MAX_THREADS];
-static u8 thread_stacks[MAX_THREADS][STACK_SIZE] __attribute__((aligned(16)));
+static uint8_t thread_stacks[MAX_THREADS][STACK_SIZE] __attribute__((aligned(16)));
 static Thread *current_thread = NULL;
 
-extern volatile u64 pg_dir[512];
+extern volatile uint64_t pg_dir[512];
 
-static u64 thread_l1_tables[MAX_THREADS][512] __attribute__((aligned(4096)));
-static u64 thread_l2_tables[MAX_THREADS][512] __attribute__((aligned(4096)));
-static u64 thread_l3_tables[MAX_THREADS][512] __attribute__((aligned(4096)));
+static uint64_t thread_l1_tables[MAX_THREADS][512] __attribute__((aligned(4096)));
+static uint64_t thread_l2_tables[MAX_THREADS][512] __attribute__((aligned(4096)));
+static uint64_t thread_l3_tables[MAX_THREADS][512] __attribute__((aligned(4096)));
 
 void thread_init(void) {
     int i;
@@ -24,12 +24,12 @@ void thread_init(void) {
         threads[i].tid = i;
         threads[i].stack_base = thread_stacks[i];
         threads[i].stack_size = STACK_SIZE;
-        threads[i].pg_dir_phys = (u64)pg_dir; // Default to boot page table
+        threads[i].pg_dir_phys = (uint64_t)pg_dir; // Default to boot page table
     }
     
     // Thread 0 represents the main boot thread
     threads[0].state = THREAD_STATE_RUNNING;
-    threads[0].pg_dir_phys = (u64)pg_dir;
+    threads[0].pg_dir_phys = (uint64_t)pg_dir;
     current_thread = &threads[0];
     
     pl011_puts("Threads initialized. Main thread tid=0.\n");
@@ -42,20 +42,20 @@ int thread_create(void (*entry)(void)) {
         if (threads[i].state == THREAD_STATE_FREE) {
             Thread *t = &threads[i];
             
-            t->pg_dir_phys = (u64)pg_dir; // Kernel threads use boot page table
+            t->pg_dir_phys = (uint64_t)pg_dir; // Kernel threads use boot page table
             
             // Setup fake context on stack
-            u8 *stk_top = (u8 *)t->stack_base + t->stack_size;
+            uint8_t *stk_top = (uint8_t *)t->stack_base + t->stack_size;
             
             stk_top -= sizeof(CpuContext);
             CpuContext *ctx = (CpuContext *)stk_top;
             
-            CbMemSet((s8 *)ctx, 0, sizeof(CpuContext));
+            CbMemSet((int8_t *)ctx, 0, sizeof(CpuContext));
             
-            ctx->x19 = (u64)entry;
-            ctx->lr = (u64)thread_entry_wrapper;
-            ctx->sp = (u64)stk_top;
-            ctx->fp = (u64)stk_top;
+            ctx->x19 = (uint64_t)entry;
+            ctx->lr = (uint64_t)thread_entry_wrapper;
+            ctx->sp = (uint64_t)stk_top;
+            ctx->fp = (uint64_t)stk_top;
             
             t->context = *ctx;
             t->state = THREAD_STATE_READY;
@@ -63,7 +63,7 @@ int thread_create(void (*entry)(void)) {
             pl011_puts("Created thread tid=");
             print_hex(t->tid);
             pl011_puts(" entry=");
-            print_hex((u64)entry);
+            print_hex((uint64_t)entry);
             pl011_puts("\n");
             
             IntEnable();
@@ -112,7 +112,7 @@ retry:
         current_thread = next;
         
         // Switch page tables
-        u64 next_pg_dir = next->pg_dir_phys;
+        uint64_t next_pg_dir = next->pg_dir_phys;
         __asm__ volatile(
             "msr ttbr0_el1, %0\n"
             "tlbi vmalle1is\n"
@@ -134,19 +134,19 @@ retry:
     }
 }
 
-void map_page_thread(Thread *t, u64 vaddr, u64 paddr, u64 flags) {
-        u32 idx = (vaddr & 0x1FFFFF) / 4096; // Offset within first 2MB
-        u64 *l3 = thread_l3_tables[t->tid];
+void map_page_thread(Thread *t, uint64_t vaddr, uint64_t paddr, uint64_t flags) {
+        uint32_t idx = (vaddr & 0x1FFFFF) / 4096; // Offset within first 2MB
+        uint64_t *l3 = thread_l3_tables[t->tid];
         l3[idx] = (paddr & ~0xFFF) | flags;
     }
 
-#define USER_CODE_SIZE 16384
-static u8 user_code_pages[MAX_THREADS][USER_CODE_SIZE] __attribute__((aligned(4096)));
-static u8 user_stack_pages[MAX_THREADS][4096] __attribute__((aligned(4096)));
+#define USER_CODE_SIZE 32768
+static uint8_t user_code_pages[MAX_THREADS][USER_CODE_SIZE] __attribute__((aligned(4096)));
+static uint8_t user_stack_pages[MAX_THREADS][4096] __attribute__((aligned(4096)));
 
 extern void userspace_entry_wrapper(void);
 
-int thread_create_userspace(const unsigned char *bin, u32 size) {
+int thread_create_userspace(const unsigned char *bin, uint32_t size) {
     int i;
     IntDisable();
     for (i = 1; i < MAX_THREADS; i++) {
@@ -160,53 +160,53 @@ int thread_create_userspace(const unsigned char *bin, u32 size) {
             }
             
             // Initialize private page tables for this thread
-            u64 *l1 = thread_l1_tables[i];
-            u64 *l2 = thread_l2_tables[i];
-            u64 *l3 = thread_l3_tables[i];
+            uint64_t *l1 = thread_l1_tables[i];
+            uint64_t *l2 = thread_l2_tables[i];
+            uint64_t *l3 = thread_l3_tables[i];
             
-            CbMemSet((s8 *)l1, 0, 4096);
-            CbMemSet((s8 *)l2, 0, 4096);
-            CbMemSet((s8 *)l3, 0, 4096);
+            CbMemSet((int8_t *)l1, 0, 4096);
+            CbMemSet((int8_t *)l2, 0, 4096);
+            CbMemSet((int8_t *)l3, 0, 4096);
             
             // L1[0] -> L2
-            l1[0] = ((u64)l2 & ~0xFFF) | 0x3;
+            l1[0] = ((uint64_t)l2 & ~0xFFF) | 0x3;
             // L1[1] -> copy RAM mapping from boot pg_dir[1]
             l1[1] = pg_dir[1];
             
             // L2[0] -> L3
-            l2[0] = ((u64)l3 & ~0xFFF) | 0x3;
+            l2[0] = ((uint64_t)l3 & ~0xFFF) | 0x3;
             // L2[64] -> GIC
             l2[64] = 0x0060000008000401ULL;
             // L2[72] -> UART
             l2[72] = 0x0060000009000401ULL;
             
-            t->pg_dir_phys = (u64)l1;
+            t->pg_dir_phys = (uint64_t)l1;
             
             CbMemCpy(user_code_pages[i], bin, size);
             
             // Flags for user code: PXN=1, UXN=0, AP=01 (RW EL1/EL0), SH=11, AF=1, Attr=1, Type=3
-            u64 code_flags = 0x0020000000000747ULL;
-            u32 num_pages = USER_CODE_SIZE / 4096;
-            u32 p;
+            uint64_t code_flags = 0x0020000000000747ULL;
+            uint32_t num_pages = USER_CODE_SIZE / 4096;
+            uint32_t p;
             for (p = 0; p < num_pages; p++) {
-                u64 vaddr = 0x00100000 + p * 4096;
-                u64 paddr = (u64)user_code_pages[i] + p * 4096;
+                uint64_t vaddr = 0x00100000 + p * 4096;
+                uint64_t paddr = (uint64_t)user_code_pages[i] + p * 4096;
                 map_page_thread(t, vaddr, paddr, code_flags);
             }
             
             // Flags for user stack: PXN=1, UXN=1, AP=01 (RW EL1/EL0), SH=11, AF=1, Attr=1, Type=3
-            u64 stack_flags = 0x0060000000000747ULL;
-            map_page_thread(t, 0x001FF000, (u64)user_stack_pages[i], stack_flags);
+            uint64_t stack_flags = 0x0060000000000747ULL;
+            map_page_thread(t, 0x001FF000, (uint64_t)user_stack_pages[i], stack_flags);
             
-            u8 *stk_top = (u8 *)t->stack_base + t->stack_size;
+            uint8_t *stk_top = (uint8_t *)t->stack_base + t->stack_size;
             stk_top -= sizeof(CpuContext);
             CpuContext *ctx = (CpuContext *)stk_top;
             
-            CbMemSet((s8 *)ctx, 0, sizeof(CpuContext));
+            CbMemSet((int8_t *)ctx, 0, sizeof(CpuContext));
             
-            ctx->lr = (u64)userspace_entry_wrapper;
-            ctx->sp = (u64)stk_top;
-            ctx->fp = (u64)stk_top;
+            ctx->lr = (uint64_t)userspace_entry_wrapper;
+            ctx->sp = (uint64_t)stk_top;
+            ctx->fp = (uint64_t)stk_top;
             
             t->context = *ctx;
             t->state = THREAD_STATE_READY;
@@ -223,7 +223,7 @@ int thread_create_userspace(const unsigned char *bin, u32 size) {
     return -1;
 }
 
-u32 thread_get_current_tid(void) {
+uint32_t thread_get_current_tid(void) {
     return current_thread->tid;
 }
 
@@ -231,40 +231,40 @@ void thread_set_current_regs(ARM64Registers *regs) {
     current_thread->regs = regs;
 }
 
-u64 translate_user_va(Thread *t, u64 va) {
-    u64 *l1 = (u64 *)t->pg_dir_phys;
+uint64_t translate_user_va(Thread *t, uint64_t va) {
+    uint64_t *l1 = (uint64_t *)t->pg_dir_phys;
     
-    u32 l1_idx = (va >> 30) & 0x1FF;
-    u64 l1_entry = l1[l1_idx];
+    uint32_t l1_idx = (va >> 30) & 0x1FF;
+    uint64_t l1_entry = l1[l1_idx];
     if ((l1_entry & 0x1) == 0) return 0; // Invalid
     
     if ((l1_entry & 0x2) == 0) {
         // 1GB Block
-        u64 phys = l1_entry & 0x0000FFFFC0000000ULL;
+        uint64_t phys = l1_entry & 0x0000FFFFC0000000ULL;
         return phys | (va & 0x3FFFFFFF);
     }
     
-    u64 *l2 = (u64 *)(l1_entry & ~0xFFF);
-    u32 l2_idx = (va >> 21) & 0x1FF;
-    u64 l2_entry = l2[l2_idx];
+    uint64_t *l2 = (uint64_t *)(l1_entry & ~0xFFF);
+    uint32_t l2_idx = (va >> 21) & 0x1FF;
+    uint64_t l2_entry = l2[l2_idx];
     if ((l2_entry & 0x1) == 0) return 0; // Invalid
     
     if ((l2_entry & 0x2) == 0) {
         // 2MB Block
-        u64 phys = l2_entry & 0x0000FFFFFFE00000ULL;
+        uint64_t phys = l2_entry & 0x0000FFFFFFE00000ULL;
         return phys | (va & 0x1FFFFF);
     }
     
-    u64 *l3 = (u64 *)(l2_entry & ~0xFFF);
-    u32 l3_idx = (va >> 12) & 0x1FF;
-    u64 l3_entry = l3[l3_idx];
+    uint64_t *l3 = (uint64_t *)(l2_entry & ~0xFFF);
+    uint32_t l3_idx = (va >> 12) & 0x1FF;
+    uint64_t l3_entry = l3[l3_idx];
     if ((l3_entry & 0x3) != 0x3) return 0; // Invalid or not Page
     
-    u64 phys = l3_entry & 0x0000FFFFFFFFF000ULL;
+    uint64_t phys = l3_entry & 0x0000FFFFFFFFF000ULL;
     return phys | (va & 0xFFF);
 }
 
-int thread_ipc_send(u32 dest, void *buf, u32 size) {
+int thread_ipc_send(uint32_t dest, void *buf, uint32_t size) {
     IntDisable();
     
     if (dest == current_thread->tid || dest >= MAX_THREADS || threads[dest].state == THREAD_STATE_FREE) {
@@ -278,10 +278,10 @@ int thread_ipc_send(u32 dest, void *buf, u32 size) {
     if (dest_thread->state == THREAD_STATE_BLOCKED && 
         (dest_thread->ipc_partner == current_thread->tid || dest_thread->ipc_partner == ANY_THREAD)) {
         
-        u32 copy_size = size < dest_thread->ipc_size ? size : dest_thread->ipc_size;
+        uint32_t copy_size = size < dest_thread->ipc_size ? size : dest_thread->ipc_size;
         
-        u64 src_phys = translate_user_va(current_thread, (u64)buf);
-        u64 dest_phys = translate_user_va(dest_thread, (u64)dest_thread->ipc_buf);
+        uint64_t src_phys = translate_user_va(current_thread, (uint64_t)buf);
+        uint64_t dest_phys = translate_user_va(dest_thread, (uint64_t)dest_thread->ipc_buf);
         
         if (src_phys == 0 || dest_phys == 0) {
             pl011_puts("IPC send: Translation failed. src_phys=");
@@ -289,9 +289,9 @@ int thread_ipc_send(u32 dest, void *buf, u32 size) {
             pl011_puts(" dest_phys=");
             print_hex(dest_phys);
             pl011_puts(" buf=");
-            print_hex((u64)buf);
+            print_hex((uint64_t)buf);
             pl011_puts(" dest_thread->ipc_buf=");
-            print_hex((u64)dest_thread->ipc_buf);
+            print_hex((uint64_t)dest_thread->ipc_buf);
             pl011_puts(" current_thread->tid=");
             print_hex(current_thread->tid);
             pl011_puts(" dest_thread->tid=");
@@ -320,7 +320,7 @@ int thread_ipc_send(u32 dest, void *buf, u32 size) {
     return IPC_BLOCKED;
 }
 
-int thread_ipc_recv(u32 src, void *buf, u32 size) {
+int thread_ipc_recv(uint32_t src, void *buf, uint32_t size) {
     IntDisable();
     
     if (src != ANY_THREAD) {
@@ -349,10 +349,10 @@ int thread_ipc_recv(u32 src, void *buf, u32 size) {
     }
     
     if (sender_thread != NULL) {
-        u32 copy_size = size < sender_thread->ipc_size ? size : sender_thread->ipc_size;
+        uint32_t copy_size = size < sender_thread->ipc_size ? size : sender_thread->ipc_size;
         
-        u64 src_phys = translate_user_va(sender_thread, (u64)sender_thread->ipc_buf);
-        u64 dest_phys = translate_user_va(current_thread, (u64)buf);
+        uint64_t src_phys = translate_user_va(sender_thread, (uint64_t)sender_thread->ipc_buf);
+        uint64_t dest_phys = translate_user_va(current_thread, (uint64_t)buf);
         
         if (src_phys == 0 || dest_phys == 0) {
             pl011_puts("IPC recv: Translation failed\n");
@@ -379,13 +379,13 @@ int thread_ipc_recv(u32 src, void *buf, u32 size) {
     return IPC_BLOCKED;
 }
 
-void* thread_map_mmio(u64 phys_addr) {
+void* thread_map_mmio(uint64_t phys_addr) {
     if (phys_addr == 0x09000000 || phys_addr == 0x08000000) {
-        u32 l2_idx = phys_addr >> 21;
-        u64 *l1 = (u64 *)current_thread->pg_dir_phys;
-        u64 *l2 = (u64 *)(l1[0] & ~0xFFF);
+        uint32_t l2_idx = phys_addr >> 21;
+        uint64_t *l1 = (uint64_t *)current_thread->pg_dir_phys;
+        uint64_t *l2 = (uint64_t *)(l1[0] & ~0xFFF);
         
-        u64 entry = l2[l2_idx];
+        uint64_t entry = l2[l2_idx];
         if ((entry & 0x3) == 0) {
             pl011_puts("thread_map_mmio: Entry not present in L2\n");
             return NULL;
@@ -410,19 +410,19 @@ void* thread_map_mmio(u64 phys_addr) {
         return (void*)phys_addr;
     } 
     else if (phys_addr == 0x48000000) {
-        u64 virt_base = 0x10000000;
-        u64 phys_base = 0x48000000;
-        u32 num_blocks = 17; // 34MB
+        uint64_t virt_base = 0x10000000;
+        uint64_t phys_base = 0x48000000;
+        uint32_t num_blocks = 17; // 34MB
         
-        u64 *l1 = (u64 *)current_thread->pg_dir_phys;
-        u64 *l2 = (u64 *)(l1[0] & ~0xFFF);
+        uint64_t *l1 = (uint64_t *)current_thread->pg_dir_phys;
+        uint64_t *l2 = (uint64_t *)(l1[0] & ~0xFFF);
         
-        u32 start_l2_idx = virt_base >> 21;
-        u32 i;
+        uint32_t start_l2_idx = virt_base >> 21;
+        uint32_t i;
         
         for (i = 0; i < num_blocks; i++) {
-            u32 idx = start_l2_idx + i;
-            u64 paddr = phys_base + i * 0x200000;
+            uint32_t idx = start_l2_idx + i;
+            uint64_t paddr = phys_base + i * 0x200000;
             l2[idx] = paddr | 0x0060000000000745ULL;
         }
         

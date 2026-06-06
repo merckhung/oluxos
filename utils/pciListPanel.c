@@ -32,9 +32,9 @@ void printPciListBasePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
 }
 
 void printPciListUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
-  s8 *p, buf[KDBGER_BUF_SIZE], hlbuf[KDBGER_PCIL_CON_COLUMN + 1];
-  s32 i;
-  s32 start, end;
+  int8_t *p, buf[KDBGER_BUF_SIZE], hlbuf[KDBGER_PCIL_CON_COLUMN + 1];
+  int32_t i;
+  int32_t start, end;
 
   // Range
   start = pKdbgerUiProperty->kdbgerPciListPanel.pageOffset;
@@ -91,7 +91,7 @@ void clearPciListUpdatePanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
   destroyWindow(pKdbgerUiProperty->kdbgerPciListPanel, highlight);
 }
 
-s32 handleKeyPressForPciListPanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
+int32_t handleKeyPressForPciListPanel(kdbgerUiProperty_t* pKdbgerUiProperty) {
   switch (pKdbgerUiProperty->inputBuf) {
     case KBPRS_UP:
 

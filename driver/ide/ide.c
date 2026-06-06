@@ -15,8 +15,8 @@
 #include <ia32/platform.h>
 #include <types.h>
 
-void IDEReadData(s8* buf) {
-  s16 i, j, k, tmp;
+void IDEReadData(int8_t* buf) {
+  int16_t i, j, k, tmp;
 
   for (i = 0, j = 0, k = 0; i < 256; i++, j++, k += 2) {
     tmp = IoInWord(IDE_DATA);
@@ -25,7 +25,7 @@ void IDEReadData(s8* buf) {
   }
 }
 
-void IDEReadSector(u32 sector, s8* buf) {
+void IDEReadSector(uint32_t sector, int8_t* buf) {
   DbgPrint("IDE Read LBA %d\n", sector);
 
   IoOutByte(0x01, IDE_NSECTOR);
@@ -38,8 +38,8 @@ void IDEReadSector(u32 sector, s8* buf) {
   IDEReadData(buf);
 }
 
-void IDEWriteSector(u32 sector, s8* buf) {
-  s32 i;
+void IDEWriteSector(uint32_t sector, int8_t* buf) {
+  int32_t i;
 
   IoOutByte(0x01, IDE_NSECTOR);
   IoOutByte((sector & 0x000000ff), IDE_SECTOR);

@@ -3,7 +3,7 @@
 
 #include <types.h>
 
-void arm_timer_init(u32 tick_hz);
-void arm_timer_reset(u32 tick_hz);
+void arm_timer_init(uint32_t tick_hz);
+void arm_timer_reset(uint32_t tick_hz);
 
 #endif // __ARM_TIMER_H__

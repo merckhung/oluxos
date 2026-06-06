@@ -33,7 +33,7 @@ static void help(void) {
   fprintf(stderr, "\t-h\tPrint help and exit\n\n");
 }
 
-static s32 configureTtyDevice(s32 fd) {
+static int32_t configureTtyDevice(int32_t fd) {
   struct termios termSetting;
 
   if (tcgetattr(fd, &termSetting)) return 1;
@@ -77,9 +77,9 @@ void initColorPairs(void) {
 void updateStatusTimer(kdbgerUiProperty_t* pKdbgerUiProperty) {
   time_t timer;
   struct tm* nowtime;
-  u32 thisSecond;
-  u8 update = 0;
-  s8 stsBuf[KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR];
+  uint32_t thisSecond;
+  uint8_t update = 0;
+  int8_t stsBuf[KDBGER_MAX_COLUMN - KDBGER_MAX_TIMESTR];
 
   // Read second
   thisSecond = time(&timer);
@@ -103,7 +103,7 @@ void updateStatusTimer(kdbgerUiProperty_t* pKdbgerUiProperty) {
   if (pKdbgerUiProperty->kdbgerBasePanel.statusStr &&
       ((thisSecond - pKdbgerUiProperty->kdbgerBasePanel.lastSecond) >=
        KDBGER_STS_INTV_SECS)) {
-    s32 len = strlen(pKdbgerUiProperty->kdbgerBasePanel.statusStr);
+    int32_t len = strlen(pKdbgerUiProperty->kdbgerBasePanel.statusStr);
     if (pKdbgerUiProperty->kdbgerBasePanel.strIdx >= len)
       pKdbgerUiProperty->kdbgerBasePanel.strIdx = 0;
 
@@ -150,7 +150,7 @@ void printBasePlane(kdbgerUiProperty_t* pKdbgerUiProperty) {
 }
 
 void printBaseHelp(kdbgerUiProperty_t* pKdbgerUiProperty) {
-  s8* helpTxt =
+  int8_t* helpTxt =
       "Copyright (C) 2011 OluxOS Kernel Debugger, all right reserved.\n\
 Author: Merck Hung <merckhung@gmail.com>\n\n\
   <F1>:  Help\n\
@@ -176,8 +176,8 @@ Author: Merck Hung <merckhung@gmail.com>\n\n\
     destroyWindow(pKdbgerUiProperty->kdbgerBasePanel, help);
 }
 
-s32 main(s32 argc, s8** argv) {
-  s8 c, ttyDevice[KDBGER_MAX_PATH];
+int32_t main(int32_t argc, int8_t** argv) {
+  int8_t c, ttyDevice[KDBGER_MAX_PATH];
   kdbgerUiProperty_t kdbgerUiProperty;
 
   // Initialization
