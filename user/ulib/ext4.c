@@ -36,6 +36,8 @@ int ext4_init(void) {
   }
 
   Ext4SuperBlock* sb = (Ext4SuperBlock*)sb_buf;
+  printf("EXT4 init: magic=%x, inodes_count=%d, blocks_count=%d\n",
+         (unsigned int)sb->s_magic, (unsigned int)sb->s_inodes_count, (unsigned int)sb->s_blocks_count_lo);
   if (sb->s_magic != EXT4_SUPER_MAGIC) {
     return -1;
   }
@@ -57,6 +59,8 @@ int ext4_init(void) {
   ext4_gdt_start_block = (ext4_block_size == 1024) ? 2 : 1;
   ext4_num_groups = (sb->s_inodes_count + ext4_inodes_per_group - 1) / ext4_inodes_per_group;
 
+  printf("EXT4 config: block_size=%d, inodes_per_group=%d, inode_size=%d, desc_size=%d, num_groups=%d\n",
+         ext4_block_size, ext4_inodes_per_group, ext4_inode_size, ext4_desc_size, ext4_num_groups);
   return 0;
 }
 
@@ -67,6 +71,7 @@ static int ext4_read_inode(uint32_t inode_num, Ext4Inode* out_inode) {
   uint32_t desc_offset = group * ext4_desc_size;
   uint32_t gdt_block = ext4_gdt_start_block + desc_offset / ext4_block_size;
   uint32_t gdt_block_offset = desc_offset % ext4_block_size;
+
 
   if (ext4_read_block(gdt_block, ext4_block_buf) < 0) {
     puts("EXT4: Failed to read GDT block\n");
@@ -80,12 +85,14 @@ static int ext4_read_inode(uint32_t inode_num, Ext4Inode* out_inode) {
   uint32_t itable_block = itable_start_block + inode_offset / ext4_block_size;
   uint32_t itable_block_offset = inode_offset % ext4_block_size;
 
+
   if (ext4_read_block(itable_block, ext4_block_buf) < 0) {
     puts("EXT4: Failed to read Inode Table block\n");
     return -1;
   }
 
-  memcpy(out_inode, ext4_block_buf + itable_block_offset, ext4_inode_size);
+  uint32_t copy_size = ext4_inode_size < sizeof(Ext4Inode) ? ext4_inode_size : sizeof(Ext4Inode);
+  memcpy(out_inode, ext4_block_buf + itable_block_offset, copy_size);
   return 0;
 }
 
@@ -96,14 +103,14 @@ static int ext4_bmap(Ext4Inode* inode, uint32_t file_block, uint32_t* out_phys_b
   }
 
   Ext4ExtentHeader hdr;
-  memcpy(&hdr, inode->osd1.i_block, sizeof(Ext4ExtentHeader));
+  memcpy(&hdr, inode->i_block, sizeof(Ext4ExtentHeader));
 
   if (hdr.eh_magic != EXT4_EXT_MAGIC) {
     puts("EXT4: Invalid extent magic in inode\n");
     return -1;
   }
 
-  unsigned char* ext_data = (unsigned char*)(inode->osd1.i_block + 3);
+  unsigned char* ext_data = (unsigned char*)(inode->i_block + 3);
   uint32_t depth = hdr.eh_depth;
 
   while (1) {
@@ -335,20 +342,37 @@ int ext4_close_file(int handle) {
   return 0;
 }
 
-int ext4_list_dir(char* out_buf, unsigned int max_size) {
-  Ext4Inode root_inode;
-  if (ext4_read_inode(2, &root_inode) < 0) {
+int ext4_list_dir(const char* path, char* out_buf, unsigned int max_size) {
+  uint32_t inode_num = 2;
+
+  if (path && path[0] != '\0') {
+    if (ext4_resolve_path(path, &inode_num) < 0) {
+      printf("ext4_list_dir: ext4_resolve_path failed for %s\n", path);
+      return -1;
+    }
+  }
+
+
+  Ext4Inode inode;
+  if (ext4_read_inode(inode_num, &inode) < 0) {
+    printf("ext4_list_dir: ext4_read_inode failed!\n");
     return -1;
   }
 
-  uint32_t file_size = root_inode.i_size_lo;
+
+  if ((inode.i_mode & 0xF000) != 0x4000) {
+    printf("EXT4: List dir target is not a directory. i_mode=%x\n", (unsigned int)inode.i_mode);
+    return -1;
+  }
+
+  uint32_t file_size = inode.i_size_lo;
   uint32_t block_offset = 0;
   uint32_t out_offset = 0;
 
   while (block_offset < file_size) {
     uint32_t lblock = block_offset / ext4_block_size;
     uint32_t pblock = 0;
-    if (ext4_bmap(&root_inode, lblock, &pblock) < 0) {
+    if (ext4_bmap(&inode, lblock, &pblock) < 0) {
       block_offset += ext4_block_size;
       continue;
     }

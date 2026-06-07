@@ -36,19 +36,18 @@ static void print_dec(long val) {
 }
 
 static void print_hex(unsigned long val) {
-  char hex[17];
+  putc('0');
+  putc('x');
   int i;
+  int started = 0;
   for (i = 15; i >= 0; i--) {
-    int digit = val & 0xF;
-    hex[i] = digit < 10 ? '0' + digit : 'A' + digit - 10;
-    val >>= 4;
+    int digit = (val >> (i * 4)) & 0xF;
+    if (digit != 0 || started || i == 0) {
+      char c = digit < 10 ? '0' + digit : 'A' + digit - 10;
+      putc(c);
+      started = 1;
+    }
   }
-  hex[16] = '\0';
-
-  int start = 0;
-  while (start < 15 && hex[start] == '0') start++;
-  puts("0x");
-  puts(hex + start);
 }
 
 void printf(const char* fmt, ...) {

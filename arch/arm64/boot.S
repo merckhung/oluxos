@@ -123,8 +123,8 @@ _start:
 #if CONFIG_BOARD_RPI4
 
 pg_dir:
-    // Entry 0: points to l2_table_0 (covers 0 - 1GB virtual)
-    .quad l2_table_0 + 0x3
+    // Entry 0: 0-1GB virtual mapped to 0-1GB physical RAM (boot mapping)
+    .quad 0x0040000000000705
     // Entry 1: 1-2GB virtual mapped to 1-2GB physical RAM (kernel space, same as virt!)
     .quad 0x0040000040000705
     // Entry 2: empty
@@ -141,7 +141,9 @@ l2_table_0:
 
 l2_table_3:
     // Static definitions for RPi4 peripherals.
-    .zero 497 * 8
+    .zero 496 * 8
+    // Entry 496: Mailbox/Peripherals (Device, 2MB block, physical 0xFE000000)
+    .quad 0x00600000FE000401
     // Entry 497: UART0 (Device, 2MB block, physical 0xFE200000)
     .quad 0x00600000FE200401
     .zero (508 - 497 - 1) * 8

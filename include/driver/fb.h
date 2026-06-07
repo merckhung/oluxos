@@ -8,6 +8,8 @@
 #define FB_BPP 3 // 24bpp RGB
 
 extern uint8_t fb_mem[FB_WIDTH * FB_HEIGHT * FB_BPP];
+extern uint8_t* fb_active_mem;
+extern uint64_t fb_phys_addr;
 
 void fb_init(void);
 void fb_clear(uint8_t r, uint8_t g, uint8_t b);

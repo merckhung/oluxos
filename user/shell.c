@@ -363,7 +363,15 @@ void cmd_echo(int argc, char* argv[]) {
   puts("\n");
 }
 
-void cmd_pwd(int argc, char* argv[]) { puts("/\n"); }
+void cmd_pwd(int argc, char* argv[]) {
+  char buf[128];
+  if (getcwd(buf, 128)) {
+    puts(buf);
+    puts("\n");
+  } else {
+    puts("pwd: error getting current directory\n");
+  }
+}
 
 void cmd_clear(int argc, char* argv[]) { puts("\033[2J\033[H"); }
 
@@ -513,7 +521,11 @@ void cmd_grep(int argc, char* argv[]) {
 }
 
 void cmd_ls(int argc, char* argv[]) {
-  DIR* dir = opendir(".");
+  const char* path = ".";
+  if (argc > 1) {
+    path = argv[1];
+  }
+  DIR* dir = opendir(path);
   if (!dir) {
     puts("Failed to open directory\n");
   } else {
@@ -523,6 +535,18 @@ void cmd_ls(int argc, char* argv[]) {
       puts("\n");
     }
     closedir(dir);
+  }
+}
+
+void cmd_cd(int argc, char* argv[]) {
+  const char* path = "/";
+  if (argc > 1) {
+    path = argv[1];
+  }
+  if (chdir(path) < 0) {
+    puts("cd: no such file or directory: ");
+    puts(path);
+    puts("\n");
   }
 }
 
@@ -814,12 +838,20 @@ void main(void) {
     while (1) {
       int n = sys_recv(ANY_THREAD, &req, sizeof(req));
       if (n >= 8) {
+        // Ensure null-termination of filename/path argument
+        unsigned int arg_len = n - 8;
+        if (arg_len < 64) {
+          req.args.filename[arg_len] = '\0';
+        } else {
+          req.args.filename[63] = '\0';
+        }
+
         if (req.cmd == 1) {  // List Dir
           int read_bytes = -1;
           if (active_fs == FS_FAT32) {
             read_bytes = fat32_list_dir((char*)reply.data, 512);
           } else if (active_fs == FS_EXT4) {
-            read_bytes = ext4_list_dir((char*)reply.data, 512);
+            read_bytes = ext4_list_dir(req.args.filename, (char*)reply.data, 512);
           }
           reply.size = read_bytes;
           sys_send(req.sender, &reply,
@@ -886,7 +918,8 @@ void main(void) {
             if (strcmp(argv[0], "help") == 0) {
               puts("Commands:\n");
               puts("  help                - Show this help\n");
-              puts("  ls                  - List files\n");
+              puts("  ls [dir]            - List files\n");
+              puts("  cd [dir]            - Change directory\n");
               puts("  cat <file>          - Show file content\n");
               puts("  echo [args...]      - Print arguments\n");
               puts("  pwd                 - Print working directory\n");
@@ -897,6 +930,8 @@ void main(void) {
               puts("  gui                 - Launch GUI system\n");
             } else if (strcmp(argv[0], "ls") == 0) {
               cmd_ls(argc, argv);
+            } else if (strcmp(argv[0], "cd") == 0) {
+              cmd_cd(argc, argv);
             } else if (strcmp(argv[0], "cat") == 0) {
               cmd_cat(argc, argv);
             } else if (strcmp(argv[0], "echo") == 0) {

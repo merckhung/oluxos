@@ -2,6 +2,7 @@
 #include <arm64/task.h>
 #include <clib.h>
 #include <types.h>
+#include <driver/fb.h>
 
 void pl011_puts(const char* s);
 void print_hex(uint64_t val);
@@ -521,13 +522,8 @@ void* thread_map_mmio(uint64_t phys_addr) {
   return NULL;
 }
 
-extern uint8_t fb_mem[];
-#define FB_WIDTH 640
-#define FB_HEIGHT 480
-#define FB_BPP 3
-
 void* thread_map_fb(void) {
-  uint64_t phys_base = (uint64_t)fb_mem;
+  uint64_t phys_base = fb_phys_addr;
   uint64_t virt_base = 0x02000000;
   uint32_t num_pages = (FB_WIDTH * FB_HEIGHT * FB_BPP + 4095) / 4096;
 

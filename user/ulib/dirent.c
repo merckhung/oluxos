@@ -1,7 +1,9 @@
 #include "dirent.h"
 
+#include "stdio.h"
 #include "string.h"
 #include "syscall.h"
+#include "unistd.h"
 
 #define MAX_DIRS 4
 static DIR dir_pool[MAX_DIRS];
@@ -10,22 +12,30 @@ static int dir_pool_used[MAX_DIRS];
 static struct dirent static_dirent;
 
 DIR* opendir(const char* name) {
-  if (strcmp(name, "/") != 0 && strcmp(name, ".") != 0 &&
-      strcmp(name, "") != 0) {
-    return NULL;
-  }
-
   int i;
+
   for (i = 0; i < MAX_DIRS; i++) {
     if (!dir_pool_used[i]) {
       dir_pool_used[i] = 1;
 
+      char resolved_path[64];
+      if (resolve_absolute_path(name, resolved_path, 64) < 0) {
+        dir_pool_used[i] = 0;
+        return NULL;
+      }
+
       struct {
         unsigned int sender;
         unsigned int cmd;
+        char path[64];
       } req;
       req.sender = sys_gettid();
       req.cmd = 1;  // List Dir
+      
+      int len = strlen(resolved_path);
+      if (len >= 64) len = 63;
+      memcpy(req.path, resolved_path, len);
+      req.path[len] = '\0';
 
       sys_send(FS_SERVER_TID, &req, sizeof(req));
 
@@ -35,6 +45,7 @@ DIR* opendir(const char* name) {
       } reply;
 
       sys_recv(FS_SERVER_TID, &reply, sizeof(reply));
+
 
       if (reply.size < 0) {
         dir_pool_used[i] = 0;

@@ -89,10 +89,11 @@ typedef struct {
   uint16_t i_links_count;
   uint32_t i_blocks_lo;
   uint32_t i_flags;
+  uint32_t i_osd1;
   union {
     uint32_t i_block[15]; // Block pointers or Extent Header
     uint8_t  i_block_bytes[60];
-  } osd1;
+  };
   uint32_t i_generation;
   uint32_t i_file_acl_lo;
   uint32_t i_size_high;
@@ -150,6 +151,6 @@ int ext4_init(void);
 int ext4_open_file(const char* filename);
 int ext4_read_file_handle(int handle, unsigned char* out_buf, unsigned int count);
 int ext4_close_file(int handle);
-int ext4_list_dir(char* out_buf, unsigned int max_size);
+int ext4_list_dir(const char* path, char* out_buf, unsigned int max_size);
 
 #endif

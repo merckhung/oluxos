@@ -138,15 +138,38 @@ void syscall_handler(ARM64Registers* regs) {
     pl011_putc((char)arg0);
     regs->x[0] = 0;               // Success
   } else if (syscall_num == 2) {  // SYS_SEND
+    /*
+    pl011_puts("KRN: SYS_SEND from ");
+    print_hex(thread_get_current_tid());
+    pl011_puts(" to ");
+    print_hex(arg0);
+    pl011_puts("\n");
+    */
     int ret = thread_ipc_send((uint32_t)arg0, (void*)arg1, (uint32_t)arg2);
     if (ret != IPC_BLOCKED) {
       regs->x[0] = ret;
     }
   } else if (syscall_num == 3) {  // SYS_RECV
+    /*
+    pl011_puts("KRN: SYS_RECV from ");
+    print_hex(thread_get_current_tid());
+    pl011_puts(" src ");
+    print_hex(arg0);
+    pl011_puts("\n");
+    */
     int ret = thread_ipc_recv((uint32_t)arg0, (void*)arg1, (uint32_t)arg2);
     if (ret != IPC_BLOCKED) {
       regs->x[0] = ret;
     }
+    /*
+    pl011_puts("KRN: SYS_RECV exit, tid=");
+    print_hex(thread_get_current_tid());
+    pl011_puts(" x0=");
+    print_hex(regs->x[0]);
+    pl011_puts(" x30=");
+    print_hex(regs->x[30]);
+    pl011_puts("\n");
+    */
   } else if (syscall_num == 4) {  // SYS_GETTID
     regs->x[0] = thread_get_current_tid();
   } else if (syscall_num == 5) {  // SYS_MAP_MMIO
