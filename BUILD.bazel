@@ -224,7 +224,10 @@ genrule(
 sh_binary(
     name = "run_qemu_arm64",
     srcs = ["run_qemu_arm64.sh"],
-    data = [":arm64_kernel_elf"],
+    data = [
+        ":arm64_kernel_elf",
+        "fat.img",
+    ],
     args = ["$(location :arm64_kernel_elf)"],
 )
 
@@ -315,7 +318,10 @@ genrule(
 sh_binary(
     name = "run_qemu_rpi4",
     srcs = ["run_qemu_rpi4.sh"],
-    data = [":rpi4_kernel_elf"],
+    data = [
+        ":rpi4_kernel_elf",
+        "fat.img",
+    ],
     args = ["$(location :rpi4_kernel_elf)"],
 )
 
