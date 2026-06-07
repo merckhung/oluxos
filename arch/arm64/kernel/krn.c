@@ -4,6 +4,14 @@
 #include <driver/gicv2.h>
 #include <types.h>
 #include <driver/fb.h>
+#include <arm64/kdbger.h>
+
+#if CONFIG_BOARD_RPI4
+#define UART_IRQ 153
+#else
+#define UART_IRQ 33
+#endif
+
 
 // Include generated userspace binary
 #if CONFIG_BOARD_RPI4
@@ -55,6 +63,9 @@ void irq_handler_el1(ARM64Registers* regs) {
   if (irq == 30) {
     arm_timer_reset(100);
     gicv2_end_of_irq(irq);
+  } else if (irq == UART_IRQ) {
+    kdbger_intr_handler();
+    gicv2_end_of_irq(irq);
   } else {
     pl011_puts("Unexpected EL1 IRQ: ");
     print_hex(irq);
@@ -71,6 +82,9 @@ void irq_handler_el0(ARM64Registers* regs) {
     thread_set_current_regs(regs);
     gicv2_end_of_irq(irq);  // EOI before schedule
     schedule();
+  } else if (irq == UART_IRQ) {
+    kdbger_intr_handler();
+    gicv2_end_of_irq(irq);
   } else {
     pl011_puts("Unexpected EL0 IRQ: ");
     print_hex(irq);
@@ -91,6 +105,12 @@ void syscall_handler(ARM64Registers* regs) {
     print_hex(ec);
     pl011_puts(" ISS: ");
     print_hex(esr & 0x1FFFFFF);
+    pl011_puts("\nEL0 PC: ");
+    print_hex(regs->pc);
+    pl011_puts("\nEL0 LR: ");
+    print_hex(regs->x[30]);
+    pl011_puts("\nEL0 SP: ");
+    print_hex(regs->sp);
     pl011_puts("\n");
     exception_handler_dump(regs->pc, "EL0 Fault");
   }
@@ -153,6 +173,12 @@ void krn_entry(void) {
   gicv2_init();
   gicv2_enable_irq(30);
   arm_timer_init(100);
+
+#if CONFIG_KDBGER
+  kdbger_initialization();
+  gicv2_set_irq_target(UART_IRQ, 1);
+  gicv2_enable_irq(UART_IRQ);
+#endif
 
   // Initialize threads
   thread_init();

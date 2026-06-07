@@ -5,7 +5,11 @@
 #include "unistd.h"
 #include "gles.h"
 #include "gui.h"
+#include "ext4.h"
 
+#define FS_FAT32 1
+#define FS_EXT4  2
+static int active_fs = 0;
 #if CONFIG_BOARD_RPI4
 #define UART_BASE 0xFE201000ULL
 #else
@@ -134,7 +138,33 @@ typedef struct {
 
 OpenFileEntry open_file_table[MAX_OPEN_FILES];
 
+static void format_filename(const char* src, char* dest) {
+  memset(dest, ' ', 11);
+  int i = 0;
+  int d = 0;
+  // Skip leading '/' if present
+  if (src[i] == '/') i++;
+  while (src[i] && src[i] != '.' && d < 8) {
+    char c = src[i];
+    if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
+    dest[d++] = c;
+    i++;
+  }
+  while (src[i] && src[i] != '.') i++;
+  if (src[i] == '.') i++;
+  d = 8;
+  while (src[i] && d < 11) {
+    char c = src[i];
+    if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
+    dest[d++] = c;
+    i++;
+  }
+}
+
 int fat32_open_file(const char* filename) {
+  char formatted[11];
+  format_filename(filename, formatted);
+
   unsigned char sector_buf[512];
   unsigned int current_cluster = BPB_RootClus;
 
@@ -162,7 +192,7 @@ int fat32_open_file(const char* filename) {
         int match = 1;
         int j;
         for (j = 0; j < 11; j++) {
-          if (entry[i].name[j] != filename[j]) {
+          if (entry[i].name[j] != formatted[j]) {
             match = 0;
             break;
           }
@@ -677,10 +707,16 @@ void main(void) {
 
   if (tid == UART_DRIVER_TID) {
 #if CONFIG_BOARD_RPI4
-    sys_map_mmio(0xFE201000);
+    void* mapped = sys_map_mmio(0xFE201000);
 #else
-    sys_map_mmio(0x09000000);
+    void* mapped = sys_map_mmio(0x09000000);
 #endif
+    if (!mapped) {
+      while (1) {
+        volatile int d;
+        for (d = 0; d < 1000000; d++);
+      }
+    }
     user_uart_puts("UART Driver: Initialized.\n");
 
     struct {
@@ -728,21 +764,35 @@ void main(void) {
       }
     }
   } else if (tid == FS_SERVER_TID) {
-    puts("FS Server: Initializing FAT32...\n");
     volatile int d;
     for (d = 0; d < 1000000; d++);
 
-    if (fat32_init() < 0) {
-      puts("FS Server: FAT32 Init Failed!\n");
-      while (1);
+    // Auto-detect Filesystem
+    unsigned char detect_buf[512];
+    if (ramdisk_read_sector(2, detect_buf) == 0 &&
+        detect_buf[56] == 0x53 && detect_buf[57] == 0xEF) {
+      puts("FS Server: Detected EXT4 Filesystem. Initializing...\n");
+      if (ext4_init() < 0) {
+        puts("FS Server: EXT4 Init Failed!\n");
+        while (1);
+      }
+      active_fs = FS_EXT4;
+      puts("FS Server: EXT4 Init Success.\n");
+    } else {
+      puts("FS Server: Defaulting to FAT32. Initializing...\n");
+      if (fat32_init() < 0) {
+        puts("FS Server: FAT32 Init Failed!\n");
+        while (1);
+      }
+      active_fs = FS_FAT32;
+      puts("FS Server: FAT32 Init Success.\n");
     }
-    puts("FS Server: FAT32 Init Success.\n");
 
     struct {
       unsigned int sender;
       unsigned int cmd;
       union {
-        char filename[11];
+        char filename[64];
         struct {
           unsigned int handle;
           unsigned int count;
@@ -765,22 +815,43 @@ void main(void) {
       int n = sys_recv(ANY_THREAD, &req, sizeof(req));
       if (n >= 8) {
         if (req.cmd == 1) {  // List Dir
-          int read_bytes = fat32_list_dir((char*)reply.data, 512);
+          int read_bytes = -1;
+          if (active_fs == FS_FAT32) {
+            read_bytes = fat32_list_dir((char*)reply.data, 512);
+          } else if (active_fs == FS_EXT4) {
+            read_bytes = ext4_list_dir((char*)reply.data, 512);
+          }
           reply.size = read_bytes;
           sys_send(req.sender, &reply,
                    sizeof(reply.size) + (read_bytes > 0 ? read_bytes : 0));
         } else if (req.cmd == 2) {  // Open File
-          int handle = fat32_open_file(req.args.filename);
+          int handle = -1;
+          if (active_fs == FS_FAT32) {
+            handle = fat32_open_file(req.args.filename);
+          } else if (active_fs == FS_EXT4) {
+            handle = ext4_open_file(req.args.filename);
+          }
           reply.size = handle;
           sys_send(req.sender, &reply, 4);
         } else if (req.cmd == 3) {  // Read File Handle
-          int read_bytes = fat32_read_file_handle(
-              req.args.read.handle, reply.data, req.args.read.count);
+          int read_bytes = -1;
+          if (req.args.read.handle >= 100) {
+            read_bytes = ext4_read_file_handle(
+                req.args.read.handle, reply.data, req.args.read.count);
+          } else {
+            read_bytes = fat32_read_file_handle(
+                req.args.read.handle, reply.data, req.args.read.count);
+          }
           reply.size = read_bytes;
           sys_send(req.sender, &reply,
                    sizeof(reply.size) + (read_bytes > 0 ? read_bytes : 0));
         } else if (req.cmd == 4) {  // Close File
-          int status = fat32_close_file(req.args.handle);
+          int status = -1;
+          if (req.args.handle >= 100) {
+            status = ext4_close_file(req.args.handle);
+          } else {
+            status = fat32_close_file(req.args.handle);
+          }
           reply.size = status;
           sys_send(req.sender, &reply, 4);
         }

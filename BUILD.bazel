@@ -158,9 +158,11 @@ genrule(
         "user/ulib/gui.h",
         "user/ulib/gui.c",
         "user/ulib/gui_font.h",
+        "user/ulib/ext4.h",
+        "user/ulib/ext4.c",
     ] + glob(["include/**/*.h"]),
     outs = ["user_shell.elf"],
-    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) $(location user/ulib/gles.c) $(location user/ulib/gui.c) -Iuser/ulib -Iinclude -o $@",
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) $(location user/ulib/gles.c) $(location user/ulib/gui.c) $(location user/ulib/ext4.c) -Iuser/ulib -Iinclude -o $@",
 )
 
 genrule(
@@ -191,6 +193,7 @@ genrule(
         "driver/timer/arm_timer.c",
         "driver/video/fb.c",
         "lib/clib.c",
+        "arch/arm64/kernel/kdbger.c",
         "arch/arm64/kernel.lds",
         ":user_shell_h",
     ] + glob(["include/**/*.h"]),
@@ -199,6 +202,7 @@ genrule(
         aarch64-linux-gnu-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
             -std=gnu89 \
             -mgeneral-regs-only \
+            -DCONFIG_KDBGER=1 \
             -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
             -T $(location arch/arm64/kernel.lds) \
             $(location arch/arm64/boot.S) \
@@ -207,6 +211,7 @@ genrule(
             $(location arch/arm64/kernel/interrupt.c) \
             $(location arch/arm64/kernel/task.c) \
             $(location arch/arm64/kernel/krn.c) \
+            $(location arch/arm64/kernel/kdbger.c) \
             $(location driver/serial/pl011.c) \
             $(location driver/interrupt/gicv2.c) \
             $(location driver/timer/arm_timer.c) \
@@ -243,9 +248,11 @@ genrule(
         "user/ulib/gui.h",
         "user/ulib/gui.c",
         "user/ulib/gui_font.h",
+        "user/ulib/ext4.h",
+        "user/ulib/ext4.c",
     ] + glob(["include/**/*.h"]),
     outs = ["user_shell_rpi4.elf"],
-    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -DCONFIG_BOARD_RPI4=1 -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) $(location user/ulib/gles.c) $(location user/ulib/gui.c) -Iuser/ulib -Iinclude -o $@",
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -DCONFIG_BOARD_RPI4=1 -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) $(location user/ulib/gles.c) $(location user/ulib/gui.c) $(location user/ulib/ext4.c) -Iuser/ulib -Iinclude -o $@",
 )
 
 genrule(
@@ -276,6 +283,7 @@ genrule(
         "driver/timer/arm_timer.c",
         "driver/video/fb.c",
         "lib/clib.c",
+        "arch/arm64/kernel/kdbger.c",
         "arch/arm64/kernel.lds",
         ":user_shell_h_rpi4",
     ] + glob(["include/**/*.h"]),
@@ -285,6 +293,7 @@ genrule(
             -std=gnu89 \
             -mgeneral-regs-only \
             -DCONFIG_BOARD_RPI4=1 \
+            -DCONFIG_KDBGER=1 \
             -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
             -T $(location arch/arm64/kernel.lds) \
             $(location arch/arm64/boot.S) \
@@ -293,6 +302,7 @@ genrule(
             $(location arch/arm64/kernel/interrupt.c) \
             $(location arch/arm64/kernel/task.c) \
             $(location arch/arm64/kernel/krn.c) \
+            $(location arch/arm64/kernel/kdbger.c) \
             $(location driver/serial/pl011.c) \
             $(location driver/interrupt/gicv2.c) \
             $(location driver/timer/arm_timer.c) \

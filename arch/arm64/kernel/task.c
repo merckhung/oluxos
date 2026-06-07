@@ -406,6 +406,19 @@ int thread_ipc_recv(uint32_t src, void* buf, uint32_t size) {
 }
 
 void* thread_map_mmio(uint64_t phys_addr) {
+#if CONFIG_KDBGER
+#if CONFIG_BOARD_RPI4
+  if (phys_addr == 0xFE201000) {
+    pl011_puts("thread_map_mmio: UART mapping blocked (KDBGER active)\n");
+    return NULL;
+  }
+#else
+  if (phys_addr == 0x09000000) {
+    pl011_puts("thread_map_mmio: UART mapping blocked (KDBGER active)\n");
+    return NULL;
+  }
+#endif
+#endif
 #if CONFIG_BOARD_RPI4
   if (phys_addr == 0xFE201000 || phys_addr == 0xFF840000) {
     uint32_t l1_idx = (phys_addr >> 30) & 0x1FF; // should be 3

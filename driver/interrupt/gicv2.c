@@ -65,6 +65,16 @@ void gicv2_set_irq_priority(uint32_t irq, uint8_t priority) {
   *GICD_IPRIORITYR(reg_idx) = val;
 }
 
+void gicv2_set_irq_target(uint32_t irq, uint8_t cpu_mask) {
+  uint32_t reg_idx = irq / 4;
+  uint32_t byte_idx = irq % 4;
+
+  uint32_t val = *GICD_ITARGETSR(reg_idx);
+  val &= ~(0xFF << (byte_idx * 8));
+  val |= (cpu_mask << (byte_idx * 8));
+  *GICD_ITARGETSR(reg_idx) = val;
+}
+
 uint32_t gicv2_acknowledge_irq(void) {
   return *GICC_IAR & 0x3FF;  // Bits 9:0 contain INTID
 }

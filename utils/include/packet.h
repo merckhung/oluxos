@@ -1,1 +1,1 @@
-../../include/ia32/kdbger.h
+../../include/kdbger_pkt.h

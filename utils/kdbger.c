@@ -42,6 +42,9 @@ static int32_t configureTtyDevice(int32_t fd) {
 
   if (tcsetattr(fd, TCSANOW, &termSetting)) return 1;
 
+  // Flush input buffer to discard boot logs
+  tcflush(fd, TCIFLUSH);
+
   return 0;
 }
 

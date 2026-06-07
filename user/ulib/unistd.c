@@ -46,26 +46,7 @@ static FdEntry* get_fd(int fd) {
   return &fd_table[fd];
 }
 
-static void format_filename(const char* src, char* dest) {
-  memset(dest, ' ', 11);
-  int i = 0;
-  int d = 0;
-  while (src[i] && src[i] != '.' && d < 8) {
-    char c = src[i];
-    if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
-    dest[d++] = c;
-    i++;
-  }
-  while (src[i] && src[i] != '.') i++;
-  if (src[i] == '.') i++;
-  d = 8;
-  while (src[i] && d < 11) {
-    char c = src[i];
-    if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
-    dest[d++] = c;
-    i++;
-  }
-}
+
 
 int open(const char* pathname, int flags) {
   if (!fd_table_initialized) {
@@ -80,17 +61,18 @@ int open(const char* pathname, int flags) {
   }
   if (fd == MAX_FD) return -1;
 
-  char formatted[11];
-  format_filename(pathname, formatted);
-
   struct {
     unsigned int sender;
     unsigned int cmd;
-    char filename[11];
+    char filename[64];
   } req;
   req.sender = sys_gettid();
   req.cmd = 2;  // Open File
-  memcpy(req.filename, formatted, 11);
+  
+  int len = strlen(pathname);
+  if (len > 63) len = 63;
+  memcpy(req.filename, pathname, len);
+  req.filename[len] = '\0';
 
   sys_send(FS_SERVER_TID, &req, sizeof(req));
 
