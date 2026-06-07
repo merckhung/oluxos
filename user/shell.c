@@ -571,6 +571,168 @@ void cmd_cat(int argc, char* argv[]) {
   close(fd);
 }
 
+static int atoi(const char* s) {
+  int val = 0;
+  while (*s >= '0' && *s <= '9') {
+    val = val * 10 + (*s - '0');
+    s++;
+  }
+  return val;
+}
+
+void cmd_uname(int argc, char* argv[]) {
+  puts("OluxOS arm64\n");
+}
+
+void cmd_sleep(int argc, char* argv[]) {
+  if (argc < 2) {
+    puts("Usage: sleep <seconds>\n");
+    return;
+  }
+  int secs = atoi(argv[1]);
+  if (secs <= 0) return;
+  int i;
+  for (i = 0; i < secs; i++) {
+    volatile int d;
+    for (d = 0; d < 100000000; d++) {
+      // Spin
+    }
+  }
+}
+
+void cmd_tail(int argc, char* argv[]) {
+  char* filename = NULL;
+  int lines_to_print = 10;
+
+  int i = 1;
+  while (i < argc) {
+    if (strcmp(argv[i], "-n") == 0) {
+      if (i + 1 < argc) {
+        lines_to_print = 0;
+        char* p = argv[i + 1];
+        while (*p >= '0' && *p <= '9') {
+          lines_to_print = lines_to_print * 10 + (*p - '0');
+          p++;
+        }
+        i += 2;
+      } else {
+        puts("tail: option requires an argument -- n\n");
+        return;
+      }
+    } else {
+      filename = argv[i];
+      i++;
+    }
+  }
+
+  if (!filename) {
+    puts("Usage: tail [-n lines] <filename>\n");
+    return;
+  }
+
+  // Pass 1: count lines
+  int fd = open(filename, 0);
+  if (fd < 0) {
+    puts("tail: cannot open ");
+    puts(filename);
+    puts("\n");
+    return;
+  }
+
+  char buf[512];
+  ssize_t n;
+  int total_lines = 0;
+  while ((n = read(fd, buf, 512)) > 0) {
+    int j;
+    for (j = 0; j < n; j++) {
+      if (buf[j] == '\n') {
+        total_lines++;
+      }
+    }
+  }
+  close(fd);
+
+  // Pass 2: print last N lines
+  fd = open(filename, 0);
+  if (fd < 0) {
+    puts("tail: cannot open ");
+    puts(filename);
+    puts("\n");
+    return;
+  }
+
+  int lines_to_skip = total_lines - lines_to_print;
+  if (lines_to_skip < 0) {
+    lines_to_skip = 0;
+  }
+
+  int current_line = 0;
+  while ((n = read(fd, buf, 512)) > 0) {
+    int j;
+    for (j = 0; j < n; j++) {
+      if (current_line >= lines_to_skip) {
+        write(1, &buf[j], 1);
+      }
+      if (buf[j] == '\n') {
+        current_line++;
+      }
+    }
+  }
+  close(fd);
+}
+
+static void find_recursive(const char* base_path) {
+  DIR* dir = opendir(base_path);
+  if (!dir) {
+    return;
+  }
+
+  struct dirent* entry;
+  while ((entry = readdir(dir)) != NULL) {
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+      continue;
+    }
+
+    char full_path[128];
+    int base_len = strlen(base_path);
+    int entry_len = strlen(entry->d_name);
+    if (base_len + 1 + entry_len >= 128) {
+      puts("find: path too long: ");
+      puts(base_path);
+      puts("/");
+      puts(entry->d_name);
+      puts("\n");
+      continue;
+    }
+
+    memcpy(full_path, base_path, base_len);
+    if (full_path[base_len - 1] != '/') {
+      full_path[base_len] = '/';
+      memcpy(full_path + base_len + 1, entry->d_name, entry_len);
+      full_path[base_len + 1 + entry_len] = '\0';
+    } else {
+      memcpy(full_path + base_len, entry->d_name, entry_len);
+      full_path[base_len + entry_len] = '\0';
+    }
+
+    puts(full_path);
+    puts("\n");
+
+    find_recursive(full_path);
+  }
+  closedir(dir);
+}
+
+void cmd_find(int argc, char* argv[]) {
+  const char* path = ".";
+  if (argc > 1) {
+    path = argv[1];
+  }
+  puts(path);
+  puts("\n");
+  find_recursive(path);
+}
+
 void draw_win1_content(Window* win) {
   draw_button(win->x + 20, win->y + 40, 100, 30, "Button");
   draw_scrollbar(win->x + win->w - 25, win->y + 30, 15, win->h - 40, 30, 40);
@@ -928,6 +1090,10 @@ void main(void) {
               puts("  head [-n N] <file>  - Show first N lines\n");
               puts("  grep <pattern> <file>- Search for pattern in file\n");
               puts("  gui                 - Launch GUI system\n");
+              puts("  tail [-n N] <file>  - Show last N lines\n");
+              puts("  find [dir]          - Find files recursively\n");
+              puts("  uname               - Show system info\n");
+              puts("  sleep <seconds>     - Sleep for N seconds\n");
             } else if (strcmp(argv[0], "ls") == 0) {
               cmd_ls(argc, argv);
             } else if (strcmp(argv[0], "cd") == 0) {
@@ -948,6 +1114,14 @@ void main(void) {
               cmd_grep(argc, argv);
             } else if (strcmp(argv[0], "gui") == 0) {
               cmd_gui(argc, argv);
+            } else if (strcmp(argv[0], "tail") == 0) {
+              cmd_tail(argc, argv);
+            } else if (strcmp(argv[0], "find") == 0) {
+              cmd_find(argc, argv);
+            } else if (strcmp(argv[0], "uname") == 0) {
+              cmd_uname(argc, argv);
+            } else if (strcmp(argv[0], "sleep") == 0) {
+              cmd_sleep(argc, argv);
             } else {
               puts("Unknown command: ");
               puts(argv[0]);

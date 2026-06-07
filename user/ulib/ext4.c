@@ -347,7 +347,7 @@ int ext4_list_dir(const char* path, char* out_buf, unsigned int max_size) {
 
   if (path && path[0] != '\0') {
     if (ext4_resolve_path(path, &inode_num) < 0) {
-      printf("ext4_list_dir: ext4_resolve_path failed for %s\n", path);
+      // printf("ext4_list_dir: ext4_resolve_path failed for %s\n", path);
       return -1;
     }
   }
@@ -355,13 +355,13 @@ int ext4_list_dir(const char* path, char* out_buf, unsigned int max_size) {
 
   Ext4Inode inode;
   if (ext4_read_inode(inode_num, &inode) < 0) {
-    printf("ext4_list_dir: ext4_read_inode failed!\n");
+    // printf("ext4_list_dir: ext4_read_inode failed!\n");
     return -1;
   }
 
 
   if ((inode.i_mode & 0xF000) != 0x4000) {
-    printf("EXT4: List dir target is not a directory. i_mode=%x\n", (unsigned int)inode.i_mode);
+    // printf("EXT4: List dir target is not a directory. i_mode=%x\n", (unsigned int)inode.i_mode);
     return -1;
   }
 

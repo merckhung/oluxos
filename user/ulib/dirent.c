@@ -5,7 +5,7 @@
 #include "syscall.h"
 #include "unistd.h"
 
-#define MAX_DIRS 4
+#define MAX_DIRS 16
 static DIR dir_pool[MAX_DIRS];
 static int dir_pool_used[MAX_DIRS];
 
