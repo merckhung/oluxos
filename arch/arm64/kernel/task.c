@@ -187,10 +187,16 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
       l2[0] = ((uint64_t)l3 & ~0xFFF) | 0x3;
       // L2[16] -> FB L3
       l2[16] = ((uint64_t)fb_l3 & ~0xFFF) | 0x3;
+#if CONFIG_BOARD_RPI4
+      extern uint64_t l2_table_3[];
+      // L1[3] -> global peripheral table
+      l1[3] = ((uint64_t)l2_table_3 & ~0xFFF) | 0x3;
+#else
       // L2[64] -> GIC
       l2[64] = 0x0060000008000401ULL;
       // L2[72] -> UART
       l2[72] = 0x0060000009000401ULL;
+#endif
 
       t->pg_dir_phys = (uint64_t)l1;
 
@@ -400,6 +406,37 @@ int thread_ipc_recv(uint32_t src, void* buf, uint32_t size) {
 }
 
 void* thread_map_mmio(uint64_t phys_addr) {
+#if CONFIG_BOARD_RPI4
+  if (phys_addr == 0xFE201000 || phys_addr == 0xFF840000) {
+    uint32_t l1_idx = (phys_addr >> 30) & 0x1FF; // should be 3
+    uint32_t l2_idx = (phys_addr >> 21) & 0x1FF;
+    uint64_t* l1 = (uint64_t*)current_thread->pg_dir_phys;
+    uint64_t* l2 = (uint64_t*)(l1[l1_idx] & ~0xFFF);
+
+    uint64_t entry = l2[l2_idx];
+    if ((entry & 0x3) == 0) {
+      pl011_puts("thread_map_mmio: Entry not present in L2\n");
+      return NULL;
+    }
+
+    entry = (entry & ~(3ULL << 6)) | (1ULL << 6);
+    l2[l2_idx] = entry;
+
+    __asm__ volatile(
+        "tlbi vmalle1is\n"
+        "dsb sy\n"
+        "isb\n" ::
+            : "memory");
+
+    pl011_puts("Mapped MMIO ");
+    print_hex(phys_addr);
+    pl011_puts(" for EL0 access in tid ");
+    print_hex(current_thread->tid);
+    pl011_puts("\n");
+
+    return (void*)phys_addr;
+  }
+#else // QEMU virt (Default)
   if (phys_addr == 0x09000000 || phys_addr == 0x08000000) {
     uint32_t l2_idx = phys_addr >> 21;
     uint64_t* l1 = (uint64_t*)current_thread->pg_dir_phys;
@@ -427,7 +464,11 @@ void* thread_map_mmio(uint64_t phys_addr) {
     pl011_puts("\n");
 
     return (void*)phys_addr;
-  } else if (phys_addr == 0x48000000) {
+  }
+#endif
+
+  // Shared Ramdisk mapping (same for both!)
+  if (phys_addr == 0x48000000) {
     uint64_t virt_base = 0x10000000;
     uint64_t phys_base = 0x48000000;
     uint32_t num_blocks = 17;  // 34MB

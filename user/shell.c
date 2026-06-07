@@ -6,7 +6,11 @@
 #include "gles.h"
 #include "gui.h"
 
+#if CONFIG_BOARD_RPI4
+#define UART_BASE 0xFE201000ULL
+#else
 #define UART_BASE 0x09000000ULL
+#endif
 #define UART_DR ((volatile unsigned int*)(UART_BASE + 0x00))
 #define UART_FR ((volatile unsigned int*)(UART_BASE + 0x18))
 #define TXFF (1 << 5)
@@ -672,7 +676,11 @@ void main(void) {
   int tid = sys_gettid();
 
   if (tid == UART_DRIVER_TID) {
+#if CONFIG_BOARD_RPI4
+    sys_map_mmio(0xFE201000);
+#else
     sys_map_mmio(0x09000000);
+#endif
     user_uart_puts("UART Driver: Initialized.\n");
 
     struct {

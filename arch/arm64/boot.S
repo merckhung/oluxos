@@ -18,7 +18,24 @@ _start:
     b.eq    .Lsetup_el1
     cmp     x0, #0x8 // EL2
     b.eq    .Ldrop_to_el1
+    cmp     x0, #0xc // EL3
+    b.eq    .Ldrop_to_el2
     b       .Lhang
+
+.Ldrop_to_el2:
+    // Enable AArch64 in EL2 (from EL3)
+    mov     x0, #0x501              // RW=1 (AArch64 next EL), HCE=1, NS=1
+    msr     scr_el3, x0
+
+    // Setup SPSR_EL3 for EL2h
+    mov     x0, #0x3c9              // EL2h with interrupts masked (D, A, I, F)
+    msr     spsr_el3, x0
+
+    // Setup return address to EL2 entry
+    adr     x0, .Ldrop_to_el1
+    msr     elr_el3, x0
+
+    eret
 
 .Ldrop_to_el1:
     // Enable AArch64 in EL1
@@ -54,6 +71,8 @@ _start:
     ldr     x0, =el1_vector_table
     msr     vbar_el1, x0
     isb
+
+
 
     // Setup MAIR_EL1
     ldr     x0, =0xFF00 // Attr0 = Device, Attr1 = Normal
@@ -95,7 +114,46 @@ _start:
 
 .section ".data"
 .align 12
+#if CONFIG_BOARD_RPI4
+.global pg_dir, l2_table_0, l2_table_3, l3_table_0
+#else
 .global pg_dir, l2_table_0, l3_table_0
+#endif
+
+#if CONFIG_BOARD_RPI4
+
+pg_dir:
+    // Entry 0: points to l2_table_0 (covers 0 - 1GB virtual)
+    .quad l2_table_0 + 0x3
+    // Entry 1: 1-2GB virtual mapped to 1-2GB physical RAM (kernel space, same as virt!)
+    .quad 0x0040000040000705
+    // Entry 2: empty
+    .quad 0
+    // Entry 3: points to l2_table_3 (covers 3GB - 4GB peripherals)
+    .quad l2_table_3 + 0x3
+    .zero 4096 - 32
+
+l2_table_0:
+    // Entry 0: points to l3_table_0 (Table descriptor)
+    .quad l3_table_0 + 0x3
+    // Entry 1 to 511: empty
+    .zero 511 * 8
+
+l2_table_3:
+    // Static definitions for RPi4 peripherals.
+    .zero 497 * 8
+    // Entry 497: UART0 (Device, 2MB block, physical 0xFE200000)
+    .quad 0x00600000FE200401
+    .zero (508 - 497 - 1) * 8
+    // Entry 508: GIC (Device, 2MB block, physical 0xFF800000)
+    .quad 0x00600000FF800401
+    .zero (512 - 508 - 1) * 8
+
+l3_table_0:
+    // Maps 0-2MB in 4KB pages. Empty at boot.
+    .zero 4096
+
+#else // QEMU virt (Default)
 
 pg_dir:
     // Entry 0: points to l2_table_0 (Table descriptor)
@@ -121,4 +179,6 @@ l2_table_0:
 l3_table_0:
     // Maps 0-2MB in 4KB pages. Empty at boot.
     .zero 4096
+
+#endif
 

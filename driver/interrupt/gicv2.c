@@ -1,8 +1,13 @@
 #include <driver/gicv2.h>
 #include <types.h>
 
+#if CONFIG_BOARD_RPI4
+#define GICD_BASE 0xFF841000ULL
+#define GICC_BASE 0xFF842000ULL
+#else
 #define GICD_BASE 0x08000000ULL
 #define GICC_BASE 0x08010000ULL
+#endif
 
 #define GICD_CTLR ((volatile uint32_t*)(GICD_BASE + 0x000))
 #define GICD_TYPER ((volatile uint32_t*)(GICD_BASE + 0x004))

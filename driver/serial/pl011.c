@@ -1,4 +1,8 @@
+#if CONFIG_BOARD_RPI4
+#define UART_BASE 0xFE201000ULL
+#else
 #define UART_BASE 0x09000000ULL
+#endif
 #define UART_DR ((volatile unsigned int*)(UART_BASE + 0x00))
 #define UART_FR ((volatile unsigned int*)(UART_BASE + 0x18))
 

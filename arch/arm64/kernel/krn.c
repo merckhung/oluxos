@@ -6,7 +6,11 @@
 #include <driver/fb.h>
 
 // Include generated userspace binary
+#if CONFIG_BOARD_RPI4
+#include "user_shell_bin_rpi4.h"
+#else
 #include "user_shell_bin.h"
+#endif
 
 void pl011_init(void);
 void pl011_puts(const char* s);
