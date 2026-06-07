@@ -27,7 +27,7 @@ COMMON_DEFINES = [
     "CONFIG_SERIAL=1",
     "CONFIG_KERNEL_GDB=1",
     "CONFIG_FS_FAT=1",
-    "CONFIG_KDBGER=1",
+    "CONFIG_KDBGER=0",
 ]
 
 cc_library(
@@ -202,7 +202,7 @@ genrule(
         aarch64-linux-gnu-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
             -std=gnu89 \
             -mgeneral-regs-only \
-            -DCONFIG_KDBGER=1 \
+            -DCONFIG_KDBGER=0 \
             -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
             -T $(location arch/arm64/kernel.lds) \
             $(location arch/arm64/boot.S) \
@@ -296,7 +296,7 @@ genrule(
             -std=gnu89 \
             -mgeneral-regs-only \
             -DCONFIG_BOARD_RPI4=1 \
-            -DCONFIG_KDBGER=1 \
+            -DCONFIG_KDBGER=0 \
             -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
             -T $(location arch/arm64/kernel.lds) \
             $(location arch/arm64/boot.S) \
