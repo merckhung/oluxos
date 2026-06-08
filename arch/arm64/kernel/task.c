@@ -3,6 +3,7 @@
 #include <clib.h>
 #include <types.h>
 #include <driver/fb.h>
+#include <elf.h>
 
 void pl011_puts(const char* s);
 void print_hex(uint64_t val);
@@ -19,7 +20,7 @@ static uint64_t thread_l1_tables[MAX_THREADS][512]
     __attribute__((aligned(4096)));
 static uint64_t thread_l2_tables[MAX_THREADS][512]
     __attribute__((aligned(4096)));
-static uint64_t thread_l3_tables[MAX_THREADS][512]
+static uint64_t thread_l3_tables[MAX_THREADS][4][512]
     __attribute__((aligned(4096)));
 
 void thread_init(void) {
@@ -140,16 +141,22 @@ retry:
 
 void map_page_thread(Thread* t, uint64_t vaddr, uint64_t paddr,
                      uint64_t flags) {
-  uint32_t idx = (vaddr & 0x1FFFFF) / 4096;  // Offset within first 2MB
-  uint64_t* l3 = thread_l3_tables[t->tid];
-  l3[idx] = (paddr & ~0xFFF) | flags;
+  uint64_t* l1 = (uint64_t*)t->pg_dir_phys;
+  uint32_t l2_idx = (vaddr >> 21) & 0x1FF;
+  uint32_t l3_idx = (vaddr >> 12) & 0x1FF;
+
+  uint64_t* l2 = (uint64_t*)(l1[0] & ~0xFFF);
+  if (l2_idx < 4) {
+      uint64_t* l3 = thread_l3_tables[t->tid][l2_idx];
+      l2[l2_idx] = ((uint64_t)l3 & ~0xFFF) | 0x3;
+      l3[l3_idx] = (paddr & ~0xFFF) | flags;
+  }
 }
 
-#define USER_CODE_SIZE 65536
-static uint8_t user_code_pages[MAX_THREADS][USER_CODE_SIZE]
-    __attribute__((aligned(4096)));
-static uint8_t user_stack_pages[MAX_THREADS][4096]
-    __attribute__((aligned(4096)));
+#define USER_CODE_SIZE 0x200000
+static uint8_t user_code_pages[MAX_THREADS][USER_CODE_SIZE] __attribute__((aligned(4096)));
+#define USER_STACK_SIZE 65536
+static uint8_t user_stack_pages[MAX_THREADS][USER_STACK_SIZE] __attribute__((aligned(4096)));
 static uint64_t thread_fb_l3_tables[MAX_THREADS][512]
     __attribute__((aligned(4096)));
 
@@ -158,6 +165,11 @@ extern void userspace_entry_wrapper(void);
 int thread_create_userspace(const unsigned char* bin, uint32_t size) {
   int i;
   IntDisable();
+  
+  pl011_puts("sys_spawn size: ");
+  print_hex(size);
+  pl011_puts("\n");
+  
   for (i = 1; i < MAX_THREADS; i++) {
     if (threads[i].state == THREAD_STATE_FREE) {
       Thread* t = &threads[i];
@@ -171,12 +183,15 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
       // Initialize private page tables for this thread
       uint64_t* l1 = thread_l1_tables[i];
       uint64_t* l2 = thread_l2_tables[i];
-      uint64_t* l3 = thread_l3_tables[i];
+      uint64_t* l3 = thread_l3_tables[i][0];
       uint64_t* fb_l3 = thread_fb_l3_tables[i];
 
       CbMemSet((int8_t*)l1, 0, 4096);
       CbMemSet((int8_t*)l2, 0, 4096);
-      CbMemSet((int8_t*)l3, 0, 4096);
+      CbMemSet((int8_t*)thread_l3_tables[i][0], 0, 4096);
+      CbMemSet((int8_t*)thread_l3_tables[i][1], 0, 4096);
+      CbMemSet((int8_t*)thread_l3_tables[i][2], 0, 4096);
+      CbMemSet((int8_t*)thread_l3_tables[i][3], 0, 4096);
       CbMemSet((int8_t*)fb_l3, 0, 4096);
 
       // L1[0] -> L2
@@ -201,24 +216,80 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
 
       t->pg_dir_phys = (uint64_t)l1;
 
-      CbMemCpy(user_code_pages[i], bin, size);
+      CbMemSet((int8_t*)user_code_pages[i], 0, USER_CODE_SIZE);
+      CbMemSet((int8_t*)user_stack_pages[i], 0, USER_STACK_SIZE);
 
-      // Flags for user code: PXN=1, UXN=0, AP=01 (RW EL1/EL0), SH=11, AF=1,
-      // Attr=1, Type=3
       uint64_t code_flags = 0x0020000000000747ULL;
-      uint32_t num_pages = USER_CODE_SIZE / 4096;
-      uint32_t p;
-      for (p = 0; p < num_pages; p++) {
-        uint64_t vaddr = 0x00100000 + p * 4096;
-        uint64_t paddr = (uint64_t)user_code_pages[i] + p * 4096;
-        map_page_thread(t, vaddr, paddr, code_flags);
+      Elf64_Ehdr* ehdr = (Elf64_Ehdr*)bin;
+      
+      uint64_t entry_point = 0x00100000;
+      
+      if (ehdr->e_ident[0] == 0x7f &&
+          ehdr->e_ident[1] == 'E' &&
+          ehdr->e_ident[2] == 'L' &&
+          ehdr->e_ident[3] == 'F') {
+          
+          entry_point = ehdr->e_entry;
+          
+          Elf64_Phdr* phdr = (Elf64_Phdr*)(bin + ehdr->e_phoff);
+          int j;
+          for (j = 0; j < ehdr->e_phnum; j++) {
+            if (phdr[j].p_type == PT_LOAD) {
+              uint64_t vaddr = phdr[j].p_vaddr;
+              uint64_t memsz = phdr[j].p_memsz;
+              uint64_t filesz = phdr[j].p_filesz;
+              uint64_t offset = phdr[j].p_offset;
+
+              uint64_t start_page = vaddr & ~0xFFF;
+              uint64_t end_page = (vaddr + memsz + 0xFFF) & ~0xFFF;
+              uint64_t curr_page;
+              
+              pl011_puts("LOAD Segment: vaddr="); print_hex(vaddr);
+              pl011_puts(" offset="); print_hex(offset);
+              pl011_puts(" filesz="); print_hex(filesz);
+              pl011_puts("\n");
+              
+              for (curr_page = start_page; curr_page < end_page; curr_page += 4096) {
+                  uint64_t phys_offset = curr_page & 0x1FFFFF;
+                  map_page_thread(t, curr_page, (uint64_t)user_code_pages[i] + phys_offset, code_flags);
+              }
+              
+              CbMemCpy((int8_t*)((uint64_t)user_code_pages[i] + (vaddr & 0x1FFFFF)), (int8_t*)(bin + offset), filesz);
+              
+              if (vaddr == 0x4fb188) {
+                  pl011_puts("GOT PLT value in memory 500000: ");
+                  print_hex(*(uint64_t*)((uint64_t)user_code_pages[i] + 0x100000));
+                  pl011_puts("\nGOT PLT value in memory 500020: ");
+                  print_hex(*(uint64_t*)((uint64_t)user_code_pages[i] + 0x100020));
+                  pl011_puts("\n");
+              }
+            }
+          }
+          
+          uint64_t heap_start = 0x509000;
+          uint64_t heap_end = 0x600000;
+          uint64_t heap_curr;
+          for (heap_curr = heap_start; heap_curr < heap_end; heap_curr += 4096) {
+               uint64_t phys_offset = heap_curr & 0x1FFFFF;
+               map_page_thread(t, heap_curr, (uint64_t)user_code_pages[i] + phys_offset, code_flags);
+          }
+      } else {
+          // Raw binary
+          CbMemCpy(user_code_pages[i], bin, size);
+          uint32_t num_pages = (size + 4095) / 4096;
+          uint32_t p;
+          for (p = 0; p < num_pages; p++) {
+            uint64_t vaddr = 0x00100000 + p * 4096;
+            uint64_t paddr = (uint64_t)user_code_pages[i] + p * 4096;
+            map_page_thread(t, vaddr, paddr, code_flags);
+          }
       }
 
-      // Flags for user stack: PXN=1, UXN=1, AP=01 (RW EL1/EL0), SH=11, AF=1,
-      // Attr=1, Type=3
       uint64_t stack_flags = 0x0060000000000747ULL;
-      map_page_thread(t, 0x001FF000, (uint64_t)user_stack_pages[i],
-                      stack_flags);
+      int page_idx;
+      for (page_idx = 0; page_idx < (USER_STACK_SIZE / 4096); page_idx++) {
+          map_page_thread(t, 0x00800000 - USER_STACK_SIZE + (page_idx * 4096), (uint64_t)user_stack_pages[i] + (page_idx * 4096), stack_flags);
+      }
 
       uint8_t* stk_top = (uint8_t*)t->stack_base + t->stack_size;
       stk_top -= sizeof(CpuContext);
@@ -226,9 +297,44 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
 
       CbMemSet((int8_t*)ctx, 0, sizeof(CpuContext));
 
+      ctx->x19 = entry_point;
       ctx->lr = (uint64_t)userspace_entry_wrapper;
       ctx->sp = (uint64_t)stk_top;
       ctx->fp = (uint64_t)stk_top;
+
+      uint64_t user_sp = 0x00800000 - 0x100;
+      ctx->x20 = user_sp; // Passed to switch.S for SP_EL0
+      
+      uint64_t* ustack = (uint64_t*)(user_stack_pages[i] + USER_STACK_SIZE - 0x100);
+      ustack[0] = 3;                           // argc
+      ustack[1] = user_sp + 0xD0;              // argv[0] -> "busybox"
+      ustack[2] = user_sp + 0xD8;              // argv[1] -> "echo"
+      ustack[3] = user_sp + 0xE0;              // argv[2] -> "Hello OluxOS!"
+      ustack[4] = 0;                           // argv[3] (NULL)
+      ustack[5] = 0;                           // envp[0] (NULL)
+      
+      ustack[6] = 3;                           // AT_PHDR
+      ustack[7] = 0x400000 + ehdr->e_phoff;    // phdr vaddr
+      ustack[8] = 4;                           // AT_PHENT
+      ustack[9] = ehdr->e_phentsize;           // phent
+      ustack[10] = 5;                           // AT_PHNUM
+      ustack[11] = ehdr->e_phnum;               // phnum
+      
+      ustack[12] = 25;                         // AT_RANDOM
+      ustack[13] = user_sp + 0xF0;             // pointer to random bytes
+      ustack[14] = 6;                          // AT_PAGESZ
+      ustack[15] = 4096;                       // 4096
+      ustack[16] = 31;                         // AT_EXECFN
+      ustack[17] = user_sp + 0xC0;             // pointer to "/bin/busybox"
+      ustack[18] = 0;                          // AT_NULL
+      ustack[19] = 0;                          // auxv val
+      
+      CbMemCpy((int8_t*)&ustack[24], "/bin/busybox\0", 13); // "/bin/busybox\0" at +0xC0
+      CbMemCpy((int8_t*)&ustack[26], "busybox\0", 8); // "busybox\0" at +0xD0
+      CbMemCpy((int8_t*)&ustack[27], "echo\0\0\0\0", 8); // "echo\0" at +0xD8
+      CbMemCpy((int8_t*)&ustack[28], "Hello OluxOS!\0\0", 16); // "Hello OluxOS!\0" at +0xE0
+      ustack[30] = 0x123456789ABCDEF0;         // Random bytes 0..7 at +0xF0
+      ustack[31] = 0x0FEDCBA987654321;         // Random bytes 8..15 at +0xF8
 
       t->context = *ctx;
       t->state = THREAD_STATE_READY;
@@ -552,3 +658,38 @@ void* thread_map_fb(void) {
 
   return (void*)virt_base;
 }
+
+uint64_t sys_mmap_impl(uint64_t size) {
+  // Always return 2MB aligned allocations
+  static uint64_t next_vaddr = 0x20000000; // 512MB mark
+  static uint64_t next_paddr = 0x60000000; // QEMU physical memory
+
+  if (size == 0) return next_vaddr;
+
+  uint64_t ret_vaddr = next_vaddr;
+  uint64_t num_blocks = (size + 0x1FFFFF) >> 21; // Number of 2MB blocks
+  
+  uint64_t* l1 = (uint64_t*)current_thread->pg_dir_phys;
+  uint64_t* l2 = (uint64_t*)(l1[0] & ~0xFFF);
+  
+  uint64_t i;
+  for (i = 0; i < num_blocks; i++) {
+     uint32_t l2_idx = (next_vaddr >> 21) & 0x1FF;
+     // Map as 2MB block: UXN=0, PXN=1, AP=01 (RW EL1/0), AF=1, Attr=1 (Normal Memory)
+     l2[l2_idx] = next_paddr | 0x0020000000000745ULL;
+     
+     next_vaddr += 0x200000;
+     next_paddr += 0x200000;
+  }
+  
+  // Invalidate TLB
+  __asm__ volatile(
+      "tlbi vmalle1is\n"
+      "dsb sy\n"
+      "isb\n" ::: "memory");
+      
+  CbMemSet((int8_t*)ret_vaddr, 0, num_blocks * 0x200000);
+      
+  return ret_vaddr;
+}
+

@@ -35,12 +35,10 @@ thread_entry_wrapper:
 .global userspace_entry_wrapper
 userspace_entry_wrapper:
     // Setup SP_EL0 (User Stack)
-    ldr     x0, =0x00200000
-    msr     sp_el0, x0
+    msr     sp_el0, x20
     
     // Setup ELR_EL1 (User Entry Point)
-    ldr     x0, =0x00100000
-    msr     elr_el1, x0
+    msr     elr_el1, x19
     
     // Setup SPSR_EL1 (EL0t, interrupts enabled)
     mov     x0, #0x0

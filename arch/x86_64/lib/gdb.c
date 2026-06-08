@@ -9,11 +9,11 @@
  */
 #include <clib.h>
 #include <driver/serial.h>
-#include <ia32/debug.h>
-#include <ia32/gdb.h>
-#include <ia32/interrupt.h>
-#include <ia32/io.h>
-#include <ia32/platform.h>
+#include <x86_64/debug.h>
+#include <x86_64/gdb.h>
+#include <x86_64/interrupt.h>
+#include <x86_64/io.h>
+#include <x86_64/platform.h>
 #include <types.h>
 
 ExternIRQHandler(4);

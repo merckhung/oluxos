@@ -1122,6 +1122,30 @@ void main(void) {
               cmd_uname(argc, argv);
             } else if (strcmp(argv[0], "sleep") == 0) {
               cmd_sleep(argc, argv);
+            } else if (strcmp(argv[0], "busybox") == 0) {
+              static unsigned char exec_buf[2000000];
+              int fd = open("busybox", 0);
+              if (fd >= 0) {
+                  puts("Loading busybox...\n");
+                  int total_read = 0;
+                  while (1) {
+                      int r = read(fd, exec_buf + total_read, 512);
+                      if (r <= 0) break;
+                      total_read += r;
+                  }
+                  close(fd);
+                  if (total_read > 0) {
+                      puts("Spawning busybox...\n");
+                      int tid = sys_spawn(exec_buf, total_read);
+                      if (tid >= 0) {
+                          puts("Spawned busybox successfully.\n");
+                      } else {
+                          puts("Spawn failed.\n");
+                      }
+                  }
+              } else {
+                  puts("Could not open busybox file.\n");
+              }
             } else {
               puts("Unknown command: ");
               puts(argv[0]);

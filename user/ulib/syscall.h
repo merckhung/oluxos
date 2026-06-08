@@ -46,4 +46,12 @@ static inline void* sys_map_fb(void) {
   return (void*)x0;
 }
 
+static inline int sys_spawn(const void* buf, int size) {
+  register long x0 __asm__("x0") = (long)buf;
+  register long x1 __asm__("x1") = size;
+  register long x8 __asm__("x8") = 7;
+  __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x8) : "memory");
+  return x0;
+}
+
 #endif

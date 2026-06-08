@@ -30,13 +30,13 @@ static uint8_t yPos = 0;
 // Description:
 //  Print string on console just like standard C printf() routine
 //
-void TcPrint(const int8_t* format, ...) {
-  int8_t* p;
+void TcPrint(const char* format, ...) {
+  char* p;
   va_list args;
   va_start(args, format);
 
   // Handle String Format
-  if (CbFmtPrint(buf, CONSOLE_BUF_LEN, format, args)) {
+  if (CbFmtPrint((int8_t*)buf, CONSOLE_BUF_LEN, (const int8_t*)format, args)) {
     va_end(args);
     return;
   }

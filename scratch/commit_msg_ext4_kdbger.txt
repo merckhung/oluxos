@@ -1,0 +1,19 @@
+Implement EXT4 read-only support and port Kernel Debugger (kdbger) to ARM64
+
+1. EXT4 Filesystem Support:
+   - Added `user/ulib/ext4.h` and `user/ulib/ext4.c` implementing ext4 superblock, group descriptor, inode, and extent tree parsing.
+   - Implemented iterative `ext4_bmap` to resolve file block mappings safely within the 4KB userspace stack.
+   - Refactored `user/shell.c` FS Server to auto-detect EXT4 (magic 0xEF53) and dynamically route commands (list_dir, open, read, close) between FAT32 and EXT4.
+   - Modified `unistd.c` `open()` to send raw filenames (instead of formatting to 8.3 FAT client-side) and moved formatting to FAT32 server-side.
+   - Added `memcmp` to `user/ulib/string.c`.
+
+2. Kernel Debugger (kdbger) ARM64 Port & Revival:
+   - Revived the host TUI debugger `utils/kdbger` and updated the `packet.h` symlink.
+   - Extracted shared packet structures to `include/kdbger_pkt.h` to share between host, x86, and ARM64.
+   - Created `arch/arm64/kernel/kdbger.c` implementing the debugger serial state machine and memory read/write commands for PL011.
+   - Configured UART RX interrupts on PL011 and routed UART interrupts in GIC (IRQ 153 for RPi4, IRQ 33 for Virt) to kdbger.
+   - Blocked userspace mapping of UART0 in `task.c` when KDBGER is active to prevent conflicts, and fixed the userspace UART driver thread to spin safely instead of crashing when mapping fails.
+   - Updated `run_qemu_rpi4.sh` to support `PTY=1` env variable to launch QEMU with PTY serial redirection.
+
+TAG=agy
+CONV=fc57c8fd-f7b5-4388-bc4e-7188d369df68

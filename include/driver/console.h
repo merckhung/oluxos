@@ -17,7 +17,7 @@
 #define CRTC_ADDR 0x3D4
 #define CRTC_DATA 0x3D5
 
-void TcPrint(const int8_t* format, ...);
+void TcPrint(const char* format, ...);
 void TcClear(void);
 void TcCursorSet(uint8_t x, uint8_t y);
 void TcPutChar(int8_t c);

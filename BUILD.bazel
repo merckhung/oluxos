@@ -9,7 +9,6 @@ COMMON_COPTS = [
     "-Wstrict-prototypes",
     "-O2",
     "-fomit-frame-pointer",
-    "-nostdinc",
     "-fno-stack-protector",
     "-fno-pie",
     "-fno-pic",
@@ -329,3 +328,126 @@ sh_binary(
     args = ["$(location :rpi4_kernel_elf)"],
 )
 
+
+x86_64_COMMON_COPTS = [
+    "-m64",
+    "-Wall",
+    "-Wstrict-prototypes",
+    "-O2",
+    "-fomit-frame-pointer",
+    "-fno-stack-protector",
+    "-fno-pie",
+    "-fno-pic",
+    "-ffreestanding",
+    "-fno-builtin",
+    "-mcmodel=large",
+    "-mno-red-zone",
+    "-std=gnu89",
+    "-include", "include/types.h",
+]
+
+x86_64_COMMON_DEFINES = [
+    "KERNEL_DEBUG",
+    "CONFIG_ARCH_X86_64=1",
+    "CONFIG_MENU=1",
+    "CONFIG_SERIAL_CONSOLE=1",
+    "CONFIG_SERIAL=1",
+    "CONFIG_KERNEL_GDB=1",
+    "CONFIG_FS_FAT=1",
+    "CONFIG_KDBGER=0",
+]
+
+cc_library(
+    name = "x86_64_kernel_lib",
+    srcs = [
+        "fs/fat.c",
+        "driver/input/kbd.c",
+        "driver/ide/ide.c",
+        "driver/pci/pci.c",
+        "driver/serial/serial.c",
+        "driver/console/menu.c",
+        "driver/console/ksh.c",
+        "driver/console/sercon.c",
+        "driver/console/console.c",
+        "driver/resource/resource.c",
+        "arch/x86_64/kernel/setup.S",
+        "arch/x86_64/kernel/handler.S",
+        "arch/x86_64/kernel/page.c",
+        "arch/x86_64/kernel/interrupt.c",
+        "arch/x86_64/kernel/krn.c",
+        "arch/x86_64/kernel/task.c",
+        "arch/x86_64/component/timer.c",
+        "arch/x86_64/component/i8259.c",
+        "arch/x86_64/lib/kdbger.c",
+        "arch/x86_64/lib/debug.c",
+        "arch/x86_64/lib/gdb.c",
+        "arch/x86_64/lib/io.c",
+        "lib/clib.c",
+        "lib/crc.c",
+    ] + glob(["**/*.h"]),
+    copts = x86_64_COMMON_COPTS,
+    local_defines = x86_64_COMMON_DEFINES,
+    includes = ["include"],
+    deps = [":olux_headers"],
+    linkstatic = True,
+)
+
+cc_library(
+    name = "x86_64_bootsect_lib",
+    srcs = [
+        "arch/x86_64/boot/boot.S",
+        "arch/x86_64/boot/info.S",
+        "arch/x86_64/boot/pm.S",
+    ] + glob(["**/*.h"]),
+    copts = x86_64_COMMON_COPTS,
+    local_defines = x86_64_COMMON_DEFINES,
+    includes = ["include"],
+    deps = [":olux_headers"],
+    linkstatic = True,
+)
+
+genrule(
+    name = "x86_64_kernel_elf",
+    srcs = [":x86_64_kernel_lib", "arch/x86_64/kernel.lds"],
+    outs = ["x86_64_kernel.elf"],
+    cmd = "ld -m elf_x86_64 -nostdlib -static -n -N -T $(location arch/x86_64/kernel.lds) $(locations :x86_64_kernel_lib) -o $@",
+)
+
+genrule(
+    name = "x86_64_bootsect_elf",
+    srcs = [":x86_64_bootsect_lib", "arch/x86_64/boot/boot.lds"],
+    outs = ["x86_64_bootsect.elf"],
+    cmd = "ld -m elf_x86_64 -nostdlib -static -n -N -T $(location arch/x86_64/boot/boot.lds) $(locations :x86_64_bootsect_lib) -o $@",
+)
+
+genrule(
+    name = "x86_64_kernel_bin",
+    srcs = [":x86_64_kernel_elf"],
+    outs = ["x86_64_kernel"],
+    cmd = "cp $< $@",
+)
+
+genrule(
+    name = "x86_64_bootsect_bin",
+    srcs = [":x86_64_bootsect_elf"],
+    outs = ["x86_64_bootsect"],
+    cmd = "cp $< $@",
+)
+
+genrule(
+    name = "OluxOS_krn_x86_64",
+    srcs = [
+        ":x86_64_bootsect_bin",
+        ":x86_64_kernel_bin",
+    ],
+    outs = ["OluxOS_x86_64.krn"],
+    tools = ["//utils:krnimg"],
+    cmd = "$(location //utils:krnimg) -b $(location :x86_64_bootsect_bin) -k $(location :x86_64_kernel_bin) -o $@",
+)
+
+genrule(
+    name = "OluxOS_img_x86_64",
+    srcs = [":OluxOS_krn_x86_64"],
+    outs = ["OluxOS_x86_64.img"],
+    cmd = "dd if=/dev/zero of=$@ bs=1474560 count=1 && dd if=$(location :OluxOS_krn_x86_64) of=$@ bs=1474560 count=1 conv=notrunc",
+)

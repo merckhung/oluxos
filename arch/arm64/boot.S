@@ -72,8 +72,11 @@ _start:
     msr     vbar_el1, x0
     isb
 
-
-
+    // Enable FP/SIMD for EL1 and EL0
+    mrs     x0, cpacr_el1
+    orr     x0, x0, #(3 << 20) // FPEN = 0b11
+    msr     cpacr_el1, x0
+    isb
     // Setup MAIR_EL1
     ldr     x0, =0xFF00 // Attr0 = Device, Attr1 = Normal
     msr     mair_el1, x0

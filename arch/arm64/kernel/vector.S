@@ -98,6 +98,9 @@ ExceptionStub .Lserror_el1_spx, "SError EL1 SPx"
     mov     x0, sp // Pass registers pointer
     bl      irq_handler_el0
 
+    // Disable interrupts before restoring ELR_EL1 and SPSR_EL1
+    msr     daifset, #15
+
     // Restore ELR and SPSR
     ldr     x0, [sp, #256]
     msr     elr_el1, x0
@@ -175,6 +178,9 @@ ExceptionStub .Lserror_el0_32, "SError EL0 32"
     mov     x0, sp // Pass registers pointer
     bl      irq_handler_el1
 
+    // Disable interrupts before restoring ELR_EL1 and SPSR_EL1
+    msr     daifset, #15
+
     // Restore ELR and SPSR
     ldr     x0, [sp, #256]
     msr     elr_el1, x0
@@ -238,6 +244,9 @@ ExceptionStub .Lserror_el0_32, "SError EL0 32"
     // Call C handler
     mov     x0, sp // Pass registers pointer
     bl      syscall_handler
+
+    // Disable interrupts before restoring ELR_EL1 and SPSR_EL1
+    msr     daifset, #15
 
     // Restore ELR and SPSR
     ldr     x0, [sp, #256]
