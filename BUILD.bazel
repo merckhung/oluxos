@@ -174,7 +174,7 @@ genrule(
 
 genrule(
     name = "user_shell_h",
-    srcs = [":user_shell_bin"],
+    srcs = [":user_shell_elf"],
     outs = ["user_shell_bin.h"],
     cmd = "python3 -c \"import sys; data=open(sys.argv[1],'rb').read(); open(sys.argv[2],'w').write('const unsigned char user_shell_bin[] = {' + ','.join(hex(b) for b in data) + '};\\nconst unsigned int user_shell_bin_len = ' + str(len(data)) + ';\\n')\" $< $@",
 )
@@ -269,7 +269,7 @@ genrule(
 
 genrule(
     name = "user_shell_h_rpi4",
-    srcs = [":user_shell_bin_rpi4"],
+    srcs = [":user_shell_elf_rpi4"],
     outs = ["user_shell_bin_rpi4.h"],
     cmd = "python3 -c \"import sys; data=open(sys.argv[1],'rb').read(); open(sys.argv[2],'w').write('const unsigned char user_shell_bin[] = {' + ','.join(hex(b) for b in data) + '};\\nconst unsigned int user_shell_bin_len = ' + str(len(data)) + ';\\n')\" $< $@",
 )
