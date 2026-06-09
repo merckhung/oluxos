@@ -490,8 +490,10 @@ genrule(
     srcs = [
         "arch/riscv64/boot.S",
         "arch/riscv64/kernel/switch.S",
+        "arch/riscv64/kernel/vector.S",
         "arch/riscv64/kernel/krn.c",
         "arch/riscv64/kernel/task.c",
+        "arch/riscv64/kernel/interrupt.c",
         "driver/serial/ns16550.c",
         "lib/clib.c",
         "arch/riscv64/kernel.lds",
@@ -502,12 +504,15 @@ genrule(
             -std=gnu89 \
             -march=rv64gc -mabi=lp64d \
             -mcmodel=medany \
+            -mno-relax \
             -Iinclude -I. \
             -T $(location arch/riscv64/kernel.lds) \
             $(location arch/riscv64/boot.S) \
             $(location arch/riscv64/kernel/switch.S) \
+            $(location arch/riscv64/kernel/vector.S) \
             $(location arch/riscv64/kernel/krn.c) \
             $(location arch/riscv64/kernel/task.c) \
+            $(location arch/riscv64/kernel/interrupt.c) \
             $(location driver/serial/ns16550.c) \
             $(location lib/clib.c) \
             -o $@

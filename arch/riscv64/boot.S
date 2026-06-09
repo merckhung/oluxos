@@ -8,6 +8,9 @@ _start:
 
     // Disable interrupts (Supervisor Interrupt Enable = 0)
     csrw sie, zero
+    
+    // Clear sscratch to ensure early S-mode traps are recognized correctly
+    csrw sscratch, zero
 
     // Set stack pointer
     la sp, _stack_top
