@@ -179,6 +179,57 @@ genrule(
 )
 
 genrule(
+    name = "user_shell_elf_riscv64",
+    srcs = [
+        "user/shell.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+        "user/ulib/gles.h",
+        "user/ulib/gles.c",
+        "user/ulib/gui.h",
+        "user/ulib/gui.c",
+        "user/ulib/gui_font.h",
+        "user/ulib/ext4.h",
+        "user/ulib/ext4.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["user_shell_riscv64.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none \
+            -ffreestanding -std=gnu89 \
+            -march=rv64gc -mabi=lp64d \
+            -mcmodel=medany \
+            -mno-relax \
+            -T $(location user/user.lds) \
+            $(location user/start.S) \
+            $(location user/shell.c) \
+            $(location user/ulib/string.c) \
+            $(location user/ulib/stdio.c) \
+            $(location user/ulib/unistd.c) \
+            $(location user/ulib/dirent.c) \
+            $(location user/ulib/gles.c) \
+            $(location user/ulib/gui.c) \
+            $(location user/ulib/ext4.c) \
+            -Iuser/ulib -Iinclude -o $@
+    """,
+)
+
+genrule(
+    name = "user_shell_h_riscv64",
+    srcs = [":user_shell_elf_riscv64"],
+    outs = ["user_shell_bin_riscv64.h"],
+    cmd = "python3 -c \"import sys; data=open(sys.argv[1],'rb').read(); open(sys.argv[2],'w').write('const unsigned char user_shell_bin[] = {' + ','.join(hex(b) for b in data) + '};\\nconst unsigned int user_shell_bin_len = ' + str(len(data)) + ';\\n')\" $< $@",
+)
+
+genrule(
     name = "arm64_kernel_elf",
     srcs = [
         "arch/arm64/boot.S",
@@ -497,6 +548,7 @@ genrule(
         "driver/serial/ns16550.c",
         "lib/clib.c",
         "arch/riscv64/kernel.lds",
+        ":user_shell_h_riscv64",
     ] + glob(["include/**/*.h"]),
     outs = ["riscv64_kernel.elf"],
     cmd = """
@@ -505,7 +557,7 @@ genrule(
             -march=rv64gc -mabi=lp64d \
             -mcmodel=medany \
             -mno-relax \
-            -Iinclude -I. \
+            -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
             -T $(location arch/riscv64/kernel.lds) \
             $(location arch/riscv64/boot.S) \
             $(location arch/riscv64/kernel/switch.S) \
@@ -522,7 +574,10 @@ genrule(
 sh_binary(
     name = "run_qemu_riscv64",
     srcs = ["run_qemu_riscv64.sh"],
-    data = [":riscv64_kernel_elf"],
+    data = [
+        ":riscv64_kernel_elf",
+        "fat.img",
+    ],
     args = ["$(location :riscv64_kernel_elf)"],
 )
 

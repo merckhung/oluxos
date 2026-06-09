@@ -3,6 +3,15 @@
 
 #include <types.h>
 
+// Page table flags for Sv39
+#define PTE_V (1 << 0)
+#define PTE_R (1 << 1)
+#define PTE_W (1 << 2)
+#define PTE_X (1 << 3)
+#define PTE_U (1 << 4)
+#define PTE_A (1 << 6)
+#define PTE_D (1 << 7)
+
 typedef enum {
   THREAD_STATE_FREE = 0,
   THREAD_STATE_READY,

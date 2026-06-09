@@ -8,4 +8,5 @@ fi
 
 echo "Booting OluxOS RISC-V 64-bit at $KERNEL_ELF with QEMU..."
 shift
-qemu-system-riscv64 -M virt -cpu rv64 -m 128M -kernel "$KERNEL_ELF" -nographic "$@"
+qemu-system-riscv64 -M virt -cpu rv64 -m 1024M -kernel "$KERNEL_ELF" -nographic \
+    -device loader,file=fat.img,addr=0x88000000,force-raw=on "$@"

@@ -10,6 +10,19 @@
 #define FS_FAT32 1
 #define FS_EXT4  2
 static int active_fs = 0;
+#if defined(__riscv)
+#define UART_BASE 0x10000000ULL
+#define UART_THR ((volatile unsigned char*)(UART_BASE + 0))
+#define UART_RBR ((volatile unsigned char*)(UART_BASE + 0))
+#define UART_LSR ((volatile unsigned char*)(UART_BASE + 5))
+#define LSR_RX_READY (1 << 0)
+#define LSR_TX_IDLE  (1 << 5)
+
+void user_uart_putc(char c) {
+  while ((*UART_LSR & LSR_TX_IDLE) == 0);
+  *UART_THR = c;
+}
+#else
 #if CONFIG_BOARD_RPI4
 #define UART_BASE 0xFE201000ULL
 #else
@@ -24,6 +37,7 @@ void user_uart_putc(char c) {
   while (*UART_FR & TXFF);
   *UART_DR = c;
 }
+#endif
 
 void user_uart_puts(const char* s) {
   while (*s) {
@@ -892,7 +906,9 @@ void main(void) {
   int tid = sys_gettid();
 
   if (tid == UART_DRIVER_TID) {
-#if CONFIG_BOARD_RPI4
+#if defined(__riscv)
+    void* mapped = sys_map_mmio(0x10000000);
+#elif CONFIG_BOARD_RPI4
     void* mapped = sys_map_mmio(0xFE201000);
 #else
     void* mapped = sys_map_mmio(0x09000000);
@@ -920,14 +936,23 @@ void main(void) {
           user_uart_puts(req.data);
         } else if (req.cmd == 1) {
           char c;
+#if defined(__riscv)
+          while ((*UART_LSR & LSR_RX_READY) == 0);
+          c = *UART_RBR;
+#else
           while (*UART_FR & RXFE);
           c = (char)(*UART_DR & 0xFF);
+#endif
           sys_send(req.sender, &c, 1);
         }
       }
     }
   } else if (tid == RAMDISK_DRIVER_TID) {
+#if defined(__riscv)
+    unsigned char* ramdisk_base = sys_map_mmio(0x88000000);
+#else
     unsigned char* ramdisk_base = sys_map_mmio(0x48000000);
+#endif
     puts("Ramdisk Driver: Initialized.\n");
 
     struct {

@@ -24,6 +24,9 @@ typedef struct {
 } Elf64_Ehdr;
 
 #define PT_LOAD 1
+#define PF_X 1
+#define PF_W 2
+#define PF_R 4
 
 typedef struct {
   uint32_t p_type;

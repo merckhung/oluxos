@@ -60,6 +60,8 @@ trap_entry:
     // Save user sp from sscratch
     csrr x1, sscratch
     sd x1, 16(sp)   // user sp
+    li x1, 0
+    csrw sscratch, x1 // Clear sscratch for S-mode
     
     sd x3, 24(sp)   // gp
     sd x4, 32(sp)   // tp
@@ -124,15 +126,11 @@ trap_return:
     bnez t0, .Lret_to_kernel
     
     // Returning to User Mode!
-    // Restore sscratch to hold the kernel stack top: current sp + 288
+    // 1. Set sscratch to kernel stack top (current sp + 288)
     addi t0, sp, 288
     csrw sscratch, t0
     
-    // Restore user sp to sscratch temporarily
-    ld t0, 16(sp)
-    csrw sscratch, t0
-    
-    // Restore general purpose registers (except sp)
+    // 2. Restore all general registers (except sp)
     ld x1, 8(sp)    // ra
     ld x3, 24(sp)   // gp
     ld x4, 32(sp)   // tp
@@ -164,8 +162,8 @@ trap_return:
     ld x30, 240(sp) // t5
     ld x31, 248(sp) // t6
     
-    // Swap sp and sscratch: sp gets user sp, sscratch gets kernel stack top
-    csrrw sp, sscratch, sp
+    // 3. Load user sp directly from stack frame
+    ld sp, 16(sp)
     sret
 
 .Lret_to_kernel:
