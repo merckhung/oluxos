@@ -1,4 +1,4 @@
-CROSS_COMPILE		=	arm-xscale-linux-gnu-
+CROSS_COMPILE		=	arm-none-eabi-
 AS                  =   $(CROSS_COMPILE)as
 AR                  =   $(CROSS_COMPILE)ar
 CC                  =   $(CROSS_COMPILE)gcc
@@ -24,9 +24,7 @@ LDFLAGS         	=   -cref -M -s -N
 OBJS				=	boot.o uart_pxa.o uart_msm.o routine.o krn.o
 
 
-QEMU				=	/home/merck/software/qemu/bin/qemu
-FLASHPART1			=	/home/merck/software/armemu/flashpart1.img
-FLASHPART2			=	/home/merck/software/armemu/flashpart2.img
+QEMU				=	qemu-system-arm
 MEMSIZE				=	256
 IMGSIZE				=	67108864
 PLATFORM			=	mainstone
@@ -38,7 +36,7 @@ all: clean boot.bin
 boot.bin: $(OBJS)
 	$(LD) $(LDFLAGS) -o boot.exec $(OBJS) > boot.map -T boot.lds
 	$(OBJCOPY) -O binary boot.exec $@
-	$(DD) if=./$@ of=$(FLASHPART1) bs=$(IMGSIZE) count=1 conv=notrunc
+
 
 
 %.o: %.S
@@ -54,7 +52,7 @@ dis:
 
 
 emu:
-	$(QEMU)-system-arm -M $(PLATFORM) -pflash $(FLASHPART1) -pflash $(FLASHPART2) -m $(MEMSIZE) -kernel ./boot.bin
+	$(QEMU) -M $(PLATFORM) -m $(MEMSIZE) -kernel ./boot.bin -nographic
 
 
 clean:
