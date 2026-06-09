@@ -5,6 +5,11 @@
 #include <types.h>
 #include <driver/fb.h>
 #include <arm64/kdbger.h>
+#include <kernel/pmm.h>
+#include <kernel/heap.h>
+#include <kernel/vmm.h>
+
+extern char _stack_top[];
 
 #if CONFIG_BOARD_RPI4
 #define UART_IRQ 153
@@ -20,10 +25,17 @@
 #include "user_shell_bin.h"
 #endif
 
+#include <kernel/console.h>
+
 void pl011_init(void);
 void pl011_puts(const char* s);
 void pl011_putc(char c);
+char pl011_getc(void);
 extern void thread_exit(void);
+
+void kputs(const char* s) {
+  pl011_puts(s);
+}
 
 void print_hex(uint64_t val) {
   char hex[17];
@@ -305,6 +317,18 @@ void krn_entry(void) {
   pl011_puts(" OluxOS ARM64 Starting...\n");
   pl011_puts("====================================\n");
   pl011_puts("Booted successfully to EL1.\n");
+
+  // Initialize PMM
+  uint64_t mem_start = (uint64_t)_stack_top;
+  uint64_t mem_size = 0x48000000ULL - mem_start;
+  pmm_init(mem_start, mem_size);
+
+  // Initialize Heap
+  heap_init();
+
+  // Initialize VMM
+  vmm_init();
+
   fb_init();
 
   gicv2_init();

@@ -1,4 +1,8 @@
 .global cpu_switch_to
+.extern sched_lock
+.extern spin_unlock
+.extern IntEnable
+
 cpu_switch_to:
     // a0 points to current CpuContext
     // a1 points to next CpuContext
@@ -39,22 +43,39 @@ cpu_switch_to:
 
 .global thread_entry_wrapper
 thread_entry_wrapper:
+    // Release scheduler lock before starting thread
+    la a0, sched_lock
+    call spin_unlock
+    
+    // Enable interrupts for kernel thread
+    call IntEnable
+
     // s1 contains entry function
     jalr s1
     // if it returns, call thread_exit
     call thread_exit
 
+.extern cpus
+
 .global userspace_entry_wrapper
 userspace_entry_wrapper:
     // s1 = user entry point
     // s2 = user stack pointer
-    // s3 = kernel stack top
+    // s3 = kernel stack top (no longer used for sscratch directly)
+
+    // Release scheduler lock before entering userspace
+    la a0, sched_lock
+    call spin_unlock
 
     // Write user entry point to sepc
     csrw sepc, s1
 
-    // Setup kernel stack in sscratch for traps
-    csrw sscratch, s3
+    // Setup CpuLocal* in sscratch for traps (sscratch = &cpus[tp])
+    la t0, cpus
+    li t1, 72 // sizeof(CpuLocal) = 72
+    mul t1, tp, t1
+    add t0, t0, t1
+    csrw sscratch, t0
 
     // Configure sstatus:
     // Clear SPP (bit 8) to return to User Mode (0)

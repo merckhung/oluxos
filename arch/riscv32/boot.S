@@ -25,6 +25,23 @@ _start:
     j .Lclear_bss
 
 .Lsetup_mmu:
+    // Populate boot_pg_dir entries 512 to 767 (1GB RAM identity map)
+    // Entry i: maps (i << 22) physical to (i << 22) virtual.
+    // PTE = (i << 20) | 0xCF
+    la t0, boot_pg_dir
+    li t1, 512          // start index
+    li t2, 768          // end index
+.Lloop_map:
+    bge t1, t2, .Ldone_map
+    slli t3, t1, 20
+    ori t3, t3, 0xCF
+    slli t4, t1, 2
+    add t4, t0, t4
+    sw t3, 0(t4)
+    addi t1, t1, 1
+    j .Lloop_map
+.Ldone_map:
+
     // Setup boot page table (Sv32)
     la t0, boot_pg_dir
     srli t0, t0, 12 // PPN of boot_pg_dir
@@ -49,31 +66,11 @@ _start:
 
 // Sv32 page table: 1024 entries, each 4 bytes (4KB page)
 boot_pg_dir:
-    // Entry 0 to 63: empty (0-256MB virtual)
+    // Entry 0 to 63: empty
     .zero 64 * 4
 
     // Entry 64: maps 0x10000000 physical -> 0x10000000 virtual (UART)
-    // PTE: 0x10000000 >> 2 | 0xC7 = 0x040000C7
     .word 0x040000C7
 
-    // Entry 65 to 511: empty (260MB-2048MB virtual)
-    .zero (512 - 65) * 4
-
-    // Entry 512: maps 0x80000000 physical -> 0x80000000 virtual (RAM block 0)
-    // PTE: 0x80000000 >> 2 | 0xCF = 0x200000CF
-    .word 0x200000CF
-
-    // Entry 513: maps 0x80400000 physical -> 0x80400000 virtual (RAM block 1)
-    // PTE: 0x80400000 >> 2 | 0xCF = 0x201000CF
-    .word 0x201000CF
-
-    // Entry 514: maps 0x80800000 physical -> 0x80800000 virtual (RAM block 2)
-    // PTE: 0x80800000 >> 2 | 0xCF = 0x202000CF
-    .word 0x202000CF
-
-    // Entry 515: maps 0x80C00000 physical -> 0x80C00000 virtual (RAM block 3)
-    // PTE: 0x80C00000 >> 2 | 0xCF = 0x203000CF
-    .word 0x203000CF
-
-    // Remaining 508 entries are 0 (2064MB-4096MB virtual)
-    .zero (1024 - 516) * 4
+    // Entry 65 to 1023: empty (will be populated for RAM at boot)
+    .zero (1024 - 65) * 4

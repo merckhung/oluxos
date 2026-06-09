@@ -230,6 +230,57 @@ genrule(
 )
 
 genrule(
+    name = "user_shell_elf_riscv32",
+    srcs = [
+        "user/shell.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+        "user/ulib/gles.h",
+        "user/ulib/gles.c",
+        "user/ulib/gui.h",
+        "user/ulib/gui.c",
+        "user/ulib/gui_font.h",
+        "user/ulib/ext4.h",
+        "user/ulib/ext4.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["user_shell_riscv32.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none \
+            -ffreestanding -std=gnu89 \
+            -march=rv32imac_zicsr -mabi=ilp32 \
+            -mcmodel=medany \
+            -mno-relax \
+            -T $(location user/user.lds) \
+            $(location user/start.S) \
+            $(location user/shell.c) \
+            $(location user/ulib/string.c) \
+            $(location user/ulib/stdio.c) \
+            $(location user/ulib/unistd.c) \
+            $(location user/ulib/dirent.c) \
+            $(location user/ulib/gles.c) \
+            $(location user/ulib/gui.c) \
+            $(location user/ulib/ext4.c) \
+            -Iuser/ulib -Iinclude -o $@
+    """,
+)
+
+genrule(
+    name = "user_shell_h_riscv32",
+    srcs = [":user_shell_elf_riscv32"],
+    outs = ["user_shell_bin_riscv32.h"],
+    cmd = "python3 -c \"import sys; data=open(sys.argv[1],'rb').read(); open(sys.argv[2],'w').write('const unsigned char user_shell_bin[] = {' + ','.join(hex(b) for b in data) + '};\\nconst unsigned int user_shell_bin_len = ' + str(len(data)) + ';\\n')\" $< $@",
+)
+
+genrule(
     name = "arm64_kernel_elf",
     srcs = [
         "arch/arm64/boot.S",
@@ -238,6 +289,10 @@ genrule(
         "arch/arm64/kernel/interrupt.c",
         "arch/arm64/kernel/task.c",
         "arch/arm64/kernel/krn.c",
+        "kernel/pmm.c",
+        "kernel/heap.c",
+        "arch/arm64/kernel/vmm.c",
+        "kernel/spinlock.c",
         "driver/serial/pl011.c",
         "driver/interrupt/gicv2.c",
         "driver/timer/arm_timer.c",
@@ -251,7 +306,7 @@ genrule(
     outs = ["arm64_kernel.elf"],
     cmd = """
         aarch64-linux-gnu-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
-            -std=gnu89 \
+            -std=gnu89 -DCONFIG_ARCH_ARM64=1 -mno-outline-atomics \
             -mgeneral-regs-only \
             -DCONFIG_KDBGER=0 \
             -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
@@ -263,6 +318,10 @@ genrule(
             $(location arch/arm64/kernel/task.c) \
             $(location arch/arm64/kernel/krn.c) \
             $(location arch/arm64/kernel/kdbger.c) \
+            $(location kernel/pmm.c) \
+            $(location kernel/heap.c) \
+            $(location arch/arm64/kernel/vmm.c) \
+            $(location kernel/spinlock.c) \
             $(location driver/serial/pl011.c) \
             $(location driver/interrupt/gicv2.c) \
             $(location driver/timer/arm_timer.c) \
@@ -545,6 +604,11 @@ genrule(
         "arch/riscv64/kernel/krn.c",
         "arch/riscv64/kernel/task.c",
         "arch/riscv64/kernel/interrupt.c",
+        "kernel/pmm.c",
+        "kernel/heap.c",
+        "arch/riscv64/kernel/vmm.c",
+        "kernel/spinlock.c",
+        "kernel/cpu.c",
         "driver/serial/ns16550.c",
         "lib/clib.c",
         "arch/riscv64/kernel.lds",
@@ -553,7 +617,7 @@ genrule(
     outs = ["riscv64_kernel.elf"],
     cmd = """
         riscv64-unknown-elf-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
-            -std=gnu89 \
+            -std=gnu89 -DCONFIG_ARCH_RISCV64=1 \
             -march=rv64gc -mabi=lp64d \
             -mcmodel=medany \
             -mno-relax \
@@ -565,6 +629,11 @@ genrule(
             $(location arch/riscv64/kernel/krn.c) \
             $(location arch/riscv64/kernel/task.c) \
             $(location arch/riscv64/kernel/interrupt.c) \
+            $(location kernel/pmm.c) \
+            $(location kernel/heap.c) \
+            $(location arch/riscv64/kernel/vmm.c) \
+            $(location kernel/spinlock.c) \
+            $(location kernel/cpu.c) \
             $(location driver/serial/ns16550.c) \
             $(location lib/clib.c) \
             -o $@
@@ -590,14 +659,19 @@ genrule(
         "arch/riscv32/kernel/interrupt.c",
         "arch/riscv32/kernel/task.c",
         "arch/riscv32/kernel/krn.c",
+        "kernel/pmm.c",
+        "kernel/heap.c",
+        "arch/riscv32/kernel/vmm.c",
+        "kernel/spinlock.c",
         "driver/serial/ns16550.c",
         "lib/clib.c",
         "arch/riscv32/kernel.lds",
+        ":user_shell_h_riscv32",
     ] + glob(["include/**/*.h"]),
     outs = ["riscv32_kernel.elf"],
     cmd = """
         riscv64-unknown-elf-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
-            -std=gnu89 \
+            -std=gnu89 -DCONFIG_ARCH_RISCV32=1 \
             -march=rv32imac_zicsr -mabi=ilp32 \
             -mcmodel=medany \
             -mno-relax \
@@ -609,6 +683,10 @@ genrule(
             $(location arch/riscv32/kernel/interrupt.c) \
             $(location arch/riscv32/kernel/task.c) \
             $(location arch/riscv32/kernel/krn.c) \
+            $(location kernel/pmm.c) \
+            $(location kernel/heap.c) \
+            $(location arch/riscv32/kernel/vmm.c) \
+            $(location kernel/spinlock.c) \
             $(location driver/serial/ns16550.c) \
             $(location lib/clib.c) \
             -o $@

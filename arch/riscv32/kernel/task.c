@@ -3,9 +3,11 @@
 #include <elf.h>
 #include <clib.h>
 #include <types.h>
+#include <kernel/vmm.h>
+#include <kernel/pmm.h>
 
 extern void ns16550_puts(const char* s);
-extern void print_hex(uint32_t val);
+extern void print_hex(uint64_t val);
 extern void thread_entry_wrapper(void);
 extern void userspace_entry_wrapper(void);
 extern void thread_exit(void);
@@ -16,17 +18,7 @@ static Thread* current_thread = NULL;
 
 extern uint32_t boot_pg_dir[];
 
-// SV32 Page Tables for MAX_THREADS
-// Root is Level 1 (1 table per thread, 1024 entries of 4 bytes = 4KB)
-static uint32_t thread_l1_tables[MAX_THREADS][1024] __attribute__((aligned(4096)));
-// Leaf is Level 0 (4 tables per thread to cover 16MB userspace virtual memory)
-static uint32_t thread_l0_tables[MAX_THREADS][4][1024] __attribute__((aligned(4096)));
-
-#define USER_CODE_SIZE 0x80000 // 512KB
-static uint8_t user_code_pages[MAX_THREADS][USER_CODE_SIZE] __attribute__((aligned(4096)));
-
 #define USER_STACK_SIZE 0x20000 // 128KB
-static uint8_t user_stack_pages[MAX_THREADS][USER_STACK_SIZE] __attribute__((aligned(4096)));
 
 
 void thread_init(void) {
@@ -89,6 +81,13 @@ int thread_create(void (*entry)(void)) {
 
 void thread_exit(void) {
   IntDisable();
+
+  uint32_t boot_satp = (1UL << 31) | ((uint32_t)boot_pg_dir >> 12);
+  if (current_thread->pg_dir_phys != 0 && current_thread->pg_dir_phys != boot_satp) {
+      vmm_free_aspace(current_thread->pg_dir_phys);
+      current_thread->pg_dir_phys = 0;
+  }
+
   current_thread->state = THREAD_STATE_FREE;
   ns16550_puts("Thread ");
   print_hex(current_thread->tid);
@@ -147,22 +146,6 @@ retry:
   IntEnable();
 }
 
-void map_page_thread(Thread* t, uint32_t vaddr, uint32_t paddr, uint32_t flags) {
-  uint32_t root_phys = (t->pg_dir_phys & ((1U << 22) - 1)) << 12;
-  uint32_t* l1 = (uint32_t*)root_phys; 
-  
-  uint32_t l1_idx = (vaddr >> 22) & 0x3FF; // VPN[1]
-  uint32_t l0_idx = (vaddr >> 12) & 0x3FF; // VPN[0]
-
-  if (l1_idx < 4) { // Limit to 16MB userspace
-    if ((l1[l1_idx] & PTE_V) == 0) {
-      uint32_t* l0_table = thread_l0_tables[t->tid][l1_idx];
-      l1[l1_idx] = (((uint32_t)l0_table & ~0xFFF) >> 12 << 10) | PTE_V;
-    }
-    uint32_t* l0 = (uint32_t*)(((l1[l1_idx] >> 10) & ((1U << 22) - 1)) << 12);
-    l0[l0_idx] = (((paddr & ~0xFFF) >> 12) << 10) | flags;
-  }
-}
 
 int thread_create_userspace(const unsigned char* bin, uint32_t size) {
   int i;
@@ -171,25 +154,16 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
     if (threads[i].state == THREAD_STATE_FREE) {
       Thread* t = &threads[i];
 
-      // Initialize Sv32 page tables for userspace thread
-      uint32_t* l1 = thread_l1_tables[i]; // Root
-      
-      // Copy boot page table to inherit kernel mappings (RAM, UART)
-      CbMemCpy((int8_t*)l1, (int8_t*)boot_pg_dir, 4096);
-      
-      // Zero out userspace entries (0-16MB, indices 0-3)
-      l1[0] = 0;
-      l1[1] = 0;
-      l1[2] = 0;
-      l1[3] = 0;
-
-      t->pg_dir_phys = (1UL << 31) | ((uint32_t)l1 >> 12);
-
-      CbMemSet((int8_t*)user_code_pages[i], 0, USER_CODE_SIZE);
-      CbMemSet((int8_t*)user_stack_pages[i], 0, USER_STACK_SIZE);
+      // Initialize Sv32 page tables via VMM
+      t->pg_dir_phys = vmm_create_aspace();
+      if (t->pg_dir_phys == 0) {
+        ns16550_puts("Failed to create address space for thread!\n");
+        IntEnable();
+        return -1;
+      }
 
       // Default flags for raw fallback (RWX)
-      uint32_t code_flags = PTE_V | PTE_R | PTE_W | PTE_X | PTE_U | PTE_A | PTE_D;
+      uint32_t code_flags = VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_EXEC | VMM_FLAG_USER;
       
       Elf32_Ehdr* ehdr = (Elf32_Ehdr*)bin;
       uint32_t entry_point = 0x00100000;
@@ -210,10 +184,10 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
               uint32_t filesz = phdr[j].p_filesz;
               uint32_t offset = phdr[j].p_offset;
 
-              uint32_t seg_flags = PTE_V | PTE_U | PTE_A;
-              if (phdr[j].p_flags & PF_R) seg_flags |= PTE_R;
-              if (phdr[j].p_flags & PF_W) seg_flags |= PTE_W | PTE_D;
-              if (phdr[j].p_flags & PF_X) seg_flags |= PTE_X;
+              uint32_t seg_flags = VMM_FLAG_USER;
+              if (phdr[j].p_flags & PF_R) seg_flags |= VMM_FLAG_READ;
+              if (phdr[j].p_flags & PF_W) seg_flags |= VMM_FLAG_WRITE;
+              if (phdr[j].p_flags & PF_X) seg_flags |= VMM_FLAG_EXEC;
 
               uint32_t start_page = vaddr & ~0xFFF;
               uint32_t end_page = (vaddr + memsz + 0xFFF) & ~0xFFF;
@@ -222,35 +196,58 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
               for (curr_page = start_page; curr_page < end_page; curr_page += 4096) {
                 uint32_t phys_offset = curr_page - start_page;
                 
-                // Set page table entry
-                map_page_thread(t, curr_page, (uint32_t)user_code_pages[i] + phys_offset, seg_flags);
+                void* code_page = pmm_alloc_page();
+                if (!code_page) {
+                    ns16550_puts("Failed to allocate code page!\n");
+                    IntEnable();
+                    return -1;
+                }
                 
-                // Copy data if available
+                vmm_map(t->pg_dir_phys, curr_page, (uint32_t)code_page, seg_flags);
+                
                 if (phys_offset < filesz) {
                   uint32_t copy_size = filesz - phys_offset;
                   if (copy_size > 4096) copy_size = 4096;
-                  CbMemCpy(user_code_pages[i] + phys_offset, bin + offset + phys_offset, copy_size);
+                  CbMemCpy(code_page, bin + offset + phys_offset, copy_size);
                 }
               }
             }
           }
       } else {
           // Raw binary
-          CbMemCpy(user_code_pages[i], bin, size);
-          uint32_t num_pages = USER_CODE_SIZE / 4096;
+          uint32_t num_pages = (size + 4095) / 4096;
           uint32_t p;
           for (p = 0; p < num_pages; p++) {
             uint32_t vaddr = 0x00100000 + p * 4096;
-            uint32_t paddr = (uint32_t)user_code_pages[i] + p * 4096;
-            map_page_thread(t, vaddr, paddr, code_flags);
+            void* code_page = pmm_alloc_page();
+            if (!code_page) {
+                IntEnable();
+                return -1;
+            }
+            vmm_map(t->pg_dir_phys, vaddr, (uint32_t)code_page, code_flags);
+            
+            uint32_t copy_size = size - p * 4096;
+            if (copy_size > 4096) copy_size = 4096;
+            CbMemCpy(code_page, bin + p * 4096, copy_size);
           }
       }
 
-      // Map User Stack: V | R | W | U | A | D
-      uint32_t stack_flags = PTE_V | PTE_R | PTE_W | PTE_U | PTE_A | PTE_D;
+      // Map User Stack
+      uint32_t stack_flags = VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_USER;
       uint32_t page_idx;
+      void* last_stack_page = NULL;
       for (page_idx = 0; page_idx < (USER_STACK_SIZE / 4096); page_idx++) {
-          map_page_thread(t, 0x00800000 - USER_STACK_SIZE + (page_idx * 4096), (uint32_t)user_stack_pages[i] + (page_idx * 4096), stack_flags);
+          void* stack_page = pmm_alloc_page();
+          if (!stack_page) {
+              IntEnable();
+              return -1;
+          }
+          uint32_t va = 0x00800000 - USER_STACK_SIZE + (page_idx * 4096);
+          vmm_map(t->pg_dir_phys, va, (uint32_t)stack_page, stack_flags);
+          
+          if (page_idx == (USER_STACK_SIZE / 4096) - 1) {
+              last_stack_page = stack_page;
+          }
       }
 
       uint8_t* stk_top = (uint8_t*)t->stack_base + t->stack_size;
@@ -267,17 +264,11 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
       
       uint32_t user_sp = 0x00800000 - 0x100;
       ctx->s2 = user_sp;                        // User SP
-      ctx->s3 = (uint32_t)t->stack_base + t->stack_size; // Kernel Stack Top (for sscratch)
+      ctx->s3 = (uint32_t)t->stack_base + t->stack_size; // Kernel Stack Top
 
-      // Setup argc, argv stubs on user stack (32-bit pointers)
-      uint32_t* ustack = (uint32_t*)(user_stack_pages[i] + USER_STACK_SIZE - 0x100);
+      // Setup argc, argv stubs on user stack
+      uint32_t* ustack = (uint32_t*)((uint32_t)last_stack_page + 4096 - 0x100);
       ustack[0] = 1;                            // argc
-      ustack[1] = user_sp + 0x8;                // argv[0] (argv starts at ustack[2] in 32-bit: argc(4), argv[0](4), NULL(4). Wait.
-      // ustack[0] = argc (4 bytes)
-      // ustack[1] = argv (points to argv[0] which is ustack[2])
-      // ustack[2] = argv[0] (points to string "shell" at ustack[4])
-      // ustack[3] = NULL
-      // ustack[4] = "shell" (6 bytes)
       ustack[1] = user_sp + 8;                  // argv points to ustack[2]
       ustack[2] = user_sp + 16;                 // argv[0] points to "shell" (ustack[4])
       ustack[3] = 0;                            // NULL
@@ -453,14 +444,9 @@ int thread_ipc_recv(uint32_t src, void* buf, uint32_t size) {
 void* thread_map_mmio(uint32_t phys_addr) {
   // QEMU Virt NS16550 UART (0x10000000)
   if (phys_addr == 0x10000000) {
-    uint32_t root_phys = (current_thread->pg_dir_phys & ((1U << 22) - 1)) << 12;
-    uint32_t* l1 = (uint32_t*)root_phys;
-
-    // Map 4MB leaf block in L1 index 64
-    uint32_t flags = PTE_V | PTE_R | PTE_W | PTE_U | PTE_A | PTE_D;
-    l1[64] = (((phys_addr & ~0x3FFFFF) >> 12) << 10) | flags;
-
-    __asm__ volatile("sfence.vma" ::: "memory");
+    if (vmm_map(current_thread->pg_dir_phys, 0x10000000, 0x10000000, VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_USER) != 0) {
+        return NULL;
+    }
     return (void*)phys_addr;
   }
 
@@ -468,18 +454,16 @@ void* thread_map_mmio(uint32_t phys_addr) {
   if (phys_addr == 0x88000000) {
     uint32_t virt_base = 0x20000000;
     uint32_t phys_base = 0x88000000;
-    uint32_t num_blocks = 9; // 36MB (9 * 4MB blocks)
+    uint32_t size = 36 * 1024 * 1024; // 36MB
 
-    uint32_t root_phys = (current_thread->pg_dir_phys & ((1U << 22) - 1)) << 12;
-    uint32_t* l1 = (uint32_t*)root_phys;
-
-    uint32_t start_l1_idx = (virt_base >> 22) & 0x3FF; // should be 128
-    uint32_t flags = PTE_V | PTE_R | PTE_W | PTE_U | PTE_A | PTE_D;
-
-    uint32_t i;
-    for (i = 0; i < num_blocks; i++) {
-      uint32_t block_phys = phys_base + i * 0x400000;
-      l1[start_l1_idx + i] = (((block_phys & ~0x3FFFFF) >> 12) << 10) | flags;
+    uint32_t offset;
+    for (offset = 0; offset < size; offset += 4096) {
+      if (vmm_map(current_thread->pg_dir_phys, virt_base + offset, phys_base + offset, VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_USER) != 0) {
+        ns16550_puts("Failed to map ramdisk page at offset ");
+        print_hex(offset);
+        ns16550_puts("\n");
+        return NULL;
+      }
     }
 
     __asm__ volatile("sfence.vma" ::: "memory");

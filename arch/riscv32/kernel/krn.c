@@ -1,23 +1,35 @@
 #include <types.h>
 #include <riscv32/task.h>
+#include <kernel/pmm.h>
+#include <kernel/heap.h>
+#include <kernel/vmm.h>
 
-void ns16550_init(void);
-void ns16550_puts(const char* s);
-void ns16550_putc(char c);
+#include <kernel/console.h>
 
-void trap_init(void);
-void IntEnable(void);
-void IntDisable(void);
+extern void ns16550_init(void);
+extern void ns16550_puts(const char* s);
+extern void ns16550_putc(char c);
 
-void print_hex(uint32_t val) {
-    char hex[9];
+void kputs(const char* s) {
+    ns16550_puts(s);
+}
+
+extern void trap_init(void);
+extern void IntEnable(void);
+extern void IntDisable(void);
+
+extern char _stack_top[];
+extern uint32_t boot_pg_dir[];
+
+void print_hex(uint64_t val) {
+    char hex[17];
     int i;
-    for (i = 7; i >= 0; i--) {
+    for (i = 15; i >= 0; i--) {
         int digit = val & 0xF;
         hex[i] = digit < 10 ? '0' + digit : 'A' + digit - 10;
         val >>= 4;
     }
-    hex[8] = '\0';
+    hex[16] = '\0';
     ns16550_puts("0x");
     ns16550_puts(hex);
 }
@@ -59,6 +71,16 @@ void krn_entry(void) {
     ns16550_puts("====================================\n");
     ns16550_puts("Booted successfully to Supervisor Mode!\n");
     
+    // Initialize PMM
+    uint32_t mem_start = (uint32_t)_stack_top;
+    uint32_t mem_size = 0x88000000 - mem_start;
+    pmm_init(mem_start, mem_size);
+
+    // Initialize Heap
+    heap_init();
+
+
+
     // Initialize traps (not enabled globally yet)
     trap_init();
 

@@ -1,7 +1,7 @@
 #ifndef _UNISTD_H_
 #define _UNISTD_H_
 
-typedef unsigned long size_t;
+#include <stddef.h>
 typedef long ssize_t;
 
 int open(const char* pathname, int flags);

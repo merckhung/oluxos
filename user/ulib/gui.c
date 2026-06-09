@@ -6,11 +6,11 @@
 #include "stdio.h"
 
 static GLfixed pixel_to_ndc_x(int px, int width) {
-  return (GLfixed)((((int64_t)(px * 2 - width)) << 16) / width);
+  return (GLfixed)(((px * 2 - width) << 16) / width);
 }
 
 static GLfixed pixel_to_ndc_y(int py, int height) {
-  return (GLfixed)((((int64_t)(height - py * 2)) << 16) / height);
+  return (GLfixed)(((height - py * 2) << 16) / height);
 }
 
 void draw_rect_px(int x, int y, int w, int h, GLubyte r, GLubyte g, GLubyte b) {

@@ -26,6 +26,7 @@ SECTIONS
 
     . = ALIGN(16);
     _stack_bottom = .;
-    . = . + 0x4000; /* 16KB stack */
+    . = . + 0x10000; /* 64KB stack for 4 CPUs */
     _stack_top = .;
+    _kernel_end = .;
 }

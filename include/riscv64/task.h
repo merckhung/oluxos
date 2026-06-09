@@ -59,6 +59,7 @@ typedef struct _Thread {
   uint32_t ipc_partner;
   void* ipc_buf;
   uint32_t ipc_size;
+  int cpu;
 } Thread;
 
 #define MAX_THREADS 8
