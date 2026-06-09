@@ -489,7 +489,9 @@ genrule(
     name = "riscv64_kernel_elf",
     srcs = [
         "arch/riscv64/boot.S",
+        "arch/riscv64/kernel/switch.S",
         "arch/riscv64/kernel/krn.c",
+        "arch/riscv64/kernel/task.c",
         "driver/serial/ns16550.c",
         "lib/clib.c",
         "arch/riscv64/kernel.lds",
@@ -503,7 +505,9 @@ genrule(
             -Iinclude -I. \
             -T $(location arch/riscv64/kernel.lds) \
             $(location arch/riscv64/boot.S) \
+            $(location arch/riscv64/kernel/switch.S) \
             $(location arch/riscv64/kernel/krn.c) \
+            $(location arch/riscv64/kernel/task.c) \
             $(location driver/serial/ns16550.c) \
             $(location lib/clib.c) \
             -o $@
