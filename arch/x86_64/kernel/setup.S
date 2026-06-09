@@ -46,9 +46,11 @@ _setup_start:
     movl $pml4_table, %eax
     movl %eax, %cr3
 
-    // 4. Enable PAE
+    // 4. Enable PAE and SSE (OSFXSR, OSXMMEXCPT)
     movl %cr4, %eax
     orl $(1 << 5), %eax // PAE
+    orl $(1 << 9), %eax // OSFXSR
+    orl $(1 << 10), %eax // OSXMMEXCPT
     movl %eax, %cr4
 
     // 5. Enable Long Mode (LME)

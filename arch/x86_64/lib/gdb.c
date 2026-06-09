@@ -21,8 +21,8 @@ ExternIRQHandler(4);
 static int8_t GdbInBuf[GDB_BUF_LEN];
 static int8_t GdbOutBuf[GDB_BUF_LEN];
 
-extern uint32_t SavedAllRegs[GDB_NUM_REGS];
-extern uint32_t SavedErrorCode;
+extern uint64_t SavedAllRegs[GDB_NUM_REGS];
+extern uint64_t SavedErrorCode;
 
 static int8_t* ExcStr[] = {
 
@@ -185,7 +185,7 @@ uint8_t TranslateException(uint32_t ExceptionVector) {
   return 7;
 }
 
-uint32_t ConvertAllRegsToASCII(uint32_t* arr, uint8_t count, int8_t* buf) {
+uint32_t ConvertAllRegsToASCII(uint64_t* arr, uint8_t count, int8_t* buf) {
   int8_t* pbuf = buf;
 
   for (; count--; arr++) {
@@ -195,12 +195,12 @@ uint32_t ConvertAllRegsToASCII(uint32_t* arr, uint8_t count, int8_t* buf) {
   return (pbuf - buf);
 }
 
-void ConvertASCIIToAllRegs(uint32_t* arr, uint8_t count, int8_t* buf) {
+void ConvertASCIIToAllRegs(uint64_t* arr, uint8_t count, int8_t* buf) {
   int8_t* pbuf = buf;
-  int8_t tmp[9];
+  int8_t tmp[17];
 
-  for (; count--; arr++, pbuf += 8) {
-    CbStrCpy(tmp, pbuf, 8);
+  for (; count--; arr++, pbuf += 16) {
+    CbStrCpy(tmp, pbuf, 16);
     *arr = CbAsciiBufToBin(tmp);
   }
 }
@@ -224,22 +224,22 @@ void GdbExceptionHandler(uint32_t ExceptionVector) {
   *p++ = CbBinToAscii(sigval >> 4, LOWERCASE);
   *p++ = CbBinToAscii(sigval & 0x0F, LOWERCASE);
 
-  // ESP
-  *p++ = CbBinToAscii(ESP, LOWERCASE);
+  // RSP
+  *p++ = CbBinToAscii(RSP, LOWERCASE);
   *p++ = colon;
-  p += CbBinToAsciiBuf(SavedAllRegs[ESP], p, LOWERCASE, 0, 0);
+  p += CbBinToAsciiBuf(SavedAllRegs[RSP], p, LOWERCASE, 0, 0);
   *p++ = semicolon;
 
-  // EBP
-  *p++ = CbBinToAscii(EBP, LOWERCASE);
+  // RBP
+  *p++ = CbBinToAscii(RBP, LOWERCASE);
   *p++ = colon;
-  p += CbBinToAsciiBuf(SavedAllRegs[EBP], p, LOWERCASE, 0, 0);
+  p += CbBinToAsciiBuf(SavedAllRegs[RBP], p, LOWERCASE, 0, 0);
   *p++ = semicolon;
 
-  // ESP
-  *p++ = CbBinToAscii(EIP, LOWERCASE);
+  // RIP
+  *p++ = CbBinToAscii(RIP, LOWERCASE);
   *p++ = colon;
-  p += CbBinToAsciiBuf(SavedAllRegs[EIP], p, LOWERCASE, 0, 0);
+  p += CbBinToAsciiBuf(SavedAllRegs[RIP], p, LOWERCASE, 0, 0);
   *p++ = semicolon;
 
   // Terminate Char

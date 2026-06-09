@@ -14,7 +14,7 @@
 #include <x86_64/platform.h>
 
 #define NR_VECTOR 256
-#define SZ_INT_ENTRY 8
+#define SZ_INT_ENTRY 16
 #define SZ_INT_TABLE (NR_VECTOR * SZ_INT_ENTRY)
 #define SZ_INT_STACK 4096
 
@@ -23,8 +23,8 @@
 
 // IDT Gate Type
 #define IDT_F_TASK 0x05
-#define IDT_F_INT 0x06
-#define IDT_F_TRAP 0x07
+#define IDT_F_INT 0x0E
+#define IDT_F_TRAP 0x0F
 
 // Size of gate
 #define IDT_F_SZ_16 0x00
@@ -40,8 +40,8 @@
 #define IDT_F_NPRESENT 0x00
 #define IDT_F_PRESENT 0x80
 
-#define GATE_INT_FLAG (IDT_F_INT | IDT_F_SZ_32 | IDT_F_DPL_0 | IDT_F_PRESENT)
-#define GATE_TRAP_FLAG (IDT_F_TRAP | IDT_F_SZ_32 | IDT_F_DPL_0 | IDT_F_PRESENT)
+#define GATE_INT_FLAG (IDT_F_INT | IDT_F_DPL_0 | IDT_F_PRESENT)
+#define GATE_TRAP_FLAG (IDT_F_TRAP | IDT_F_DPL_0 | IDT_F_PRESENT)
 
 #define IRQHandler(IRQNUM) IrqHandler_##IRQNUM
 #define ExternIRQHandler(IRQNUM) extern void IrqHandler_##IRQNUM(void)
@@ -58,15 +58,17 @@
 typedef struct PACKED _IDTEntry {
   uint16_t OffsetLSW;
   uint16_t SegSelect;
-  uint8_t Reserved;
+  uint8_t IST;
   uint8_t Flags;
   uint16_t OffsetMSW;
+  uint32_t OffsetHSW;
+  uint32_t Reserved;
 
 } IDTEntry;
 
 typedef struct PACKED _IDTPtr {
   uint16_t Limit;
-  uint32_t BaseAddr;
+  uint64_t BaseAddr;
 
 } IDTPtr;
 

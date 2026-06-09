@@ -140,14 +140,11 @@ _32bit_mode_start:
 
 
     // Calculate the Length of Kernel Code
-    xorl    %ebx, %ebx
-	xorl	%eax, %eax
-
-    movb    __KrnCodeNrSecs, %bl
-    movw    $KRN_BLOCK_SZ, %ax
-    mulw    %bx
-    shrl    $2, %eax
-    movl    %eax, %ecx
+    xorl    %ecx, %ecx
+    movb    __KrnCodeNrSecs, %cl
+    
+    // Convert sectors to DWORDS (x 128)
+    shll    $7, %ecx
 
 
     //

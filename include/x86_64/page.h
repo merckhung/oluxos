@@ -97,7 +97,7 @@ typedef struct PACKED _E820Result {
 //
 void MmPageInit(void);
 void MmShowE820Info(void);
-int8_t* MmShowE820Type(E820Type RecType);
+const char* MmShowE820Type(E820Type RecType);
 void MmEnablePaging(volatile uint32_t* Ptr);
 void MmDisablePaging(void);
 void MmEnablePSE(void);

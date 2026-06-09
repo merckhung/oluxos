@@ -1,4 +1,4 @@
-OUTPUT_FORMAT( "binary" )
+OUTPUT_FORMAT( "elf64-x86-64" )
 ENTRY( _setup_start )
 
 
@@ -8,6 +8,7 @@ SECTIONS {
 
 		*setup.o(.text)
         *(.text)
+        *(.rodata*)
     }
 
     .data : {

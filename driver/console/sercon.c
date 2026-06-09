@@ -27,7 +27,7 @@ static int8_t buf[CONSOLE_BUF_LEN];
 // Return:
 //  None
 //
-void ScPrint(const int8_t* format, ...) {
+void ScPrint(const char* format, ...) {
   int8_t* p;
   va_list args;
   va_start(args, format);

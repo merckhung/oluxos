@@ -1,15 +1,7 @@
 /*
- * Copyright (C) 2006 - 2008 Olux Organization All rights reserved.
- * Author: Merck Hung <merck@olux.org>
- *
- * @OLUXORG_LICENSE_HEADER_START@
- * @OLUXORG_LICENSE_HEADER_END@
- *
- * handler.S -- OluxOS IA32 interrupt handler
- *
+ * handler.S -- OluxOS x86_64 interrupt handler
  */
 #include <x86_64/interrupt.h>
-
 
 .global divide_error, debug, nmi, breakpoint, overflow, bound_range_exceeded
 .global invalid_opcode, device_not_available, double_fault, coprocessor_segment_overrun
@@ -17,104 +9,115 @@
 .global PageFaultHandler, x87_fpu_floating_point_error, alignment_check_exception
 .global machine_check_exception, simd_floating_point_exception
 
-
 //
 // Pre-interrupt handling
 //
 .macro SaveAllRegsFirstStage
-    movl    %eax, SavedAllRegs
-    movl    %ecx, SavedAllRegs+4
-    movl    %edx, SavedAllRegs+8
-    movl    %ebx, SavedAllRegs+12
-    movl    %ebp, SavedAllRegs+20
-    movl    %esi, SavedAllRegs+24
-    movl    %edi, SavedAllRegs+28
-    movw    %ds, SavedAllRegs+48
-    movw    %es, SavedAllRegs+52
-    movw    %fs, SavedAllRegs+56
-    movw    %gs, SavedAllRegs+60
+    movq    %rax, SavedAllRegs
+    movq    %rbx, SavedAllRegs+8
+    movq    %rcx, SavedAllRegs+16
+    movq    %rdx, SavedAllRegs+24
+    movq    %rsi, SavedAllRegs+32
+    movq    %rdi, SavedAllRegs+40
+    movq    %rbp, SavedAllRegs+48
+    movq    %r8,  SavedAllRegs+64
+    movq    %r9,  SavedAllRegs+72
+    movq    %r10, SavedAllRegs+80
+    movq    %r11, SavedAllRegs+88
+    movq    %r12, SavedAllRegs+96
+    movq    %r13, SavedAllRegs+104
+    movq    %r14, SavedAllRegs+112
+    movq    %r15, SavedAllRegs+120
+    movw    %ds,  SavedAllRegs+152
+    movw    %es,  SavedAllRegs+156
+    movw    %fs,  SavedAllRegs+160
+    movw    %gs,  SavedAllRegs+164
 .endm
-
 
 .macro SaveErrorCode
-    popl    %ebx
-    movl    %ebx, SavedErrorCode
+    popq    %rbx
+    movq    %rbx, SavedErrorCode
 .endm
-
 
 .macro SaveAllRegsSecondStage
-    popl    %ebx
-    movl    %ebx, SavedAllRegs+32	// EIP
-    popl    %ebx
-    movl    %ebx, SavedAllRegs+40	// CS
-    popl    %ebx
-    movl    %ebx, SavedAllRegs+36	// EFLAGS
-    movw    %ss, SavedAllRegs+44
-    movl    %esp, SavedAllRegs+16
+    // In 64-bit mode, the CPU unconditionally pushes SS, RSP, RFLAGS, CS, RIP
+    popq    %rbx
+    movq    %rbx, SavedAllRegs+128 // RIP
+    popq    %rbx
+    movw    %bx,  SavedAllRegs+144 // CS
+    popq    %rbx
+    movq    %rbx, SavedAllRegs+136 // RFLAGS
+    popq    %rbx
+    movq    %rbx, SavedAllRegs+56 // RSP
+    popq    %rbx
+    movw    %bx,  SavedAllRegs+148 // SS
 
-	// Setup interrupt stack
-	movl	$(InterruptStack + SZ_INT_STACK), %esp
+    // Setup interrupt stack
+    movq    $(InterruptStack + SZ_INT_STACK), %rsp
 .endm
-
-
 
 //
 // Restore all register after interrupt handler
 //
 .macro RestoreAllRegs
-    movl    SavedAllRegs+16, %esp
-    movw    SavedAllRegs+44, %ss
-    movw    SavedAllRegs+60, %gs
-    movw    SavedAllRegs+56, %fs
-    movw    SavedAllRegs+52, %es
-    movw    SavedAllRegs+48, %ds
-    movl    SavedAllRegs+28, %edi
-    movl    SavedAllRegs+24, %esi
-    movl    SavedAllRegs+20, %ebp
-    movl    SavedAllRegs+12, %ebx
-    movl    SavedAllRegs+8, %edx
-    movl    SavedAllRegs+4, %ecx
-    movl    SavedAllRegs+36, %eax
-    pushl   %eax					// EFLAGS
-    movl    SavedAllRegs+40, %eax
-    pushl   %eax					// CS
-    movl    SavedAllRegs+32, %eax
-    pushl   %eax					// EIP
-    movl    SavedAllRegs, %eax
+    movq    SavedAllRegs+56, %rsp
+    xorq    %rbx, %rbx
+    movw    SavedAllRegs+148, %bx
+    pushq   %rbx // SS
+    movq    SavedAllRegs+56, %rbx
+    pushq   %rbx // RSP
+    movq    SavedAllRegs+136, %rbx
+    pushq   %rbx // RFLAGS
+    xorq    %rbx, %rbx
+    movw    SavedAllRegs+144, %bx
+    pushq   %rbx // CS
+    movq    SavedAllRegs+128, %rbx
+    pushq   %rbx // RIP
+
+    movw    SavedAllRegs+164, %gs
+    movw    SavedAllRegs+160, %fs
+    movw    SavedAllRegs+156, %es
+    movw    SavedAllRegs+152, %ds
+    movq    SavedAllRegs+120, %r15
+    movq    SavedAllRegs+112, %r14
+    movq    SavedAllRegs+104, %r13
+    movq    SavedAllRegs+96,  %r12
+    movq    SavedAllRegs+88,  %r11
+    movq    SavedAllRegs+80,  %r10
+    movq    SavedAllRegs+72,  %r9
+    movq    SavedAllRegs+64,  %r8
+    movq    SavedAllRegs+48,  %rbp
+    movq    SavedAllRegs+40,  %rdi
+    movq    SavedAllRegs+32,  %rsi
+    movq    SavedAllRegs+24,  %rdx
+    movq    SavedAllRegs+16,  %rcx
+    movq    SavedAllRegs+8,   %rbx
+    movq    SavedAllRegs,     %rax
 .endm
-
-
 
 //
 // Define
 // Preliminary Interrupt Handler
-// Preload interrupt vector into stack and then jump to common handler
 //
 .macro InstallIrqHandler
     .global IrqHandler_\@
-    .align 4
+    .align 8
     IrqHandler_\@:
-	movl	$\@, SavedIRQNumber
+    movq    $\@, SavedIRQNumber
     jmp     CommonIrqHandler
 .endm
-
-
 
 //
 // Save All Registers
 //
-.align 4
+.align 8
 .global SavedAllRegs, SavedErrorCode
 SavedErrorCode:
-.long   0
+.quad   0
 SavedIRQNumber:
-.long	0
+.quad   0
 SavedAllRegs:
-.rept 16
-.long   0
-.endr
-
-
+.fill   168, 1, 0
 
 //
 // Install IRQ Handlers
@@ -123,516 +126,258 @@ SavedAllRegs:
 InstallIrqHandler
 .endr
 
-
 //
 // CommonIrqHandler -- Common entry for HW IRQ interrupt
 //
-.align 4
+.align 8
 CommonIrqHandler:
-
-
-	// Save all registers
     SaveAllRegsFirstStage
-	SaveAllRegsSecondStage
+    SaveAllRegsSecondStage
 
-
-	// Prepare input parameters
-	pushl   $SavedAllRegs
-	pushl	SavedIRQNumber
+    // Prepare input parameters for C calling convention
+    movq    SavedIRQNumber, %rdi
+    movq    $SavedAllRegs, %rsi
     call    IntHandleIRQ
-
-
-	// Return
-    jmp     InterruptReturn
-
 
 InterruptReturn:
     RestoreAllRegs
-
-    iret
-
-
+    iretq
 
 //
 // divide_error -- Handle exception 0 #DE
 //
 divide_error:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'0', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x00
+    movq    $0x00, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // debug_error -- Handle exception 1 #DB
 //
 debug:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'1', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x01
+    movq    $0x01, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // nmi -- Handle exception 2
 //
 nmi:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'2', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x02
+    movq    $0x02, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // breakpoint -- Handle exception 3 #BP
 //
 breakpoint:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'3', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x03
+    movq    $0x03, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // overflow -- Handle exception 4 #OF
 //
 overflow:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'4', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x04
+    movq    $0x04, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // bound_range_exceeded -- Handle exception 5 #BR
 //
 bound_range_exceeded:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'5', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x05
+    movq    $0x05, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // invalid_opcode -- Handle exception 6 #UD
 //
 invalid_opcode:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'6', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x06
+    movq    $0x06, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // device_not_available -- Handle exception 7 #NM
 //
 device_not_available:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'7', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x07
+    movq    $0x07, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // double_fault -- Handle exception 8 #DF
 //
 double_fault:
-
     SaveAllRegsFirstStage
     SaveErrorCode
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'8', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x08
+    movq    $0x08, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // coprocessor_segment_overrun -- Handle exception 9
 //
 coprocessor_segment_overrun:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83be, %esi
-    //movb    $'9', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x09
+    movq    $0x09, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // invalid_tss -- Handle exception 10 #TS
 //
 invalid_tss:
-
     SaveAllRegsFirstStage
     SaveErrorCode
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83bc, %esi
-    //movb    $'1', (%esi)
-    //movl    $0xb83be, %esi
-    //movb    $'0', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x0A
+    movq    $0x0A, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // segment_not_present -- Handle exception 11 #NP
 //
 segment_not_present:
-
     SaveAllRegsFirstStage
     SaveErrorCode
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83bc, %esi
-    //movb    $'1', (%esi)
-    //movl    $0xb83be, %esi
-    //movb    $'1', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x0B
+    movq    $0x0B, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // stack_fault -- Handle exception 12 #SS
 //
 stack_fault:
-
     SaveAllRegsFirstStage
     SaveErrorCode
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83bc, %esi
-    //movb    $'1', (%esi)
-    //movl    $0xb83be, %esi
-    //movb    $'2', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x0C
+    movq    $0x0C, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // general_protection_exception -- Handle exception 13 #NP
 //
 general_protection_exception:
-
     SaveAllRegsFirstStage
     SaveErrorCode
     SaveAllRegsSecondStage
-
-
-    //movl    $0xb83bc, %esi
-    //movb    $'1', (%esi)
-    //movl    $0xb83be, %esi
-    //movb    $'3', (%esi)
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x0D
+    movq    $0x0D, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // Page-Fault Exception #PF (14)
 //
 PageFaultHandler:
-
-
-	// Save all registers
     SaveAllRegsFirstStage
     SaveErrorCode
     SaveAllRegsSecondStage
-
-
-	// Call Memory Management Code
-	pushl	$SavedAllRegs
-	pushl	SavedErrorCode
-	call	MmPageFaultHandler
-
-
+    movq    $SavedAllRegs, %rdi
+    movq    SavedErrorCode, %rsi
+    call    MmPageFaultHandler
     RestoreAllRegs
     jmp     ExceptionReturn
-
 
 //
 // x87 FPU Floating-Point Error (#MF) -- Handle exception 16 #MF
 //
 x87_fpu_floating_point_error:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x10
+    movq    $0x10, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn 
-
 
 //
 // Alignment Check Exception (#AC) -- Handle exception 17 #AC
 //
 alignment_check_exception:
-
     SaveAllRegsFirstStage
     SaveErrorCode
     SaveAllRegsSecondStage
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x11
+    movq    $0x11, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn 
-
 
 //
 // Machine-Check Exception (#MC) -- Handle exception 18 #MC
 //
 machine_check_exception:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x12
+    movq    $0x12, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn 
-
 
 //
 // SIMD Floating-Point Exception (#XM) -- Handle exception 19 #XM
 //
 simd_floating_point_exception:
-
     SaveAllRegsFirstStage
     SaveAllRegsSecondStage
-
-
-    //
-    // FIXME: exception handle
-    //
-    pushl   $0x13
+    movq    $0x13, %rdi
     call    GdbExceptionHandler
-
-
     RestoreAllRegs
     jmp     ExceptionReturn 
 
-
 ExceptionReturn:
-
-    iret
-
-
+    iretq
 
 //
 // ExceptionHandler -- Common entry for exception
 //
 .global ExceptionHandler
-.align 4
+.align 8
 ExceptionHandler:
-
-	pushl	%esi
-    movl    $0xb83bc, %esi
-    incb    (%esi)
-    movl    $0xb83bd, %esi
-    incb    (%esi)
-	popl	%esi
-
-    iret
-
-
+    pushq   %rsi
+    movq    $0xb83bc, %rsi
+    incb    (%rsi)
+    movq    $0xb83bd, %rsi
+    incb    (%rsi)
+    popq    %rsi
+    iretq
 
 //
 // Interrupt Stack
 //
-.common		InterruptStack, SZ_INT_STACK
-
-
-
+.common     InterruptStack, SZ_INT_STACK

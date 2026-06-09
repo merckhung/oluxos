@@ -75,6 +75,7 @@ void TskUsr2(void) {
 }
 
 void TskInit(void) {
+#if 0
   TSSD_t* p = (TSSD_t*)KrnTSSD;
   TSSD_t* u = (TSSD_t*)UsrTSSD;
 
@@ -119,25 +120,25 @@ void TskInit(void) {
   //
   // Fill up Task descriptors
   //
-  tsks[0].eip = (uint32_t)TskUsr1;
+  tsks[0].rip = (uint64_t)TskUsr1;
   tsks[0].cs = (uint32_t)__USER_CS | 0x03;
   tsks[0].ss = (uint32_t)__USER_DS | 0x03;
   tsks[0].ds = (uint32_t)__USER_DS | 0x03;
   tsks[0].es = (uint32_t)__USER_DS | 0x03;
   tsks[0].fs = (uint32_t)__USER_DS | 0x03;
   tsks[0].gs = (uint32_t)__USER_DS | 0x03;
-  tsks[0].esp = (uint32_t)stack_buf[0] + 1024;
-  tsks[0].eflags = 0x3000;
+  tsks[0].rsp = (uint64_t)stack_buf[0] + 1024;
+  tsks[0].rflags = 0x3000;
 
-  UsrTSS.eip = tsks[0].eip;
+  UsrTSS.rip = tsks[0].rip;
   UsrTSS.cs = tsks[0].cs;
   UsrTSS.ss = tsks[0].ss;
   UsrTSS.ds = tsks[0].ds;
   UsrTSS.es = tsks[0].es;
   UsrTSS.fs = tsks[0].fs;
   UsrTSS.gs = tsks[0].gs;
-  UsrTSS.esp = tsks[0].esp;
-  UsrTSS.eflags = tsks[0].eflags;
+  UsrTSS.rsp = tsks[0].rsp;
+  UsrTSS.rflags = tsks[0].rflags;
 
   KrnTSS.cs = (uint32_t)__KERNEL_CS;
   KrnTSS.ss = (uint32_t)__KERNEL_DS;
@@ -146,18 +147,20 @@ void TskInit(void) {
   KrnTSS.fs = (uint32_t)__KERNEL_DS;
   KrnTSS.gs = (uint32_t)__KERNEL_DS;
 
-  tsks[1].eip = (uint32_t)TskUsr2;
+  tsks[1].rip = (uint64_t)TskUsr2;
   tsks[1].cs = (uint32_t)__USER_CS | 0x03;
   tsks[1].ss = (uint32_t)__USER_DS | 0x03;
   tsks[1].ds = (uint32_t)__USER_DS | 0x03;
   tsks[1].es = (uint32_t)__USER_DS | 0x03;
   tsks[1].fs = (uint32_t)__USER_DS | 0x03;
   tsks[1].gs = (uint32_t)__USER_DS | 0x03;
-  tsks[1].esp = (uint32_t)stack_buf[1] + 1024;
-  tsks[1].eflags = 0x3000;
+  tsks[1].rsp = (uint64_t)stack_buf[1] + 1024;
+  tsks[1].rflags = 0x3000;
+#endif
 }
 
 void TskStart(void) {
+#if 0
   uint16_t uts = ((uint16_t)__utask_seg) | 0x03;
 
   //
@@ -206,10 +209,11 @@ void TskStart(void) {
       "jmp    .\n"
       "iret\n"  // Switch to new task
       ::"g"(tsks[0].ss),
-      "g"(tsks[0].esp), "g"(tsks[0].eflags), "g"(tsks[0].cs), "g"(tsks[0].eip),
-      "g"(tsks[0].ecx), "g"(tsks[0].edx), "g"(tsks[0].ebx), "g"(tsks[0].ebp),
-      "g"(tsks[0].esi), "g"(tsks[0].edi), "g"(tsks[0].fs), "g"(tsks[0].gs),
-      "g"(tsks[0].es), "g"(tsks[0].eax), "g"(tsks[0].ds));
+      "g"(tsks[0].rsp), "g"(tsks[0].rflags), "g"(tsks[0].cs), "g"(tsks[0].rip),
+      "g"(tsks[0].rcx), "g"(tsks[0].rdx), "g"(tsks[0].rbx), "g"(tsks[0].rbp),
+      "g"(tsks[0].rsi), "g"(tsks[0].rdi), "g"(tsks[0].fs), "g"(tsks[0].gs),
+      "g"(tsks[0].es), "g"(tsks[0].rax), "g"(tsks[0].ds));
+#endif
 }
 
 void TskSwitch(uint32_t origtsk, uint32_t newtsk) {

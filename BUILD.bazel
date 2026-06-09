@@ -424,7 +424,7 @@ genrule(
     name = "x86_64_kernel_bin",
     srcs = [":x86_64_kernel_elf"],
     outs = ["x86_64_kernel"],
-    cmd = "cp $< $@",
+    cmd = "objcopy -O binary $< $@",
 )
 
 genrule(

@@ -28,8 +28,8 @@
 #define HDD_MAX_HEAD 0xFF
 #define HDD_MAX_SECTOR 0x3F
 
-#define E820_COUNT 0x9000
-#define E820_BASE 0x9004
+#define E820_COUNT 0x1000
+#define E820_BASE 0x1004
 #define E820_FUNC 0xE820
 #define E820_MAGIC 0x534D4150
 #define E820_SZ_RECORD 24

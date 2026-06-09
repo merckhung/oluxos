@@ -60,8 +60,7 @@ void krn_entry(void) {
   TcPrint("PciDetectDevice\n");
   PciDetectDevice();
 
-  // Init CPU interrupt and i8259A
-  TcPrint("IntInitInterrupt\n");
+  // Interrupt Initialization
   IntInitInterrupt();
   // Initialize Kernel Debugger
   TcPrint("kdbgerInitialization\n");
@@ -89,11 +88,8 @@ void krn_entry(void) {
   // TskScheduler();
 
   // FAT file system
-  TcPrint("FsFatInit\n");
   FsFatInit();
 
-  TcPrint("KshStart\n");
-  KshStart();
   // Initialize GDB
   // GdbInit();
 

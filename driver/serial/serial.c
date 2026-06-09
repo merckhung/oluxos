@@ -34,6 +34,7 @@ void SrInit(void) {
 
   // DLAB = OFF, 8 Bits, No Parity, 1 Stop Bit
   IoOutByte((UART_WLS8 | UART_STB_1), UART_DEF_LCR);
+  IoOutByte(0x00, UART_DEF_MCR);
 
   // FIFO off
   IoOutByte(0x00, UART_DEF_FCR);
@@ -53,11 +54,11 @@ void SrInitInterrupt(void) {
   // Enable interrupt
   IntDisable();
 
-  // Enable UART interrupt
-  IoOutByte((UART_RAVIE | UART_TIE | UART_RLSE | UART_MIE), UART_DEF_IER);
+  // Enable UART interrupt (Receive Data Available ONLY)
+  IoOutByte((UART_RAVIE), UART_DEF_IER);
 
   // Disable interrupt
-  IntEnable();
+  // IntEnable();
 }
 
 void SrIntHandler(uint8_t IrqNum) {

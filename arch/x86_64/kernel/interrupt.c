@@ -69,6 +69,11 @@ void IntInitInterrupt(void) {
     IntSetIDT(i, ExceptionHandler, __KERNEL_CS, GATE_TRAP_FLAG);
   }
 
+  // Set default handlers for ALL interrupts to avoid #NP
+  for (i = HW_INT_START; i < NR_VECTOR; i++) {
+    IntSetIDT(i, ExceptionHandler, __KERNEL_CS, GATE_INT_FLAG);
+  }
+
   // Initialize IDT Entry for Exceptions
   IntSetIDT(0, divide_error, __KERNEL_CS, GATE_TRAP_FLAG);
   IntSetIDT(1, debug, __KERNEL_CS, GATE_TRAP_FLAG);
@@ -92,7 +97,7 @@ void IntInitInterrupt(void) {
 
   // Setup IDT Pointer
   IDTPointer.Limit = (NR_VECTOR - 1) * sizeof(IDTEntry);
-  IDTPointer.BaseAddr = (uint32_t)IDTTable;
+  IDTPointer.BaseAddr = (uint64_t)IDTTable;
   // DbgPrint( "IDTPointer = 0x%X, IDTTable = 0x%X\n", &IDTPointer, IDTTable );
 
   // Load IDT Pointer
@@ -109,8 +114,7 @@ void IntInitInterrupt(void) {
 void IntLoadIDTRegister(IDTPtr* Ptr) {
   // Load IDT Register
   __asm__ __volatile__(
-
-      "lidt   (%%eax)\n" ::"a"(Ptr));
+      "lidt   (%0)\n" ::"r"(Ptr));
 }
 
 //
@@ -129,12 +133,15 @@ void IntLoadIDTRegister(IDTPtr* Ptr) {
 //  Setup IDT entry for specified interrupt/exception number
 //
 void IntSetIDT(uint32_t Index, void* Handler, void* SegSel, uint8_t Flags) {
-  uint32_t Offset = (uint32_t)Handler;
+  uint64_t Offset = (uint64_t)Handler;
 
   IDTTable[Index].OffsetLSW = (uint16_t)(Offset & 0xFFFF);
   IDTTable[Index].OffsetMSW = (uint16_t)((Offset >> 16) & 0xFFFF);
-  IDTTable[Index].SegSelect = (uint32_t)SegSel;
+  IDTTable[Index].OffsetHSW = (uint32_t)((Offset >> 32) & 0xFFFFFFFF);
+  IDTTable[Index].SegSelect = (uint16_t)(uint64_t)SegSel;
+  IDTTable[Index].IST = 0;
   IDTTable[Index].Flags = Flags;
+  IDTTable[Index].Reserved = 0;
 }
 
 //
@@ -266,9 +273,6 @@ void IntHandleIRQ(uint32_t IrqNum, GeneralRegisters* Regs) {
 
   // Relinquish to hardware interrupt handler
   InterrupHandlertList[IrqNum].IrqHandler(IrqNum);
-
-  // Enable interrupt
-  IntEnable();
 
   // Issue End Of Interrupt (EOI)
   IntIssueEOI();

@@ -49,7 +49,7 @@ uint32_t CalNrSectors(uint32_t bufsz) {
 
 int32_t main(int32_t argc, int8_t** argv) {
   int32_t kfd, bfd, ifd;
-  int8_t krn_name[LENNAME], boot_name[LENNAME], img_name[LENNAME];
+  char krn_name[LENNAME], boot_name[LENNAME], img_name[LENNAME];
   int32_t krn_sz, boot_sz;
   int32_t set = 0, err = 1;
   int32_t i;

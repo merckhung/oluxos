@@ -10,21 +10,28 @@
 //
 // Definitions
 //
-#define GDB_BUF_LEN 400
-#define GDB_NUM_REGS 16
+#define GDB_BUF_LEN 600
+#define GDB_NUM_REGS 24
 
 enum {
-
-  EAX,
-  ECX,
-  EDX,
-  EBX,
-  ESP,
-  EBP,
-  ESI,
-  EDI,
-  EIP,
-  EFLAGS,
+  RAX,
+  RBX,
+  RCX,
+  RDX,
+  RSI,
+  RDI,
+  RBP,
+  RSP,
+  R8,
+  R9,
+  R10,
+  R11,
+  R12,
+  R13,
+  R14,
+  R15,
+  RIP,
+  RFLAGS,
   CS,
   SS,
   DS,
