@@ -581,3 +581,46 @@ sh_binary(
     args = ["$(location :riscv64_kernel_elf)"],
 )
 
+genrule(
+    name = "riscv32_kernel_elf",
+    srcs = [
+        "arch/riscv32/boot.S",
+        "arch/riscv32/kernel/vector.S",
+        "arch/riscv32/kernel/switch.S",
+        "arch/riscv32/kernel/interrupt.c",
+        "arch/riscv32/kernel/task.c",
+        "arch/riscv32/kernel/krn.c",
+        "driver/serial/ns16550.c",
+        "lib/clib.c",
+        "arch/riscv32/kernel.lds",
+    ] + glob(["include/**/*.h"]),
+    outs = ["riscv32_kernel.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
+            -std=gnu89 \
+            -march=rv32imac_zicsr -mabi=ilp32 \
+            -mcmodel=medany \
+            -mno-relax \
+            -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
+            -T $(location arch/riscv32/kernel.lds) \
+            $(location arch/riscv32/boot.S) \
+            $(location arch/riscv32/kernel/vector.S) \
+            $(location arch/riscv32/kernel/switch.S) \
+            $(location arch/riscv32/kernel/interrupt.c) \
+            $(location arch/riscv32/kernel/task.c) \
+            $(location arch/riscv32/kernel/krn.c) \
+            $(location driver/serial/ns16550.c) \
+            $(location lib/clib.c) \
+            -o $@
+    """,
+)
+
+sh_binary(
+    name = "run_qemu_riscv32",
+    srcs = ["run_qemu_riscv32.sh"],
+    data = [
+        ":riscv32_kernel_elf",
+    ],
+    args = ["$(location :riscv32_kernel_elf)"],
+)
+
