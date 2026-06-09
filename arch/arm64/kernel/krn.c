@@ -809,9 +809,76 @@ int krn_fstat(ARM64Registers* regs, int fd, void* user_statbuf) {
     return -14; // -EFAULT
   }
 
-  pl011_puts("krn_fstat: success size=");
-  print_hex(st.st_size);
-  pl011_puts("\n");
+  return 0;
+}
+
+static int kstrcmp(const char* s1, const char* s2) {
+  while (*s1 && (*s1 == *s2)) {
+    s1++;
+    s2++;
+  }
+  return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
+
+int krn_getcwd(ARM64Registers* regs, char* buf, size_t size) {
+  if (!buf) return -14; // -EFAULT
+  size_t len = 0;
+  while (current_thread->cwd[len]) len++;
+  if (size < len + 1) return -34; // -ERANGE
+  if (copy_to_user((uint64_t)buf, current_thread->cwd, len + 1) < 0) {
+    return -14; // -EFAULT
+  }
+  return len + 1;
+}
+
+int krn_chdir(ARM64Registers* regs, const char* path) {
+  char kpath[128];
+  int i = 0;
+  while (i < 127) {
+    char c;
+    if (copy_from_user(&c, (uint64_t)path + i, 1) < 0) return -14; // -EFAULT
+    kpath[i] = c;
+    if (c == '\0') break;
+    i++;
+  }
+  kpath[i] = '\0';
+
+  if (kpath[0] == '/') {
+    int len = 0;
+    while (kpath[len]) len++;
+    if (len >= 128) return -36; // -ENAMETOOLONG
+    CbMemCpy(current_thread->cwd, kpath, len + 1);
+  } else {
+    int cwd_len = 0;
+    while (current_thread->cwd[cwd_len]) cwd_len++;
+    int path_len = 0;
+    while (kpath[path_len]) path_len++;
+    
+    if (cwd_len + 1 + path_len >= 128) return -36; // -ENAMETOOLONG
+    
+    if (cwd_len > 1 && current_thread->cwd[cwd_len - 1] != '/') {
+      current_thread->cwd[cwd_len] = '/';
+      CbMemCpy(current_thread->cwd + cwd_len + 1, kpath, path_len + 1);
+    } else {
+      CbMemCpy(current_thread->cwd + cwd_len, kpath, path_len + 1);
+    }
+  }
+
+  if (kstrcmp(kpath, "..") == 0) {
+     int len = 0;
+     while (current_thread->cwd[len]) len++;
+     if (len > 1) {
+       int last_slash = len - 1;
+       while (last_slash > 0 && current_thread->cwd[last_slash] != '/') {
+         last_slash--;
+       }
+       if (last_slash == 0) {
+         current_thread->cwd[1] = '\0';
+       } else {
+         current_thread->cwd[last_slash] = '\0';
+       }
+     }
+  }
   return 0;
 }
 
@@ -982,6 +1049,20 @@ brk_done:
     regs->x[0] = -38; // -ENOSYS
   } else if (syscall_num == 113) { // sys_clock_gettime
     regs->x[0] = -38;
+  } else if (syscall_num == 17) { // sys_getcwd
+    regs->x[0] = krn_getcwd(regs, (char*)arg0, arg1);
+  } else if (syscall_num == 49) { // sys_chdir
+    regs->x[0] = krn_chdir(regs, (const char*)arg0);
+  } else if (syscall_num == 134) { // sys_rt_sigaction
+    regs->x[0] = 0; // Stub
+  } else if (syscall_num == 135) { // sys_rt_sigprocmask
+    regs->x[0] = 0; // Stub
+  } else if (syscall_num == 172) { // sys_getpid
+    regs->x[0] = current_thread->tid;
+  } else if (syscall_num == 173) { // sys_getppid
+    regs->x[0] = 1; // Fake parent PID (init)
+  } else if (syscall_num == 175) { // sys_getuid
+    regs->x[0] = 0; // Root
   } else if (syscall_num == 222) { // sys_mmap
     pl011_puts("sys_mmap arg0="); print_hex(arg0);
     pl011_puts(" arg1="); print_hex(arg1);

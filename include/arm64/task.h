@@ -54,6 +54,7 @@ typedef struct _Thread {
 
   // POSIX FDs
   KernelFdEntry fds[MAX_KERNEL_FDS];
+  char cwd[128];
 } Thread;
 
 #define MAX_THREADS 8

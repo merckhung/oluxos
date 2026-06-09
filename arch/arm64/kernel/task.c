@@ -184,6 +184,7 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size, const char*
       for (j = 0; j < MAX_KERNEL_FDS; j++) {
         t->fds[j].used = 0;
       }
+      CbMemCpy(t->cwd, "/", 2);
 
       // Initialize private address space
       t->pg_dir_phys = vmm_create_aspace();
