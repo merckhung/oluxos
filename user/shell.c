@@ -1157,18 +1157,16 @@ void main(void) {
     }
 
   } else if (tid == SHELL_TID) {
-    // Interactive Shell
     volatile int d;
     for (d = 0; d < 5000000; d++);
 
-    puts("\n====================================\n");
-    puts(" OluxOS Userspace Shell\n");
-    puts("====================================\n");
+    puts("\nBooting directly to Busybox Shell...\n");
+    char* run_argv[] = {"run", "/sh"};
+    cmd_run(2, run_argv);
+    sys_exit(0);
 
     char cmd_buf[64];
     int cmd_idx = 0;
-
-    puts("OluxOS > ");
 
     while (1) {
       char c = getch();
