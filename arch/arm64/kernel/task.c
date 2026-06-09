@@ -10,11 +10,12 @@
 void pl011_puts(const char* s);
 void print_hex(uint64_t val);
 void thread_entry_wrapper(void);  // Assembly wrapper
+uint64_t translate_user_va(Thread* t, uint64_t va);
 
 static Thread threads[MAX_THREADS];
 static uint8_t thread_stacks[MAX_THREADS][STACK_SIZE]
     __attribute__((aligned(16)));
-static Thread* current_thread = NULL;
+Thread* current_thread = NULL;
 
 extern volatile uint64_t pg_dir[512];
 
@@ -28,6 +29,10 @@ void thread_init(void) {
     threads[i].stack_base = thread_stacks[i];
     threads[i].stack_size = STACK_SIZE;
     threads[i].pg_dir_phys = (uint64_t)pg_dir;  // Default to boot page table
+    int j;
+    for (j = 0; j < MAX_KERNEL_FDS; j++) {
+      threads[i].fds[j].used = 0;
+    }
   }
 
   // Thread 0 represents the main boot thread
@@ -100,6 +105,25 @@ void schedule(void) {
 
   IntDisable();
 
+  // Check UART blocked threads
+  extern int pl011_hasc(void);
+  extern char pl011_getc(void);
+  if (pl011_hasc()) {
+    for (i = 1; i < MAX_THREADS; i++) {
+      if (threads[i].state == THREAD_STATE_BLOCKED &&
+          threads[i].ipc_partner == UART_HARDWARE) {
+        char c = pl011_getc();
+        uint64_t phys = translate_user_va(&threads[i], (uint64_t)threads[i].ipc_buf);
+        if (phys) {
+          *(char*)phys = c;
+          threads[i].regs->x[0] = 1; // 1 byte read
+          threads[i].state = THREAD_STATE_READY;
+        }
+        break; // Wake up one
+      }
+    }
+  }
+
 retry:
   next_idx = -1;
   for (i = 1; i <= MAX_THREADS; i++) {
@@ -145,7 +169,7 @@ retry:
 #define USER_STACK_SIZE 65536
 extern void userspace_entry_wrapper(void);
 
-int thread_create_userspace(const unsigned char* bin, uint32_t size) {
+int thread_create_userspace(const unsigned char* bin, uint32_t size, const char* arg) {
   int i;
   IntDisable();
   
@@ -156,6 +180,10 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
   for (i = 1; i < MAX_THREADS; i++) {
     if (threads[i].state == THREAD_STATE_FREE) {
       Thread* t = &threads[i];
+      int j;
+      for (j = 0; j < MAX_KERNEL_FDS; j++) {
+        t->fds[j].used = 0;
+      }
 
       // Initialize private address space
       t->pg_dir_phys = vmm_create_aspace();
@@ -219,6 +247,7 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
           
           // Map userspace Heap (0x509000 to 0x600000)
           uint64_t heap_start = 0x509000;
+          t->brk = heap_start;
           uint64_t heap_end = 0x600000;
           uint64_t heap_curr;
           for (heap_curr = heap_start; heap_curr < heap_end; heap_curr += 4096) {
@@ -227,11 +256,13 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
                    IntEnable();
                    return -1;
                }
+               CbMemSet(heap_page, 0, 4096);
                vmm_map(t->pg_dir_phys, heap_curr, (uint64_t)heap_page, code_flags);
           }
       } else {
           // Raw binary
           uint32_t num_pages = (size + 4095) / 4096;
+          t->brk = 0x100000 + num_pages * 4096;
           uint32_t p;
           for (p = 0; p < num_pages; p++) {
             uint64_t vaddr = 0x00100000 + p * 4096;
@@ -258,12 +289,16 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
               IntEnable();
               return -1;
           }
+          CbMemSet(stack_page, 0, 4096);
           uint64_t va = 0x00800000 - USER_STACK_SIZE + (page_idx * 4096);
           vmm_map(t->pg_dir_phys, va, (uint64_t)stack_page, stack_flags);
           if (page_idx == (USER_STACK_SIZE / 4096) - 1) {
               last_stack_page = stack_page;
           }
       }
+      extern void vmm_dump_path(uint64_t aspace, uint64_t va);
+      vmm_dump_path(t->pg_dir_phys, 0x7FFF00);
+
 
       uint8_t* stk_top = (uint8_t*)t->stack_base + t->stack_size;
       stk_top -= sizeof(CpuContext);
@@ -280,35 +315,66 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
       ctx->x20 = user_sp; // Passed to switch.S for SP_EL0
       
       uint64_t* ustack = (uint64_t*)((uint64_t)last_stack_page + 4096 - 0x100);
-      ustack[0] = 3;                           // argc
-      ustack[1] = user_sp + 0xD0;              // argv[0] -> "busybox"
-      ustack[2] = user_sp + 0xD8;              // argv[1] -> "echo"
-      ustack[3] = user_sp + 0xE0;              // argv[2] -> "Hello OluxOS!"
-      ustack[4] = 0;                           // argv[3] (NULL)
-      ustack[5] = 0;                           // envp[0] (NULL)
       
-      ustack[6] = 3;                           // AT_PHDR
-      ustack[7] = 0x400000 + ehdr->e_phoff;    // phdr vaddr
-      ustack[8] = 4;                           // AT_PHENT
-      ustack[9] = ehdr->e_phentsize;           // phent
-      ustack[10] = 5;                           // AT_PHNUM
-      ustack[11] = ehdr->e_phnum;               // phnum
-      
-      ustack[12] = 25;                         // AT_RANDOM
-      ustack[13] = user_sp + 0xF0;             // pointer to random bytes
-      ustack[14] = 6;                          // AT_PAGESZ
-      ustack[15] = 4096;                       // 4096
-      ustack[16] = 31;                         // AT_EXECFN
-      ustack[17] = user_sp + 0xC0;             // pointer to "/bin/busybox"
-      ustack[18] = 0;                          // AT_NULL
-      ustack[19] = 0;                          // auxv val
-      
-      CbMemCpy((int8_t*)&ustack[24], "/bin/busybox\0", 13);
-      CbMemCpy((int8_t*)&ustack[26], "busybox\0", 8);
-      CbMemCpy((int8_t*)&ustack[27], "echo\0\0\0\0", 8);
-      CbMemCpy((int8_t*)&ustack[28], "Hello OluxOS!\0\0", 16);
-      ustack[30] = 0x123456789ABCDEF0;
-      ustack[31] = 0x0FEDCBA987654321;
+      if (arg) {
+        // Dynamic spawn with 1 argument (e.g. loader "/bin/busybox")
+        ustack[0] = 2;                           // argc
+        ustack[1] = user_sp + 0xD0;              // argv[0] -> "loader"
+        ustack[2] = user_sp + 0xD8;              // argv[1] -> arg
+        ustack[3] = 0;                           // argv[2] (NULL)
+        ustack[4] = 0;                           // envp[0] (NULL)
+        
+        // Setup simple auxv
+        ustack[6] = 6;                          // AT_PAGESZ
+        ustack[7] = 4096;                       // 4096
+        ustack[8] = 0;                          // AT_NULL
+        ustack[9] = 0;
+        
+        // Copy strings
+        CbMemCpy((int8_t*)&ustack[26], "loader\0", 7);
+        int arg_len = CbStrLen((const int8_t*)arg);
+        if (arg_len > 39) arg_len = 39; // limit to 39 bytes to fit in ustack[27..31]
+        CbMemCpy((int8_t*)&ustack[27], arg, arg_len);
+        ((char*)&ustack[27])[arg_len] = '\0';
+        
+        pl011_puts("KRN ustack="); print_hex((uint64_t)ustack);
+        pl011_puts(" argc="); print_hex(ustack[0]);
+        pl011_puts(" argv0="); print_hex(ustack[1]);
+        pl011_puts(" argv1="); print_hex(ustack[2]);
+        pl011_puts("\nKRN str0="); pl011_puts((const char*)&ustack[26]);
+        pl011_puts(" str1="); pl011_puts((const char*)&ustack[27]); pl011_puts("\n");
+      } else {
+        // Default static spawn (for shell)
+        ustack[0] = 3;                           // argc
+        ustack[1] = user_sp + 0xD0;              // argv[0] -> "busybox"
+        ustack[2] = user_sp + 0xD8;              // argv[1] -> "echo"
+        ustack[3] = user_sp + 0xE0;              // argv[2] -> "Hello OluxOS!"
+        ustack[4] = 0;                           // argv[3] (NULL)
+        ustack[5] = 0;                           // envp[0] (NULL)
+        
+        ustack[6] = 3;                           // AT_PHDR
+        ustack[7] = 0x400000 + ehdr->e_phoff;    // phdr vaddr
+        ustack[8] = 4;                           // AT_PHENT
+        ustack[9] = ehdr->e_phentsize;           // phent
+        ustack[10] = 5;                           // AT_PHNUM
+        ustack[11] = ehdr->e_phnum;               // phnum
+        
+        ustack[12] = 25;                         // AT_RANDOM
+        ustack[13] = user_sp + 0xF0;             // pointer to random bytes
+        ustack[14] = 6;                          // AT_PAGESZ
+        ustack[15] = 4096;                       // 4096
+        ustack[16] = 31;                         // AT_EXECFN
+        ustack[17] = user_sp + 0xC0;             // pointer to "/bin/busybox"
+        ustack[18] = 0;                          // AT_NULL
+        ustack[19] = 0;                          // auxv val
+        
+        CbMemCpy((int8_t*)&ustack[24], "/bin/busybox\0", 13);
+        CbMemCpy((int8_t*)&ustack[26], "busybox\0", 8);
+        CbMemCpy((int8_t*)&ustack[27], "echo\0\0\0\0", 8);
+        CbMemCpy((int8_t*)&ustack[28], "Hello OluxOS!\0\0", 16);
+        ustack[30] = 0x123456789ABCDEF0;
+        ustack[31] = 0x0FEDCBA987654321;
+      }
 
       t->context = *ctx;
       t->state = THREAD_STATE_READY;
@@ -630,27 +696,32 @@ void* thread_map_fb(void) {
   return (void*)virt_base;
 }
 
-uint64_t sys_mmap_impl(uint64_t size) {
+uint64_t sys_mmap_impl(uint64_t addr, uint64_t size, uint64_t prot) {
   // Always return 2MB aligned allocations
   static uint64_t next_vaddr = 0x20000000; // 512MB mark
-  static uint64_t next_paddr = 0x60000000; // QEMU physical memory
 
   if (size == 0) return next_vaddr;
 
-  uint64_t ret_vaddr = next_vaddr;
+  uint64_t ret_vaddr = addr ? addr : next_vaddr;
   uint64_t num_blocks = (size + 0x1FFFFF) >> 21; // Number of 2MB blocks
 
   uint64_t num_pages = (size + 4095) / 4096;
   uint64_t i;
   for (i = 0; i < num_pages; i++) {
-    if (vmm_map(current_thread->pg_dir_phys, ret_vaddr + i * 4096, next_paddr + i * 4096, VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_USER) != 0) {
+    void* phys_page = pmm_alloc_page();
+    if (!phys_page) {
+        pl011_puts("sys_mmap: pmm_alloc_page failed!\n");
+        return 0;
+    }
+    if (vmm_map(current_thread->pg_dir_phys, ret_vaddr + i * 4096, (uint64_t)phys_page, prot | VMM_FLAG_USER) != 0) {
         pl011_puts("sys_mmap: vmm_map failed!\n");
         return 0;
     }
   }
 
-  next_vaddr += num_blocks * 0x200000;
-  next_paddr += num_blocks * 0x200000;
+  if (ret_vaddr == next_vaddr) {
+    next_vaddr += num_blocks * 0x200000;
+  }
 
   __asm__ volatile(
       "tlbi vmalle1is\n"
@@ -667,4 +738,16 @@ uint64_t sys_mmap_impl(uint64_t size) {
 
   return ret_vaddr;
 }
+
+int thread_block_on_uart(void* buf, uint32_t len) {
+  IntDisable();
+  current_thread->state = THREAD_STATE_BLOCKED;
+  current_thread->ipc_partner = UART_HARDWARE;
+  current_thread->ipc_buf = buf;
+  current_thread->ipc_size = len;
+  schedule();
+  IntEnable();
+  return IPC_BLOCKED;
+}
+
 

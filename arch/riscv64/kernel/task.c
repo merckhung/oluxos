@@ -189,7 +189,7 @@ retry:
   IntEnable();
 }
 
-int thread_create_userspace(const unsigned char* bin, uint32_t size) {
+int thread_create_userspace(const unsigned char* bin, uint32_t size, const char* arg) {
   int i = 0;
   int ret_tid = -1;
   IntDisable();
@@ -300,10 +300,25 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
 
       // Setup argc, argv stubs on user stack
       uint64_t* ustack = (uint64_t*)((uint64_t)last_stack_page + 4096 - 0x100);
-      ustack[0] = 1;
-      ustack[1] = user_sp + 0x10;
-      ustack[2] = 0;
-      CbMemCpy((char*)(ustack + 3), "shell", 6);
+      
+      if (arg) {
+        ustack[0] = 2;                           // argc
+        ustack[1] = user_sp + 16;                // argv
+        ustack[2] = user_sp + 40;                // argv[0] -> "loader"
+        ustack[3] = user_sp + 48;                // argv[1] -> arg
+        ustack[4] = 0;                           // NULL
+        CbMemCpy((char*)(ustack + 5), "loader\0", 7);
+        int arg_len = CbStrLen((const int8_t*)arg);
+        if (arg_len > 100) arg_len = 100;
+        CbMemCpy((char*)(ustack + 6), arg, arg_len);
+        ((char*)(ustack + 6))[arg_len] = '\0';
+      } else {
+        ustack[0] = 1;                           // argc
+        ustack[1] = user_sp + 16;                // argv
+        ustack[2] = user_sp + 32;                // argv[0] -> "shell"
+        ustack[3] = 0;                           // NULL
+        CbMemCpy((char*)(ustack + 4), "shell\0", 6);
+      }
 
       t->context = *ctx;
       t->cpu = -1;
@@ -567,3 +582,43 @@ void* thread_map_mmio(uint64_t phys_addr) {
 }
 
 void* thread_map_fb(void) { return NULL; }
+
+uint64_t sys_mmap_impl(uint64_t addr, uint64_t size) {
+  static uint64_t next_vaddr = 0x20000000; // 512MB mark
+
+  if (size == 0) return next_vaddr;
+
+  uint64_t ret_vaddr = addr ? addr : next_vaddr;
+  uint64_t num_blocks = (size + 0x1FFFFF) >> 21; // Number of 2MB blocks
+
+  uint64_t num_pages = (size + 4095) / 4096;
+  uint64_t i;
+  for (i = 0; i < num_pages; i++) {
+    void* phys_page = pmm_alloc_page();
+    if (!phys_page) {
+        ns16550_puts("sys_mmap: pmm_alloc_page failed!\n");
+        return 0;
+    }
+    if (vmm_map(current_thread->pg_dir_phys, ret_vaddr + i * 4096, (uint64_t)phys_page, VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_USER) != 0) {
+        ns16550_puts("sys_mmap: vmm_map failed!\n");
+        return 0;
+    }
+  }
+
+  if (ret_vaddr == next_vaddr) {
+    next_vaddr += num_blocks * 0x200000;
+  }
+
+  __asm__ volatile("sfence.vma" ::: "memory");
+
+  CbMemSet((int8_t*)ret_vaddr, 0, num_pages * 4096);
+
+  ns16550_puts("sys_mmap size=");
+  print_hex(size);
+  ns16550_puts(" vaddr=");
+  print_hex(ret_vaddr);
+  ns16550_puts("\n");
+
+  return ret_vaddr;
+}
+

@@ -1,4 +1,5 @@
 #include "unistd.h"
+#include "sys/mman.h"
 
 #include "stdio.h"
 #include "dirent.h"
@@ -131,28 +132,7 @@ ssize_t write(int fd, const void* buf, size_t count) {
   if (!f) return -1;
 
   if (f->type == FD_TYPE_UART) {
-    size_t written = 0;
-    while (written < count) {
-      struct {
-        unsigned int sender;
-        unsigned int cmd;
-        unsigned int size;
-        char data[64];
-      } req;
-      req.sender = sys_gettid();
-      req.cmd = 0;  // Write
-
-      size_t chunk = count - written;
-      if (chunk > 63) chunk = 63;
-
-      memcpy(req.data, (const char*)buf + written, chunk);
-      req.data[chunk] = '\0';
-      req.size = chunk;
-
-      sys_send(f->srv_tid, &req, 12 + chunk + 1);
-      written += chunk;
-    }
-    return written;
+    return sys_write(fd, buf, count);
   }
   return -1;
 }
@@ -162,27 +142,7 @@ ssize_t read(int fd, void* buf, size_t count) {
   if (!f) return -1;
 
   if (f->type == FD_TYPE_UART) {
-    size_t read_bytes = 0;
-    char* ptr = buf;
-    while (read_bytes < count) {
-      struct {
-        unsigned int sender;
-        unsigned int cmd;
-      } req;
-      req.sender = sys_gettid();
-      req.cmd = 1;  // Read
-
-      sys_send(f->srv_tid, &req, 8);
-      char c;
-      sys_recv(f->srv_tid, &c, 1);
-
-      ptr[read_bytes++] = c;
-
-      if (c == '\n' || c == '\r') {
-        break;
-      }
-    }
-    return read_bytes;
+    return sys_read(fd, buf, count);
   } else if (f->type == FD_TYPE_FILE) {
     struct {
       unsigned int sender;
@@ -296,4 +256,39 @@ int chdir(const char* path) {
   closedir(d);
   strncpy(current_working_directory, resolved_path, 128);
   return 0;
+}
+
+void* mmap(void* addr, size_t length, int prot, int flags, int fd, long offset) {
+  return sys_mmap(addr, length, prot, flags, fd, offset);
+}
+
+int munmap(void* addr, size_t length) {
+  return sys_munmap(addr, length);
+}
+
+int mprotect(void* addr, size_t length, int prot) {
+  return sys_mprotect(addr, length, prot);
+}
+
+long fsize(int fd) {
+  FdEntry* f = get_fd(fd);
+  if (!f || f->type != FD_TYPE_FILE) return -1;
+  
+  struct {
+    unsigned int sender;
+    unsigned int cmd;
+    unsigned int handle;
+  } req;
+  req.sender = sys_gettid();
+  req.cmd = 5; // Get Size
+  req.handle = f->handle;
+  
+  sys_send(f->srv_tid, &req, sizeof(req));
+  
+  struct {
+    int size;
+  } reply;
+  sys_recv(f->srv_tid, &reply, sizeof(reply));
+  
+  return reply.size;
 }

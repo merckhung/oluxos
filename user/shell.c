@@ -3,6 +3,7 @@
 #include "string.h"
 #include "syscall.h"
 #include "unistd.h"
+#include "sys/mman.h"
 #include "gles.h"
 #include "gui.h"
 #include "ext4.h"
@@ -901,6 +902,75 @@ void cmd_gui(int argc, char** argv) {
   puts("Exiting GUI mode.\n");
 }
 
+void cmd_run(int argc, char* argv[]) {
+  if (argc < 2) {
+    puts("Usage: run <executable> [args...]\n");
+    return;
+  }
+
+  int fd_loader = open("/loader.elf", 0);
+  if (fd_loader < 0) {
+    puts("Error: Could not open /loader.elf\n");
+    return;
+  }
+
+  long loader_size = fsize(fd_loader);
+  if (loader_size <= 0) {
+    puts("Error: Invalid loader size\n");
+    close(fd_loader);
+    return;
+  }
+
+  void* loader_buf = mmap(NULL, loader_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (loader_buf == MAP_FAILED) {
+    puts("Error: Failed to allocate memory for loader\n");
+    close(fd_loader);
+    return;
+  }
+
+  long total_read = 0;
+  while (total_read < loader_size) {
+    long r = read(fd_loader, (char*)loader_buf + total_read, loader_size - total_read);
+    if (r <= 0) break;
+    total_read += r;
+  }
+  close(fd_loader);
+  if (total_read != loader_size) {
+    puts("Error: Failed to read loader\n");
+    munmap(loader_buf, loader_size);
+    return;
+  }
+
+  char cmdline[256];
+  cmdline[0] = '\0';
+  int i;
+  int offset = 0;
+  for (i = 1; i < argc; i++) {
+    int len = strlen(argv[i]);
+    if (offset + len + 2 > 256) {
+      puts("Error: Command line too long\n");
+      munmap(loader_buf, loader_size);
+      return;
+    }
+    memcpy(cmdline + offset, argv[i], len);
+    offset += len;
+    if (i < argc - 1) {
+      cmdline[offset++] = ' ';
+    }
+  }
+  cmdline[offset] = '\0';
+
+  printf("Spawning loader for command: %s\n", cmdline);
+  int tid = sys_spawn(loader_buf, loader_size, cmdline);
+  if (tid >= 0) {
+    printf("Spawned loader thread tid=%d\n", tid);
+  } else {
+    puts("Error: Spawn failed\n");
+  }
+
+  munmap(loader_buf, loader_size);
+}
+
 // --- Main ---
 void main(void) {
   int tid = sys_gettid();
@@ -1073,6 +1143,15 @@ void main(void) {
           }
           reply.size = status;
           sys_send(req.sender, &reply, 4);
+        } else if (req.cmd == 5) {  // Get File Size
+          int size = -1;
+          if (req.args.handle < 100) {
+            if (open_file_table[req.args.handle].used) {
+              size = open_file_table[req.args.handle].size;
+            }
+          }
+          reply.size = size;
+          sys_send(req.sender, &reply, 4);
         }
       }
     }
@@ -1119,6 +1198,7 @@ void main(void) {
               puts("  find [dir]          - Find files recursively\n");
               puts("  uname               - Show system info\n");
               puts("  sleep <seconds>     - Sleep for N seconds\n");
+              puts("  run <file> [args...] - Run ELF binary via loader\n");
             } else if (strcmp(argv[0], "ls") == 0) {
               cmd_ls(argc, argv);
             } else if (strcmp(argv[0], "cd") == 0) {
@@ -1147,6 +1227,8 @@ void main(void) {
               cmd_uname(argc, argv);
             } else if (strcmp(argv[0], "sleep") == 0) {
               cmd_sleep(argc, argv);
+            } else if (strcmp(argv[0], "run") == 0) {
+              cmd_run(argc, argv);
             } else if (strcmp(argv[0], "busybox") == 0) {
               static unsigned char exec_buf[2000000];
               int fd = open("busybox", 0);
@@ -1161,7 +1243,7 @@ void main(void) {
                   close(fd);
                   if (total_read > 0) {
                       puts("Spawning busybox...\n");
-                      int tid = sys_spawn(exec_buf, total_read);
+                      int tid = sys_spawn(exec_buf, total_read, NULL);
                       if (tid >= 0) {
                           puts("Spawned busybox successfully.\n");
                       } else {

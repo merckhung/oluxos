@@ -147,7 +147,7 @@ retry:
 }
 
 
-int thread_create_userspace(const unsigned char* bin, uint32_t size) {
+int thread_create_userspace(const unsigned char* bin, uint32_t size, const char* arg) {
   int i;
   IntDisable();
   for (i = 1; i < MAX_THREADS; i++) {
@@ -268,11 +268,25 @@ int thread_create_userspace(const unsigned char* bin, uint32_t size) {
 
       // Setup argc, argv stubs on user stack
       uint32_t* ustack = (uint32_t*)((uint32_t)last_stack_page + 4096 - 0x100);
-      ustack[0] = 1;                            // argc
-      ustack[1] = user_sp + 8;                  // argv points to ustack[2]
-      ustack[2] = user_sp + 16;                 // argv[0] points to "shell" (ustack[4])
-      ustack[3] = 0;                            // NULL
-      CbMemCpy((char*)(ustack + 4), "shell", 6);
+      
+      if (arg) {
+        ustack[0] = 2;                            // argc
+        ustack[1] = user_sp + 8;                  // argv points to ustack[2]
+        ustack[2] = user_sp + 20;                 // argv[0] points to "loader" (ustack[5])
+        ustack[3] = user_sp + 28;                 // argv[1] points to arg (ustack[7])
+        ustack[4] = 0;                            // NULL
+        CbMemCpy((char*)(ustack + 5), "loader\0", 7);
+        int arg_len = CbStrLen((const int8_t*)arg);
+        if (arg_len > 100) arg_len = 100;
+        CbMemCpy((char*)(ustack + 7), arg, arg_len);
+        ((char*)(ustack + 7))[arg_len] = '\0';
+      } else {
+        ustack[0] = 1;                            // argc
+        ustack[1] = user_sp + 8;                  // argv points to ustack[2]
+        ustack[2] = user_sp + 16;                 // argv[0] points to "shell" (ustack[4])
+        ustack[3] = 0;                            // NULL
+        CbMemCpy((char*)(ustack + 4), "shell\0", 6);
+      }
 
       t->context = *ctx;
       t->state = THREAD_STATE_READY;

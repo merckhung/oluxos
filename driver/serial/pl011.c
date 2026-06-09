@@ -36,3 +36,8 @@ void pl011_init(void) {
   // etc. if needed. For Milestone 1, we assume it is already configured by
   // QEMU.
 }
+
+int pl011_hasc(void) {
+  return (*UART_FR & RXFE) == 0;
+}
+

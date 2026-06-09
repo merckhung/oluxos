@@ -150,6 +150,7 @@ genrule(
         "user/ulib/syscall.h",
         "user/ulib/unistd.h",
         "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
         "user/ulib/dirent.h",
         "user/ulib/dirent.c",
         "user/ulib/gles.h",
@@ -162,6 +163,39 @@ genrule(
     ] + glob(["include/**/*.h"]),
     outs = ["user_shell.elf"],
     cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) $(location user/ulib/gles.c) $(location user/ulib/gui.c) $(location user/ulib/ext4.c) -Iuser/ulib -Iinclude -o $@",
+)
+
+genrule(
+    name = "user_loader_elf",
+    srcs = [
+        "user/loader.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["loader.elf"],
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/loader.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) -Iuser/ulib -Iinclude -o $@",
+)
+
+genrule(
+    name = "user_testposix_elf",
+    srcs = [
+        "user/testposix.c",
+        "user/start.S",
+        "user/app.lds",
+        "user/ulib/syscall.h",
+    ] + glob(["include/**/*.h"]),
+    outs = ["tposix.elf"],
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/app.lds) $(location user/start.S) $(location user/testposix.c) -Iuser/ulib -Iinclude -o $@",
 )
 
 genrule(
@@ -191,6 +225,7 @@ genrule(
         "user/ulib/syscall.h",
         "user/ulib/unistd.h",
         "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
         "user/ulib/dirent.h",
         "user/ulib/dirent.c",
         "user/ulib/gles.h",
@@ -223,6 +258,41 @@ genrule(
 )
 
 genrule(
+    name = "user_loader_elf_riscv64",
+    srcs = [
+        "user/loader.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["loader_riscv64.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none \
+            -ffreestanding -std=gnu89 \
+            -march=rv64gc -mabi=lp64d \
+            -mcmodel=medany \
+            -mno-relax \
+            -T $(location user/user.lds) \
+            $(location user/start.S) \
+            $(location user/loader.c) \
+            $(location user/ulib/string.c) \
+            $(location user/ulib/stdio.c) \
+            $(location user/ulib/unistd.c) \
+            $(location user/ulib/dirent.c) \
+            -Iuser/ulib -Iinclude -o $@
+    """,
+)
+
+genrule(
     name = "user_shell_h_riscv64",
     srcs = [":user_shell_elf_riscv64"],
     outs = ["user_shell_bin_riscv64.h"],
@@ -242,6 +312,7 @@ genrule(
         "user/ulib/syscall.h",
         "user/ulib/unistd.h",
         "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
         "user/ulib/dirent.h",
         "user/ulib/dirent.c",
         "user/ulib/gles.h",
@@ -269,6 +340,41 @@ genrule(
             $(location user/ulib/gles.c) \
             $(location user/ulib/gui.c) \
             $(location user/ulib/ext4.c) \
+            -Iuser/ulib -Iinclude -o $@
+    """,
+)
+
+genrule(
+    name = "user_loader_elf_riscv32",
+    srcs = [
+        "user/loader.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["loader_riscv32.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none \
+            -ffreestanding -std=gnu89 \
+            -march=rv32imac_zicsr -mabi=ilp32 \
+            -mcmodel=medany \
+            -mno-relax \
+            -T $(location user/user.lds) \
+            $(location user/start.S) \
+            $(location user/loader.c) \
+            $(location user/ulib/string.c) \
+            $(location user/ulib/stdio.c) \
+            $(location user/ulib/unistd.c) \
+            $(location user/ulib/dirent.c) \
             -Iuser/ulib -Iinclude -o $@
     """,
 )

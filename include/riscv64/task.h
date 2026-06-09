@@ -69,7 +69,7 @@ typedef struct _Thread {
 
 void thread_init(void);
 int thread_create(void (*entry)(void));
-int thread_create_userspace(const unsigned char* bin, uint32_t size);
+int thread_create_userspace(const unsigned char* bin, uint32_t size, const char* arg);
 void cpu_switch_to(CpuContext* current, CpuContext* next);
 void schedule(void);
 uint32_t thread_get_current_tid(void);

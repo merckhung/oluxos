@@ -171,7 +171,7 @@ void trap_handler(RISCV64Registers* regs) {
             } else if (syscall_num == 6) { // SYS_MAP_FB
                 regs->gpr[10] = (uint64_t)thread_map_fb();
             } else if (syscall_num == 7) { // SYS_SPAWN
-                regs->gpr[10] = thread_create_userspace((const unsigned char*)arg0, (uint32_t)arg1);
+                regs->gpr[10] = thread_create_userspace((const unsigned char*)arg0, (uint32_t)arg1, (const char*)regs->gpr[12]);
             } else if (syscall_num == 64) { // sys_write (Linux compatibility)
                 if (arg0 == 1 || arg0 == 2) {
                     char* buf = (char*)arg1;
@@ -185,6 +185,13 @@ void trap_handler(RISCV64Registers* regs) {
                 } else {
                     regs->gpr[10] = (uint64_t)-9; // EBADF
                 }
+            } else if (syscall_num == 222) { // sys_mmap
+                extern uint64_t sys_mmap_impl(uint64_t addr, uint64_t size);
+                regs->gpr[10] = sys_mmap_impl(arg0, arg1);
+            } else if (syscall_num == 215) { // sys_munmap
+                regs->gpr[10] = 0; // Success
+            } else if (syscall_num == 226) { // sys_mprotect
+                regs->gpr[10] = 0; // Success
             } else {
                 ns16550_puts("\nUnknown syscall: ");
                 print_hex(syscall_num);
@@ -294,10 +301,10 @@ void krn_entry(uint64_t hartid) {
     thread_init();
     
     // Create 4 userspace threads (which will run the shell binary as UART, Ramdisk, FS, Shell)
-    thread_create_userspace(user_shell_bin, user_shell_bin_len);
-    thread_create_userspace(user_shell_bin, user_shell_bin_len);
-    thread_create_userspace(user_shell_bin, user_shell_bin_len);
-    thread_create_userspace(user_shell_bin, user_shell_bin_len);
+    thread_create_userspace(user_shell_bin, user_shell_bin_len, NULL);
+    thread_create_userspace(user_shell_bin, user_shell_bin_len, NULL);
+    thread_create_userspace(user_shell_bin, user_shell_bin_len, NULL);
+    thread_create_userspace(user_shell_bin, user_shell_bin_len, NULL);
     
     // Boot secondary harts
     ns16550_puts("Booting secondary harts...\n");
