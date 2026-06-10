@@ -504,14 +504,18 @@ genrule(
         "driver/video/fb.c",
         "driver/mailbox/mbox.c",
         "lib/clib.c",
+        "kernel/pmm.c",
+        "kernel/heap.c",
+        "arch/arm64/kernel/vmm.c",
+        "kernel/spinlock.c",
         "arch/arm64/kernel/kdbger.c",
         "arch/arm64/kernel.lds",
         ":user_shell_h_rpi4",
     ] + glob(["include/**/*.h"]),
     outs = ["rpi4_kernel.elf"],
     cmd = """
-        aarch64-linux-gnu-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
-            -std=gnu89 \
+        aarch64-linux-gnu-gcc -Wall -g -O2 -nostdlib -nostartfiles -ffreestanding \
+            -std=gnu89 -DCONFIG_ARCH_ARM64=1 -mno-outline-atomics \
             -mgeneral-regs-only \
             -DCONFIG_BOARD_RPI4=1 \
             -DCONFIG_KDBGER=0 \
@@ -529,10 +533,43 @@ genrule(
             $(location driver/timer/arm_timer.c) \
             $(location driver/video/fb.c) \
             $(location driver/mailbox/mbox.c) \
+            $(location kernel/pmm.c) \
+            $(location kernel/heap.c) \
+            $(location arch/arm64/kernel/vmm.c) \
+            $(location kernel/spinlock.c) \
             $(location lib/clib.c) \
             -o $@
     """,
 )
+
+genrule(
+    name = "rpi4_kernel_img",
+    srcs = [":rpi4_kernel_elf"],
+    outs = ["kernel8.img"],
+    cmd = "aarch64-linux-gnu-objcopy -O binary $< $@",
+)
+
+genrule(
+    name = "rpi4_boot_zip",
+    srcs = [
+        ":rpi4_kernel_img",
+        "fat.img",
+    ],
+    outs = ["rpi4_boot.zip"],
+    cmd = """
+        mkdir -p $(@D)/rpi4_boot_dir
+        cp $(location :rpi4_kernel_img) $(@D)/rpi4_boot_dir/kernel8.img
+        cp $(location fat.img) $(@D)/rpi4_boot_dir/fat.img
+        echo "arm_64bit=1" > $(@D)/rpi4_boot_dir/config.txt
+        echo "enable_uart=1" >> $(@D)/rpi4_boot_dir/config.txt
+        echo "dtoverlay=disable-bt" >> $(@D)/rpi4_boot_dir/config.txt
+        echo "kernel=kernel8.img" >> $(@D)/rpi4_boot_dir/config.txt
+        echo "initramfs fat.img 0x48000000" >> $(@D)/rpi4_boot_dir/config.txt
+        zip -j $@ $(@D)/rpi4_boot_dir/*
+        rm -rf $(@D)/rpi4_boot_dir
+    """,
+)
+
 
 sh_binary(
     name = "run_qemu_rpi4",
