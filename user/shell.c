@@ -1143,10 +1143,12 @@ void main(void) {
             read_bytes = fat32_read_file_handle(
                 req.args.read.handle, reply.data, req.args.read.count);
           }
+#if 0
           if (req.sender == 5) {
             printf("[FS] Read loader: handle=%d count=%d ret=%d\n",
                    req.args.read.handle, req.args.read.count, read_bytes);
           }
+#endif
           reply.size = read_bytes;
           sys_send(req.sender, &reply,
                    sizeof(reply.size) + (read_bytes > 0 ? read_bytes : 0));
