@@ -66,6 +66,7 @@ typedef struct _Thread {
   KernelFdEntry fds[MAX_KERNEL_FDS];
   char cwd[128];
   uint64_t clear_child_tid;
+  uint32_t parent_tid;
 } Thread;
 
 #define CLONE_VM             0x00000100

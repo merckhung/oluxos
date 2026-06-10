@@ -78,18 +78,24 @@ uint64_t vmm_create_aspace(void) {
 }
 
 void vmm_free_aspace(uint64_t aspace) {
+#if 0
     pl011_puts("vmm_free_aspace: "); print_hex(aspace); pl011_puts("\n");
+#endif
     uint64_t* l1 = (uint64_t*)aspace;
     
     if (l1[0] & PTE_VALID) {
         uint64_t* l2 = (uint64_t*)(l1[0] & PTE_ADDR_MASK);
+#if 0
         pl011_puts("  l2="); print_hex((uint64_t)l2); pl011_puts("\n");
+#endif
         int i;
         for (i = 0; i < 512; i++) {
             // Check if it is a table descriptor (not block)
             if ((l2[i] & (PTE_VALID | PTE_TABLE)) == (PTE_VALID | PTE_TABLE)) {
                 uint64_t* l3 = (uint64_t*)(l2[i] & PTE_ADDR_MASK);
+#if 0
                 pl011_puts("    l3["); print_hex(i); pl011_puts("]="); print_hex((uint64_t)l3); pl011_puts("\n");
+#endif
                 int j;
                 for (j = 0; j < 512; j++) {
                     if (l3[j] & PTE_VALID) {
@@ -99,16 +105,24 @@ void vmm_free_aspace(uint64_t aspace) {
                         }
                     }
                 }
+#if 0
                 pl011_puts("    free l3 "); print_hex((uint64_t)l3); pl011_puts("\n");
+#endif
                 pmm_free_page(l3);
             }
         }
+#if 0
         pl011_puts("  free l2 "); print_hex((uint64_t)l2); pl011_puts("\n");
+#endif
         pmm_free_page(l2);
     }
+#if 0
     pl011_puts("  free l1 "); print_hex((uint64_t)l1); pl011_puts("\n");
+#endif
     pmm_free_page(l1);
+#if 0
     pl011_puts("vmm_free_aspace done\n");
+#endif
 }
 
 int vmm_map(uint64_t aspace, uint64_t va, uint64_t pa, uint64_t flags) {

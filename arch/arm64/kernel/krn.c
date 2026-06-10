@@ -1,5 +1,6 @@
 #include <arm64/platform.h>
 #include <arm64/task.h>
+#include <kernel/interrupt.h>
 #include <driver/arm_timer.h>
 #include <driver/gicv2.h>
 #include <types.h>
@@ -305,11 +306,13 @@ int krn_openat(ARM64Registers* regs, int dfd, const char* user_filename, int fla
     return -2; // -ENOENT
   }
 
+#if 0
   pl011_puts("krn_openat: filename=\"");
   pl011_puts(filename);
   pl011_puts("\" dfd=");
   print_hex(dfd);
   pl011_puts("\n");
+#endif
 
   int fd;
   for (fd = 3; fd < MAX_KERNEL_FDS; fd++) {
@@ -328,9 +331,11 @@ int krn_openat(ARM64Registers* regs, int dfd, const char* user_filename, int fla
     current_thread->fds[fd].offset = 0;
     current_thread->fds[fd].path[0] = '/';
     current_thread->fds[fd].path[1] = '\0';
+#if 0
     pl011_puts("krn_openat: root dir mapped to fd=");
     print_hex(fd);
     pl011_puts("\n");
+#endif
     return fd;
   }
 
@@ -375,11 +380,13 @@ int krn_openat(ARM64Registers* regs, int dfd, const char* user_filename, int fla
         p_len++;
       }
       current_thread->fds[fd].path[p_len] = '\0';
+#if 0
       pl011_puts("krn_openat: success fd=");
       print_hex(fd);
       pl011_puts(" handle=");
       print_hex(handle);
       pl011_puts("\n");
+#endif
       return fd;
     } else {
       pl011_puts("krn_openat: FS server returned error=");
@@ -689,11 +696,13 @@ int krn_getdents64(ARM64Registers* regs, int fd, void* user_dirp, size_t count) 
       }
       d->d_name[name_len] = '\0';
 
+#if 0
       pl011_puts("  dirent: name=\"");
       pl011_puts(d->d_name);
       pl011_puts("\" reclen=");
       print_hex(reclen);
       pl011_puts("\n");
+#endif
 
       if (copy_to_user((uint64_t)user_dirp + written, dirent_buf, reclen) < 0) {
         pl011_puts("krn_getdents64: copy_to_user failed\n");
@@ -1029,11 +1038,15 @@ int krn_chdir(ARM64Registers* regs, const char* path) {
 
 static int krn_seek(ARM64Registers* regs, int fd, uint64_t target_offset) {
   uint64_t curr_offset = current_thread->fds[fd].offset;
+#if 0
   pl011_puts("krn_seek: target="); print_hex(target_offset);
   pl011_puts(" curr="); print_hex(curr_offset);
   pl011_puts("\n");
+#endif
   if (target_offset < curr_offset) {
+#if 0
      pl011_puts("krn_seek: backward seek detected, reopening...\n");
+#endif
      // 1. Close file at FS server
      struct FsCloseReq close_req;
      close_req.sender = current_thread->tid;
@@ -1048,14 +1061,20 @@ static int krn_seek(ARM64Registers* regs, int fd, uint64_t target_offset) {
      ret = thread_ipc_recv(FS_SERVER_TID, &reply, sizeof(reply));
      int n;
      if (ret == IPC_BLOCKED) {
+#if 0
         pl011_puts("krn_seek: close regs="); print_hex((uint64_t)regs);
         pl011_puts(" curr_regs="); print_hex((uint64_t)current_thread->regs);
         pl011_puts("\n");
+#endif
         n = regs->x[0];
+#if 0
         pl011_puts("krn_seek: close recv blocked, woke up, regs->x[0]="); print_hex(n); pl011_puts("\n");
+#endif
      } else {
         n = ret;
+#if 0
         pl011_puts("krn_seek: close recv immediate, ret="); print_hex(n); pl011_puts("\n");
+#endif
      }
      if (n < 4) {
         pl011_puts("krn_seek: close recv failed or error, n="); print_hex(n); pl011_puts("\n");
@@ -1073,7 +1092,9 @@ static int krn_seek(ARM64Registers* regs, int fd, uint64_t target_offset) {
      }
      open_req.filename[p_len] = '\0';
      
+#if 0
      pl011_puts("krn_seek: reopening file: "); pl011_puts(open_req.filename); pl011_puts("\n");
+#endif
      
      ret = thread_ipc_send(FS_SERVER_TID, &open_req, sizeof(open_req));
      if (ret < 0 && ret != IPC_BLOCKED) {
@@ -1082,14 +1103,20 @@ static int krn_seek(ARM64Registers* regs, int fd, uint64_t target_offset) {
      }
      ret = thread_ipc_recv(FS_SERVER_TID, &reply, sizeof(reply));
       if (ret == IPC_BLOCKED) {
+#if 0
         pl011_puts("krn_seek: open regs="); print_hex((uint64_t)regs);
         pl011_puts(" curr_regs="); print_hex((uint64_t)current_thread->regs);
         pl011_puts("\n");
+#endif
         n = regs->x[0];
+#if 0
         pl011_puts("krn_seek: open recv blocked, woke up, regs->x[0]="); print_hex(n); pl011_puts("\n");
+#endif
       } else {
         n = ret;
+#if 0
         pl011_puts("krn_seek: open recv immediate, ret="); print_hex(n); pl011_puts("\n");
+#endif
       }
      if (n < 4) {
         pl011_puts("krn_seek: open recv failed or error, n="); print_hex(n); pl011_puts("\n");
@@ -1097,7 +1124,9 @@ static int krn_seek(ARM64Registers* regs, int fd, uint64_t target_offset) {
      }
      
      int new_handle = reply.size;
+#if 0
      pl011_puts("krn_seek: reopened handle="); print_hex(new_handle); pl011_puts("\n");
+#endif
      if (new_handle < 0) {
         pl011_puts("krn_seek: reopen failed\n");
         return -1;
@@ -1110,7 +1139,9 @@ static int krn_seek(ARM64Registers* regs, int fd, uint64_t target_offset) {
   
   uint64_t diff = target_offset - curr_offset;
   if (diff > 0) {
+#if 0
      pl011_puts("krn_seek: seeking forward by "); print_hex(diff); pl011_puts(" bytes\n");
+#endif
   }
   char dummy[512];
   while (diff > 0) {
@@ -1122,7 +1153,9 @@ static int krn_seek(ARM64Registers* regs, int fd, uint64_t target_offset) {
      }
      diff -= ret;
   }
+#if 0
   pl011_puts("krn_seek: success\n");
+#endif
   return 0;
 }
 
@@ -1132,7 +1165,9 @@ int krn_execve(ARM64Registers* regs, const char* user_pathname, char* const user
     return -14; // -EFAULT
   }
 
+#if 0
   pl011_puts("krn_execve: pathname=\""); pl011_puts(pathname); pl011_puts("\"\n");
+#endif
 
   // Open ELF file
   int fd = krn_openat(regs, 0, user_pathname, 0);
@@ -1275,10 +1310,12 @@ int krn_execve(ARM64Registers* regs, const char* user_pathname, char* const user
       uint64_t end_page = (vaddr + memsz + 0xFFF) & ~0xFFF;
       uint64_t curr_page;
 
+#if 0
       pl011_puts("LOAD Segment: vaddr="); print_hex(vaddr);
       pl011_puts(" offset="); print_hex(offset);
       pl011_puts(" filesz="); print_hex(filesz);
       pl011_puts("\n");
+#endif
 
       if (krn_seek(regs, fd, offset) < 0) {
          pl011_puts("krn_execve: seek to segment offset failed\n");
@@ -1423,6 +1460,7 @@ int krn_execve(ARM64Registers* regs, const char* user_pathname, char* const user
   ustack[aux_idx++] = 0x123456789ABCDEF0;
   ustack[aux_idx++] = 0x0FEDCBA987654321;
 
+#if 0
   pl011_puts("krn_execve debug:\n");
   pl011_puts("  argc="); print_hex(argc); pl011_puts("\n");
   pl011_puts("  string_offset="); print_hex(string_offset); pl011_puts("\n");
@@ -1434,6 +1472,7 @@ int krn_execve(ARM64Registers* regs, const char* user_pathname, char* const user
     print_hex(user_sp + i*8); pl011_puts(") = ");
     print_hex(ustack[i]); pl011_puts("\n");
   }
+#endif
 
   pmm_free_page(temp_page);
 
@@ -1457,6 +1496,34 @@ int krn_execve(ARM64Registers* regs, const char* user_pathname, char* const user
   regs->sp = user_sp;
 
   return 0;
+}
+
+int krn_wait4(ARM64Registers* regs, int pid, int* user_stat_addr, int options, void* user_rusage) {
+  int found_child = 0;
+  int i;
+  for (i = 1; i < MAX_THREADS; i++) {
+    if (threads[i].state != THREAD_STATE_FREE && threads[i].parent_tid == current_thread->tid) {
+      if (pid == -1 || (pid > 0 && threads[i].tid == pid)) {
+        found_child = 1;
+        break;
+      }
+    }
+  }
+
+  if (!found_child) {
+    return -10; // -ECHILD
+  }
+
+  IntDisable();
+  current_thread->state = THREAD_STATE_BLOCKED;
+  if (pid == -1) {
+    current_thread->ipc_partner = ANY_THREAD;
+  } else {
+    current_thread->ipc_partner = pid;
+  }
+  schedule();
+
+  return regs->x[0];
 }
 
 void syscall_handler(ARM64Registers* regs) {
@@ -1569,14 +1636,18 @@ void syscall_handler(ARM64Registers* regs) {
   } else if (syscall_num == 66) { // sys_writev
     regs->x[0] = krn_writev(regs, arg0, (const struct iovec*)arg1, arg2);
   } else if (syscall_num == 93 || syscall_num == 94) { // sys_exit / sys_exit_group
+#if 0
     pl011_puts("Linux process exited.\n");
+#endif
     thread_exit();
   } else if (syscall_num == 29) { // sys_ioctl
     // arg0 = fd, arg1 = cmd, arg2 = arg
+#if 0
     pl011_puts("sys_ioctl fd="); print_hex(arg0);
     pl011_puts(" cmd="); print_hex(arg1);
     pl011_puts(" arg="); print_hex(arg2);
     pl011_puts("\n");
+#endif
     if (arg1 == 0x5401) { // TCGETS
       if (copy_to_user(arg2, &g_console_termios, sizeof(g_console_termios)) < 0) {
         regs->x[0] = -14; // -EFAULT
@@ -1600,7 +1671,9 @@ void syscall_handler(ARM64Registers* regs) {
       regs->x[0] = -25; // -ENOTTY
     }
   } else if (syscall_num == 214) { // sys_brk
+#if 0
     pl011_puts("sys_brk arg0="); print_hex(arg0);
+#endif
     if (arg0 == 0) {
       regs->x[0] = current_thread->brk;
     } else {
@@ -1628,7 +1701,9 @@ void syscall_handler(ARM64Registers* regs) {
       regs->x[0] = arg0;
     }
 brk_done:
+#if 0
     pl011_puts(" return="); print_hex(regs->x[0]); pl011_puts("\n");
+#endif
   } else if (syscall_num == 56) { // sys_openat
     regs->x[0] = krn_openat(regs, arg0, (const char*)arg1, arg2);
   } else if (syscall_num == 57) { // sys_close
@@ -1670,12 +1745,14 @@ brk_done:
     pl011_puts("sys_munmap arg0="); print_hex(arg0); pl011_puts("\n");
     regs->x[0] = 0; // Success
   } else if (syscall_num == 220) { // sys_clone
+#if 0
     pl011_puts("sys_clone flags="); print_hex(arg0);
     pl011_puts(" newsp="); print_hex(arg1);
     pl011_puts(" parent_tidptr="); print_hex(arg2);
     pl011_puts(" tls="); print_hex(arg3);
     pl011_puts(" child_tidptr="); print_hex(arg4);
     pl011_puts("\n");
+#endif
     extern int thread_fork(ARM64Registers* regs, uint64_t flags, uint64_t newsp);
     regs->x[0] = thread_fork(regs, arg0, arg1);
   } else if (syscall_num == 221) { // sys_execve
@@ -1683,7 +1760,8 @@ brk_done:
     regs->x[0] = krn_execve(regs, (const char*)arg0, (char* const*)arg1, (char* const*)arg2);
   } else if (syscall_num == 226) { // sys_mprotect
     regs->x[0] = 0;
-
+  } else if (syscall_num == 260) { // sys_wait4
+    regs->x[0] = krn_wait4(regs, arg0, (int*)arg1, arg2, (void*)arg3);
   } else {
     pl011_puts("Unknown syscall: ");
     print_hex(syscall_num);

@@ -85,16 +85,37 @@ int thread_create(void (*entry)(void)) {
 
 void thread_exit(void) {
   IntDisable();
+#if 0
   pl011_puts("thread_exit: tid="); print_hex(current_thread->tid);
   pl011_puts(" clear_child_tid="); print_hex(current_thread->clear_child_tid);
   pl011_puts(" pgdir="); print_hex(current_thread->pg_dir_phys);
   pl011_puts("\n");
+#endif
 
   if (current_thread->clear_child_tid) {
     uint64_t pa = translate_user_va(current_thread, current_thread->clear_child_tid);
+#if 0
     pl011_puts("  clear_child_tid pa="); print_hex(pa); pl011_puts("\n");
+#endif
     if (pa != 0) {
       *(int*)pa = 0;
+    }
+  }
+
+  uint32_t parent_tid = current_thread->parent_tid;
+  if (parent_tid > 0 && parent_tid < MAX_THREADS) {
+    Thread* parent = &threads[parent_tid];
+    if (parent->state == THREAD_STATE_BLOCKED &&
+        (parent->ipc_partner == current_thread->tid || parent->ipc_partner == ANY_THREAD)) {
+      uint64_t stat_addr_user = parent->regs->x[1];
+      if (stat_addr_user != 0) {
+        uint64_t stat_addr_phys = translate_user_va(parent, stat_addr_user);
+        if (stat_addr_phys != 0) {
+          *(int*)stat_addr_phys = 0; // Exit status 0
+        }
+      }
+      parent->state = THREAD_STATE_READY;
+      parent->regs->x[0] = current_thread->tid;
     }
   }
 
@@ -104,9 +125,11 @@ void thread_exit(void) {
   }
 
   current_thread->state = THREAD_STATE_FREE;
+#if 0
   pl011_puts("Thread ");
   print_hex(current_thread->tid);
   pl011_puts(" exited.\n");
+#endif
   schedule();
   while (1);
 }
@@ -809,6 +832,7 @@ int thread_fork(ARM64Registers* regs, uint64_t flags, uint64_t newsp) {
       child->stack_base = child_stack_base;
       child->stack_size = child_stack_size;
       child->clear_child_tid = 0; // Reset for child
+      child->parent_tid = parent->tid;
       child->ipc_partner = 0;
       child->ipc_buf = NULL;
       child->ipc_size = 0;
@@ -870,11 +894,13 @@ int thread_fork(ARM64Registers* regs, uint64_t flags, uint64_t newsp) {
 
       child->state = THREAD_STATE_READY;
 
+#if 0
       pl011_puts("Forked thread tid=");
       print_hex(child->tid);
       pl011_puts(" parent=");
       print_hex(parent->tid);
       pl011_puts("\n");
+#endif
 
       IntEnable();
       return child->tid; // Parent returns child's TID
