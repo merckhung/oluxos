@@ -204,9 +204,11 @@ void krn_uart_intr_handler(ARM64Registers* regs) {
     for (i = 1; i < MAX_THREADS; i++) {
       if (threads[i].state == THREAD_STATE_BLOCKED &&
           threads[i].ipc_partner == UART_HARDWARE) {
+#if 0
         pl011_puts("krn_uart_intr_handler: waking up thread tid=");
         print_hex(threads[i].tid);
         pl011_puts("\n");
+#endif
         threads[i].state = THREAD_STATE_READY;
         break; // Wake up one
       }
@@ -223,7 +225,9 @@ void irq_handler_el1(ARM64Registers* regs) {
     arm_timer_reset(100);
     gicv2_end_of_irq(irq);
   } else if (irq == UART_IRQ) {
+#if 0
     pl011_puts("irq_handler_el1: UART_IRQ received!\n");
+#endif
 #if CONFIG_KDBGER
     kdbger_intr_handler();
 #else
@@ -489,14 +493,18 @@ int krn_read(ARM64Registers* regs, int fd, void* user_buf, size_t count) {
     n = ret;
   }
 
+#if 0
   pl011_puts("krn_read fd="); print_hex(fd);
   pl011_puts(" handle="); print_hex(current_thread->fds[fd].handle);
   pl011_puts(" offset="); print_hex(current_thread->fds[fd].offset);
   pl011_puts(" count="); print_hex(count);
+#endif
 
   if (n >= 4) {
     int bytes_read = reply.size;
+#if 0
     pl011_puts(" ret="); print_hex(bytes_read); pl011_puts("\n");
+#endif
     if (bytes_read >= 0) {
       if (copy_to_user((uint64_t)user_buf, reply.data, bytes_read) < 0) {
         return -14; // -EFAULT
@@ -507,7 +515,9 @@ int krn_read(ARM64Registers* regs, int fd, void* user_buf, size_t count) {
       return bytes_read; // Error from server
     }
   }
+#if 0
   pl011_puts(" ret_err="); print_hex(n); pl011_puts("\n");
+#endif
   return -5; // -EIO
 }
 
@@ -574,6 +584,7 @@ struct linux_dirent64 {
 };
 
 int krn_getdents64(ARM64Registers* regs, int fd, void* user_dirp, size_t count) {
+#if 0
   pl011_puts("krn_getdents64: fd=");
   print_hex(fd);
   pl011_puts(" user_dirp=");
@@ -581,6 +592,7 @@ int krn_getdents64(ARM64Registers* regs, int fd, void* user_dirp, size_t count) 
   pl011_puts(" count=");
   print_hex(count);
   pl011_puts("\n");
+#endif
 
   if (fd < 0 || fd >= MAX_KERNEL_FDS) {
     pl011_puts("krn_getdents64: EBADF (fd out of range)\n");
@@ -696,9 +708,11 @@ int krn_getdents64(ARM64Registers* regs, int fd, void* user_dirp, size_t count) 
     offset = end + 1;
   }
 
+#if 0
   pl011_puts("krn_getdents64: success return written=");
   print_hex(written);
   pl011_puts("\n");
+#endif
   return written;
 }
 
@@ -709,6 +723,7 @@ int krn_newfstatat(ARM64Registers* regs, int dfd, const char* user_filename, voi
     return -2; // -ENOENT
   }
 
+#if 0
   pl011_puts("krn_newfstatat: filename=\"");
   pl011_puts(filename);
   pl011_puts("\" user_statbuf=");
@@ -716,6 +731,7 @@ int krn_newfstatat(ARM64Registers* regs, int dfd, const char* user_filename, voi
   pl011_puts("\" dfd=");
   print_hex(dfd);
   pl011_puts("\n");
+#endif
 
   struct stat {
     uint64_t st_dev;
@@ -823,16 +839,20 @@ int krn_newfstatat(ARM64Registers* regs, int dfd, const char* user_filename, voi
     return -14; // -EFAULT
   }
 
+#if 0
   pl011_puts("krn_newfstatat: success size=");
   print_hex(st.st_size);
   pl011_puts("\n");
+#endif
   return 0;
 }
 
 int krn_fstat(ARM64Registers* regs, int fd, void* user_statbuf) {
+#if 0
   pl011_puts("krn_fstat: entry fd=");
   print_hex(fd);
   pl011_puts("\n");
+#endif
   if (fd < 0 || fd >= MAX_KERNEL_FDS) {
     pl011_puts("krn_fstat: EBADF (fd out of range)\n");
     return -9; // -EBADF
@@ -880,11 +900,13 @@ int krn_fstat(ARM64Registers* regs, int fd, void* user_statbuf) {
     return -9; // -EBADF
   }
 
+#if 0
   pl011_puts("krn_fstat: fd=");
   print_hex(fd);
   pl011_puts(" user_statbuf=");
   print_hex((uint64_t)user_statbuf);
   pl011_puts("\n");
+#endif
 
   if (current_thread->fds[fd].handle == 999) {
     st.st_mode = 0x41ed; // Directory, 0755
