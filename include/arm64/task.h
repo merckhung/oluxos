@@ -37,6 +37,16 @@ typedef struct {
 
 #define MAX_KERNEL_FDS 16
 
+struct termios {
+  uint32_t c_iflag;
+  uint32_t c_oflag;
+  uint32_t c_cflag;
+  uint32_t c_lflag;
+  uint8_t c_line;
+  uint8_t c_cc[19];
+};
+extern struct termios g_console_termios;
+
 typedef struct _Thread {
   CpuContext context;
   ThreadState state;
@@ -55,7 +65,21 @@ typedef struct _Thread {
   // POSIX FDs
   KernelFdEntry fds[MAX_KERNEL_FDS];
   char cwd[128];
+  uint64_t clear_child_tid;
 } Thread;
+
+#define CLONE_VM             0x00000100
+#define CLONE_FS             0x00000200
+#define CLONE_FILES          0x00000400
+#define CLONE_SIGHAND        0x00000800
+#define CLONE_VFORK          0x00004000
+#define CLONE_PARENT         0x00008000
+#define CLONE_THREAD         0x00010000
+#define CLONE_SETTLS         0x00080000
+#define CLONE_PARENT_SETTID  0x00100000
+#define CLONE_CHILD_CLEARTID 0x00200000
+#define CLONE_CHILD_SETTID   0x01000000
+
 
 #define MAX_THREADS 8
 #define STACK_SIZE 4096
@@ -75,6 +99,9 @@ int thread_ipc_recv(uint32_t src, void* buf, uint32_t size);
 int thread_block_on_uart(void* buf, uint32_t len);
 void* thread_map_mmio(uint64_t phys_addr);
 void* thread_map_fb(void);
+int thread_fork(ARM64Registers* regs, uint64_t flags, uint64_t newsp);
 extern Thread* current_thread;
+extern Thread threads[MAX_THREADS];
+uint64_t translate_user_va(Thread* t, uint64_t va);
 
 #endif  // __ARM64_TASK_H__

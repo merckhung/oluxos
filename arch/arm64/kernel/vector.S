@@ -245,6 +245,8 @@ ExceptionStub .Lserror_el0_32, "SError EL0 32"
     mov     x0, sp // Pass registers pointer
     bl      syscall_handler
 
+.global fork_child_restore
+fork_child_restore:
     // Disable interrupts before restoring ELR_EL1 and SPSR_EL1
     msr     daifset, #15
 

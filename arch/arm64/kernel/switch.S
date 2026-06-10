@@ -34,8 +34,15 @@ thread_entry_wrapper:
 
 .global userspace_entry_wrapper
 userspace_entry_wrapper:
+    // Debug print
+    str     x30, [sp, #-16]!
+    adr     x0, .Lentering_user
+    bl      pl011_puts
+    ldr     x30, [sp], #16
+
     // Setup SP_EL0 (User Stack)
     msr     sp_el0, x20
+
     
     // Setup ELR_EL1 (User Entry Point)
     msr     elr_el1, x19
@@ -78,3 +85,9 @@ userspace_entry_wrapper:
     mov     x30, xzr
     
     eret
+
+.section ".rodata"
+.align 3
+.Lentering_user:
+    .asciz "KRN: Entering userspace...\n"
+

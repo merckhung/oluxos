@@ -411,7 +411,7 @@ genrule(
     ] + glob(["include/**/*.h"]),
     outs = ["arm64_kernel.elf"],
     cmd = """
-        aarch64-linux-gnu-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
+        aarch64-linux-gnu-gcc -Wall -g -O2 -nostdlib -nostartfiles -ffreestanding \
             -std=gnu89 -DCONFIG_ARCH_ARM64=1 -mno-outline-atomics \
             -mgeneral-regs-only \
             -DCONFIG_KDBGER=0 \

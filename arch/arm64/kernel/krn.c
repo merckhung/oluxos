@@ -9,6 +9,7 @@
 #include <kernel/heap.h>
 #include <kernel/vmm.h>
 #include <clib.h>
+#include <elf.h>
 
 extern char _stack_top[];
 
@@ -58,8 +59,11 @@ int copy_string_from_user(char* dest, uint64_t user_src, int max_len) {
     uint64_t phys = translate_user_va(current_thread, user_src + len);
     if (!phys) return -1;
     char c = *(char*)phys;
-    dest[len++] = c;
-    if (c == '\0') break;
+    dest[len] = c;
+    if (c == '\0') {
+      return len;
+    }
+    len++;
   }
   dest[len] = '\0';
   return len;
@@ -111,10 +115,11 @@ void exception_handler_dump(uint64_t lr, const char* msg) {
   print_hex(lr);
   pl011_puts("\n");
 
-  uint64_t esr, far, elr;
+  uint64_t esr, far, elr, spsr;
   __asm__ volatile("mrs %0, esr_el1" : "=r"(esr));
   __asm__ volatile("mrs %0, far_el1" : "=r"(far));
   __asm__ volatile("mrs %0, elr_el1" : "=r"(elr));
+  __asm__ volatile("mrs %0, spsr_el1" : "=r"(spsr));
 
   pl011_puts("ELR_EL1: ");
   print_hex(elr);
@@ -122,9 +127,93 @@ void exception_handler_dump(uint64_t lr, const char* msg) {
   print_hex(esr);
   pl011_puts("\nFAR_EL1: ");
   print_hex(far);
+  pl011_puts("\nSPSR_EL1: ");
+  print_hex(spsr);
   pl011_puts("\n");
 
   while (1);
+}
+
+#if CONFIG_BOARD_RPI4
+#define PL011_UART_BASE 0xFE201000ULL
+#else
+#define PL011_UART_BASE 0x09000000ULL
+#endif
+
+#define UART_IMSC ((volatile uint32_t*)(PL011_UART_BASE + 0x38))
+#define UART_ICR  ((volatile uint32_t*)(PL011_UART_BASE + 0x44))
+#define RXIM (1 << 4)
+#define RXIC (1 << 4)
+#define RTIM (1 << 6)
+#define RTIC (1 << 6)
+#define RX_BUF_SIZE 256
+static char rx_buf[RX_BUF_SIZE];
+static volatile int rx_head = 0;
+static volatile int rx_tail = 0;
+
+struct termios g_console_termios = {
+  .c_iflag = 0x500, // ICRNL | IXON
+  .c_oflag = 0x5,   // OPOST | ONLCR
+  .c_cflag = 0xbf,
+  .c_lflag = 0x8a3b, // ISIG | ICANON | ECHO | ...
+  .c_line = 0,
+};
+
+static void rx_buf_push(char c) {
+  int next = (rx_head + 1) % RX_BUF_SIZE;
+  if (next != rx_tail) {
+    rx_buf[rx_head] = c;
+    rx_head = next;
+  }
+}
+
+int rx_buf_pop(char* c) {
+  if (rx_head == rx_tail) {
+    return 0;
+  }
+  *c = rx_buf[rx_tail];
+  rx_tail = (rx_tail + 1) % RX_BUF_SIZE;
+  return 1;
+}
+
+int rx_buf_hasc(void) {
+  return rx_head != rx_tail;
+}
+
+void krn_uart_init(void) {
+  // Enable RX and RT interrupt in UART
+  *UART_IMSC |= (RXIM | RTIM);
+}
+
+void krn_uart_intr_handler(ARM64Registers* regs) {
+  // Clear interrupt
+  *UART_ICR = (RXIC | RTIC);
+
+  extern int pl011_hasc(void);
+  extern char pl011_getc(void);
+
+  int work_done = 0;
+  while (pl011_hasc()) {
+    char c = pl011_getc();
+    rx_buf_push(c);
+    work_done = 1;
+  }
+
+  if (work_done) {
+    int i;
+    for (i = 1; i < MAX_THREADS; i++) {
+      if (threads[i].state == THREAD_STATE_BLOCKED &&
+          threads[i].ipc_partner == UART_HARDWARE) {
+        pl011_puts("krn_uart_intr_handler: waking up thread tid=");
+        print_hex(threads[i].tid);
+        pl011_puts("\n");
+        threads[i].state = THREAD_STATE_READY;
+        break; // Wake up one
+      }
+    }
+  } else {
+    pl011_puts("krn_uart_intr_handler: pl011_hasc is false!\n");
+  }
 }
 
 void irq_handler_el1(ARM64Registers* regs) {
@@ -134,7 +223,12 @@ void irq_handler_el1(ARM64Registers* regs) {
     arm_timer_reset(100);
     gicv2_end_of_irq(irq);
   } else if (irq == UART_IRQ) {
+    pl011_puts("irq_handler_el1: UART_IRQ received!\n");
+#if CONFIG_KDBGER
     kdbger_intr_handler();
+#else
+    krn_uart_intr_handler(regs);
+#endif
     gicv2_end_of_irq(irq);
   } else {
     pl011_puts("Unexpected EL1 IRQ: ");
@@ -153,7 +247,11 @@ void irq_handler_el0(ARM64Registers* regs) {
     gicv2_end_of_irq(irq);  // EOI before schedule
     schedule();
   } else if (irq == UART_IRQ) {
+#if CONFIG_KDBGER
     kdbger_intr_handler();
+#else
+    krn_uart_intr_handler(regs);
+#endif
     gicv2_end_of_irq(irq);
   } else {
     pl011_puts("Unexpected EL0 IRQ: ");
@@ -337,25 +435,25 @@ int krn_read(ARM64Registers* regs, int fd, void* user_buf, size_t count) {
     char* buf = (char*)user_buf;
     uint64_t len = count;
     if (len > 0) {
-      extern int pl011_hasc(void);
-      if (pl011_hasc()) {
+      if (rx_buf_hasc()) {
         uint64_t count_read = 0;
-        char c = pl011_getc();
-        if (copy_to_user((uint64_t)buf + count_read, &c, 1) < 0) return -14; // -EFAULT
-        count_read++;
-        while (count_read < len && pl011_hasc()) {
-          c = pl011_getc();
+        char c;
+        while (count_read < len && rx_buf_pop(&c)) {
+          if ((g_console_termios.c_iflag & 0x100) && c == '\r') { // ICRNL
+            c = '\n';
+          }
           if (copy_to_user((uint64_t)buf + count_read, &c, 1) < 0) return -14; // -EFAULT
+          // Echo
+          if (g_console_termios.c_lflag & 0x008) { // ECHO
+            if (c == '\n') pl011_putc('\r');
+            pl011_putc(c);
+          }
           count_read++;
         }
         return count_read;
       } else {
         extern int thread_block_on_uart(void* buf, uint32_t len);
-        int ret = thread_block_on_uart(buf, len);
-        if (ret != IPC_BLOCKED) {
-          return ret;
-        }
-        return IPC_BLOCKED;
+        return thread_block_on_uart(buf, len);
       }
     } else {
       return 0;
@@ -391,8 +489,14 @@ int krn_read(ARM64Registers* regs, int fd, void* user_buf, size_t count) {
     n = ret;
   }
 
+  pl011_puts("krn_read fd="); print_hex(fd);
+  pl011_puts(" handle="); print_hex(current_thread->fds[fd].handle);
+  pl011_puts(" offset="); print_hex(current_thread->fds[fd].offset);
+  pl011_puts(" count="); print_hex(count);
+
   if (n >= 4) {
     int bytes_read = reply.size;
+    pl011_puts(" ret="); print_hex(bytes_read); pl011_puts("\n");
     if (bytes_read >= 0) {
       if (copy_to_user((uint64_t)user_buf, reply.data, bytes_read) < 0) {
         return -14; // -EFAULT
@@ -403,6 +507,7 @@ int krn_read(ARM64Registers* regs, int fd, void* user_buf, size_t count) {
       return bytes_read; // Error from server
     }
   }
+  pl011_puts(" ret_err="); print_hex(n); pl011_puts("\n");
   return -5; // -EIO
 }
 
@@ -725,20 +830,13 @@ int krn_newfstatat(ARM64Registers* regs, int dfd, const char* user_filename, voi
 }
 
 int krn_fstat(ARM64Registers* regs, int fd, void* user_statbuf) {
+  pl011_puts("krn_fstat: entry fd=");
+  print_hex(fd);
+  pl011_puts("\n");
   if (fd < 0 || fd >= MAX_KERNEL_FDS) {
     pl011_puts("krn_fstat: EBADF (fd out of range)\n");
     return -9; // -EBADF
   }
-  if (!current_thread->fds[fd].used) {
-    pl011_puts("krn_fstat: EBADF (fd not used)\n");
-    return -9; // -EBADF
-  }
-
-  pl011_puts("krn_fstat: fd=");
-  print_hex(fd);
-  pl011_puts(" user_statbuf=");
-  print_hex((uint64_t)user_statbuf);
-  pl011_puts("\n");
 
   struct stat {
     uint64_t st_dev;
@@ -764,6 +862,29 @@ int krn_fstat(ARM64Registers* regs, int fd, void* user_statbuf) {
   } st;
 
   CbMemSet(&st, 0, sizeof(st));
+
+  if (fd == 0 || fd == 1 || fd == 2) {
+    st.st_mode = 0x2190; // S_IFCHR | 0620
+    st.st_rdev = 1;
+    st.st_nlink = 1;
+    st.st_blksize = 1024;
+    if (copy_to_user((uint64_t)user_statbuf, &st, sizeof(st)) < 0) {
+      pl011_puts("krn_fstat: copy_to_user failed\n");
+      return -14; // -EFAULT
+    }
+    return 0;
+  }
+
+  if (!current_thread->fds[fd].used) {
+    pl011_puts("krn_fstat: EBADF (fd not used)\n");
+    return -9; // -EBADF
+  }
+
+  pl011_puts("krn_fstat: fd=");
+  print_hex(fd);
+  pl011_puts(" user_statbuf=");
+  print_hex((uint64_t)user_statbuf);
+  pl011_puts("\n");
 
   if (current_thread->fds[fd].handle == 999) {
     st.st_mode = 0x41ed; // Directory, 0755
@@ -882,6 +1003,440 @@ int krn_chdir(ARM64Registers* regs, const char* path) {
   return 0;
 }
 
+#define USER_STACK_SIZE 65536
+
+static int krn_seek(ARM64Registers* regs, int fd, uint64_t target_offset) {
+  uint64_t curr_offset = current_thread->fds[fd].offset;
+  pl011_puts("krn_seek: target="); print_hex(target_offset);
+  pl011_puts(" curr="); print_hex(curr_offset);
+  pl011_puts("\n");
+  if (target_offset < curr_offset) {
+     pl011_puts("krn_seek: backward seek detected, reopening...\n");
+     // 1. Close file at FS server
+     struct FsCloseReq close_req;
+     close_req.sender = current_thread->tid;
+     close_req.cmd = 4;
+     close_req.handle = current_thread->fds[fd].handle;
+     struct FsReply reply;
+     int ret = thread_ipc_send(FS_SERVER_TID, &close_req, sizeof(close_req));
+     if (ret < 0 && ret != IPC_BLOCKED) {
+        pl011_puts("krn_seek: close send failed, ret="); print_hex(ret); pl011_puts("\n");
+        return -1;
+     }
+     ret = thread_ipc_recv(FS_SERVER_TID, &reply, sizeof(reply));
+     int n;
+     if (ret == IPC_BLOCKED) {
+        pl011_puts("krn_seek: close regs="); print_hex((uint64_t)regs);
+        pl011_puts(" curr_regs="); print_hex((uint64_t)current_thread->regs);
+        pl011_puts("\n");
+        n = regs->x[0];
+        pl011_puts("krn_seek: close recv blocked, woke up, regs->x[0]="); print_hex(n); pl011_puts("\n");
+     } else {
+        n = ret;
+        pl011_puts("krn_seek: close recv immediate, ret="); print_hex(n); pl011_puts("\n");
+     }
+     if (n < 4) {
+        pl011_puts("krn_seek: close recv failed or error, n="); print_hex(n); pl011_puts("\n");
+        return -1;
+     }
+     
+     // 2. Open file again at FS server
+     struct FsOpenReq open_req;
+     open_req.sender = current_thread->tid;
+     open_req.cmd = 2;
+     int p_len = 0;
+     while (current_thread->fds[fd].path[p_len] && p_len < 63) {
+        open_req.filename[p_len] = current_thread->fds[fd].path[p_len];
+        p_len++;
+     }
+     open_req.filename[p_len] = '\0';
+     
+     pl011_puts("krn_seek: reopening file: "); pl011_puts(open_req.filename); pl011_puts("\n");
+     
+     ret = thread_ipc_send(FS_SERVER_TID, &open_req, sizeof(open_req));
+     if (ret < 0 && ret != IPC_BLOCKED) {
+        pl011_puts("krn_seek: open send failed, ret="); print_hex(ret); pl011_puts("\n");
+        return -1;
+     }
+     ret = thread_ipc_recv(FS_SERVER_TID, &reply, sizeof(reply));
+      if (ret == IPC_BLOCKED) {
+        pl011_puts("krn_seek: open regs="); print_hex((uint64_t)regs);
+        pl011_puts(" curr_regs="); print_hex((uint64_t)current_thread->regs);
+        pl011_puts("\n");
+        n = regs->x[0];
+        pl011_puts("krn_seek: open recv blocked, woke up, regs->x[0]="); print_hex(n); pl011_puts("\n");
+      } else {
+        n = ret;
+        pl011_puts("krn_seek: open recv immediate, ret="); print_hex(n); pl011_puts("\n");
+      }
+     if (n < 4) {
+        pl011_puts("krn_seek: open recv failed or error, n="); print_hex(n); pl011_puts("\n");
+        return -1;
+     }
+     
+     int new_handle = reply.size;
+     pl011_puts("krn_seek: reopened handle="); print_hex(new_handle); pl011_puts("\n");
+     if (new_handle < 0) {
+        pl011_puts("krn_seek: reopen failed\n");
+        return -1;
+     }
+     
+     current_thread->fds[fd].handle = new_handle;
+     current_thread->fds[fd].offset = 0;
+     curr_offset = 0;
+  }
+  
+  uint64_t diff = target_offset - curr_offset;
+  if (diff > 0) {
+     pl011_puts("krn_seek: seeking forward by "); print_hex(diff); pl011_puts(" bytes\n");
+  }
+  char dummy[512];
+  while (diff > 0) {
+     uint64_t chunk = diff > 512 ? 512 : diff;
+     int ret = krn_read(regs, fd, dummy, chunk);
+     if (ret <= 0) {
+        pl011_puts("krn_seek: read failed during seek forward\n");
+        return -1;
+     }
+     diff -= ret;
+  }
+  pl011_puts("krn_seek: success\n");
+  return 0;
+}
+
+int krn_execve(ARM64Registers* regs, const char* user_pathname, char* const user_argv[], char* const user_envp[]) {
+  char pathname[128];
+  if (copy_string_from_user(pathname, (uint64_t)user_pathname, sizeof(pathname)) < 0) {
+    return -14; // -EFAULT
+  }
+
+  pl011_puts("krn_execve: pathname=\""); pl011_puts(pathname); pl011_puts("\"\n");
+
+  // Open ELF file
+  int fd = krn_openat(regs, 0, user_pathname, 0);
+  if (fd < 0) {
+    pl011_puts("krn_execve: open failed\n");
+    return fd;
+  }
+
+  // Read ELF header
+  Elf64_Ehdr ehdr;
+  int ret = krn_read(regs, fd, &ehdr, sizeof(Elf64_Ehdr));
+  if (ret != sizeof(Elf64_Ehdr)) {
+    pl011_puts("krn_execve: read elf header failed\n");
+    krn_close(regs, fd);
+    return -14; // -EFAULT
+  }
+
+  if (ehdr.e_ident[0] != 0x7f ||
+      ehdr.e_ident[1] != 'E' ||
+      ehdr.e_ident[2] != 'L' ||
+      ehdr.e_ident[3] != 'F') {
+    pl011_puts("krn_execve: invalid elf magic\n");
+    krn_close(regs, fd);
+    return -8; // -ENOEXEC
+  }
+
+  // Count argv and copy them to temp page
+  char* temp_page = pmm_alloc_page();
+  if (!temp_page) {
+    krn_close(regs, fd);
+    return -12; // -ENOMEM
+  }
+
+  uint64_t* argv_ptrs = (uint64_t*)temp_page;
+  char* string_storage = temp_page + 256;
+  int string_offset = 0;
+  int argc = 0;
+
+  if (user_argv) {
+    while (argc < 31) {
+      uint64_t user_arg_ptr;
+      if (copy_from_user(&user_arg_ptr, (uint64_t)user_argv + argc * 8, 8) < 0) {
+        pmm_free_page(temp_page);
+        krn_close(regs, fd);
+        return -14; // -EFAULT
+      }
+      if (user_arg_ptr == 0) break;
+
+      int max_len = 4096 - 256 - string_offset;
+      if (max_len <= 0) {
+         pmm_free_page(temp_page);
+         krn_close(regs, fd);
+         return -7; // -E2BIG
+      }
+
+      int len = copy_string_from_user(string_storage + string_offset, user_arg_ptr, max_len);
+      if (len < 0) {
+        pmm_free_page(temp_page);
+        krn_close(regs, fd);
+        return -14; // -EFAULT
+      }
+
+      argv_ptrs[argc] = (uint64_t)(string_storage + string_offset);
+      string_offset += len + 1;
+      argc++;
+    }
+    argv_ptrs[argc] = 0;
+  }
+
+  // Seek to program headers
+  if (krn_seek(regs, fd, ehdr.e_phoff) < 0) {
+     pl011_puts("krn_execve: seek to phoff failed\n");
+     pmm_free_page(temp_page);
+     krn_close(regs, fd);
+     return -8; // -ENOEXEC
+  }
+
+  // Read program headers
+  Elf64_Phdr* phdrs = (Elf64_Phdr*)pmm_alloc_page();
+  if (!phdrs) {
+     pmm_free_page(temp_page);
+     krn_close(regs, fd);
+     return -12; // -ENOMEM
+  }
+
+  uint32_t phdrs_size = ehdr.e_phnum * sizeof(Elf64_Phdr);
+  if (phdrs_size > 4096) {
+     pl011_puts("krn_execve: phdrs too large\n");
+     pmm_free_page(phdrs);
+     pmm_free_page(temp_page);
+     krn_close(regs, fd);
+     return -8; // -ENOEXEC
+  }
+
+  ret = krn_read(regs, fd, phdrs, phdrs_size);
+  if (ret != phdrs_size) {
+     pl011_puts("krn_execve: read phdrs failed\n");
+     pmm_free_page(phdrs);
+     pmm_free_page(temp_page);
+     krn_close(regs, fd);
+     return -14; // -EFAULT
+  }
+
+  uint64_t load_addr = 0;
+  int k;
+  for (k = 0; k < ehdr.e_phnum; k++) {
+    if (phdrs[k].p_type == PT_LOAD) {
+      load_addr = phdrs[k].p_vaddr - phdrs[k].p_offset;
+      break;
+    }
+  }
+  uint64_t phdr_addr = load_addr + ehdr.e_phoff;
+  uint64_t phent = ehdr.e_phentsize;
+  uint64_t phnum = ehdr.e_phnum;
+
+  // Create new address space
+  uint64_t new_aspace = vmm_create_aspace();
+  if (new_aspace == 0) {
+     pmm_free_page(phdrs);
+     pmm_free_page(temp_page);
+     krn_close(regs, fd);
+     return -12; // -ENOMEM
+  }
+
+  // Load segments
+  int i;
+  for (i = 0; i < ehdr.e_phnum; i++) {
+    if (phdrs[i].p_type == PT_LOAD) {
+      uint64_t vaddr = phdrs[i].p_vaddr;
+      uint64_t memsz = phdrs[i].p_memsz;
+      uint64_t filesz = phdrs[i].p_filesz;
+      uint64_t offset = phdrs[i].p_offset;
+
+      uint64_t seg_flags = VMM_FLAG_USER;
+      if (phdrs[i].p_flags & PF_R) seg_flags |= VMM_FLAG_READ;
+      if (phdrs[i].p_flags & PF_W) seg_flags |= VMM_FLAG_WRITE;
+      if (phdrs[i].p_flags & PF_X) seg_flags |= VMM_FLAG_EXEC;
+
+      uint64_t start_page = vaddr & ~0xFFF;
+      uint64_t end_page = (vaddr + memsz + 0xFFF) & ~0xFFF;
+      uint64_t curr_page;
+
+      pl011_puts("LOAD Segment: vaddr="); print_hex(vaddr);
+      pl011_puts(" offset="); print_hex(offset);
+      pl011_puts(" filesz="); print_hex(filesz);
+      pl011_puts("\n");
+
+      if (krn_seek(regs, fd, offset) < 0) {
+         pl011_puts("krn_execve: seek to segment offset failed\n");
+         // TODO: clean up new_aspace
+         pmm_free_page(phdrs);
+         pmm_free_page(temp_page);
+         krn_close(regs, fd);
+         return -8;
+      }
+
+      uint64_t file_bytes_read = 0;
+
+      for (curr_page = start_page; curr_page < end_page; curr_page += 4096) {
+          void* code_page = pmm_alloc_page();
+          if (!code_page) {
+              // TODO: clean up
+              pmm_free_page(phdrs);
+              pmm_free_page(temp_page);
+              krn_close(regs, fd);
+              return -12;
+          }
+          CbMemSet(code_page, 0, 4096);
+          vmm_map(new_aspace, curr_page, (uint64_t)code_page, seg_flags);
+
+          uint64_t page_offset = 0;
+          if (curr_page == start_page) {
+             page_offset = vaddr & 0xFFF;
+          }
+
+          uint64_t avail_in_page = 4096 - page_offset;
+          uint64_t to_read = filesz - file_bytes_read;
+          if (to_read > avail_in_page) {
+             to_read = avail_in_page;
+          }
+
+          if (to_read > 0) {
+             uint64_t bytes_in_page_read = 0;
+             while (bytes_in_page_read < to_read) {
+                uint64_t chunk = to_read - bytes_in_page_read;
+                if (chunk > 512) chunk = 512;
+
+                ret = krn_read(regs, fd, (char*)code_page + page_offset + bytes_in_page_read, chunk);
+                if (ret <= 0) {
+                   pl011_puts("krn_execve: read segment data failed\n");
+                   // TODO: clean up
+                   pmm_free_page(phdrs);
+                   pmm_free_page(temp_page);
+                   krn_close(regs, fd);
+                   return -14;
+                }
+                bytes_in_page_read += ret;
+             }
+             file_bytes_read += to_read;
+          }
+      }
+    }
+  }
+
+  pmm_free_page(phdrs);
+  krn_close(regs, fd);
+
+  // Map userspace Heap (0x509000 to 0x600000)
+  uint64_t heap_start = 0x509000;
+  uint64_t heap_end = 0x600000;
+  uint64_t heap_curr;
+  uint64_t code_flags = VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_USER;
+  for (heap_curr = heap_start; heap_curr < heap_end; heap_curr += 4096) {
+       void* heap_page = pmm_alloc_page();
+       if (!heap_page) {
+         pmm_free_page(temp_page);
+         return -12;
+       }
+       CbMemSet(heap_page, 0, 4096);
+       vmm_map(new_aspace, heap_curr, (uint64_t)heap_page, code_flags);
+  }
+
+  // Map User Stack
+  uint64_t stack_flags = VMM_FLAG_READ | VMM_FLAG_WRITE | VMM_FLAG_USER;
+  int page_idx;
+  void* last_stack_page = NULL;
+  for (page_idx = 0; page_idx < (USER_STACK_SIZE / 4096); page_idx++) {
+      void* stack_page = pmm_alloc_page();
+      if (!stack_page) {
+        pmm_free_page(temp_page);
+        return -12;
+      }
+      CbMemSet(stack_page, 0, 4096);
+      uint64_t va = 0x00800000 - USER_STACK_SIZE + (page_idx * 4096);
+      vmm_map(new_aspace, va, (uint64_t)stack_page, stack_flags);
+      if (page_idx == (USER_STACK_SIZE / 4096) - 1) {
+          last_stack_page = stack_page;
+      }
+  }
+
+  // Setup Stack
+  uint64_t total_space = (17 + argc) * 8 + string_offset;
+  total_space = (total_space + 15) & ~15;
+
+  if (total_space > 4096) {
+     pmm_free_page(temp_page);
+     // TODO: clean up new_aspace
+     return -7; // -E2BIG
+  }
+
+  uint64_t user_sp = 0x00800000 - total_space;
+  uint64_t kernel_sp = (uint64_t)last_stack_page + 4096 - total_space;
+
+  uint64_t* ustack = (uint64_t*)kernel_sp;
+  ustack[0] = argc;
+
+  uint64_t user_string_base = user_sp + (17 + argc) * 8;
+  uint64_t kernel_string_base = kernel_sp + (17 + argc) * 8;
+
+  CbMemCpy((void*)kernel_string_base, temp_page + 256, string_offset);
+
+  int j;
+  uint64_t curr_user_str = user_string_base;
+  uint64_t curr_kernel_str = kernel_string_base;
+  for (j = 0; j < argc; j++) {
+     ustack[1 + j] = curr_user_str;
+     int len = CbStrLen((const int8_t*)curr_kernel_str);
+     curr_user_str += len + 1;
+     curr_kernel_str += len + 1;
+  }
+  ustack[1 + argc] = 0;
+  ustack[2 + argc] = 0;
+
+  int aux_idx = 3 + argc;
+  ustack[aux_idx++] = 3;           // AT_PHDR
+  ustack[aux_idx++] = phdr_addr;
+  ustack[aux_idx++] = 4;           // AT_PHENT
+  ustack[aux_idx++] = phent;
+  ustack[aux_idx++] = 5;           // AT_PHNUM
+  ustack[aux_idx++] = phnum;
+  ustack[aux_idx++] = 25;          // AT_RANDOM
+  ustack[aux_idx++] = user_sp + (15 + argc) * 8; // random_ptr
+  ustack[aux_idx++] = 6;           // AT_PAGESZ
+  ustack[aux_idx++] = 4096;
+  ustack[aux_idx++] = 0;           // AT_NULL
+  ustack[aux_idx++] = 0;
+
+  ustack[aux_idx++] = 0x123456789ABCDEF0;
+  ustack[aux_idx++] = 0x0FEDCBA987654321;
+
+  pl011_puts("krn_execve debug:\n");
+  pl011_puts("  argc="); print_hex(argc); pl011_puts("\n");
+  pl011_puts("  string_offset="); print_hex(string_offset); pl011_puts("\n");
+  pl011_puts("  total_space="); print_hex(total_space); pl011_puts("\n");
+  pl011_puts("  user_sp="); print_hex(user_sp); pl011_puts("\n");
+  pl011_puts("User Stack contents:\n");
+  for (i = 0; i < (int)(total_space / 8); i++) {
+    pl011_puts("  sp["); print_hex(i); pl011_puts("] (");
+    print_hex(user_sp + i*8); pl011_puts(") = ");
+    print_hex(ustack[i]); pl011_puts("\n");
+  }
+
+  pmm_free_page(temp_page);
+
+  // Switch address space
+  uint64_t old_aspace = current_thread->pg_dir_phys;
+  current_thread->pg_dir_phys = new_aspace;
+
+  __asm__ volatile(
+      "msr ttbr0_el1, %0\n"
+      "tlbi vmalle1is\n"
+      "dsb sy\n"
+      "isb\n" ::"r"(new_aspace)
+      : "memory");
+
+  vmm_free_aspace(old_aspace);
+
+  current_thread->brk = heap_start;
+
+  // Setup registers for return
+  regs->pc = ehdr.e_entry;
+  regs->sp = user_sp;
+
+  return 0;
+}
+
 void syscall_handler(ARM64Registers* regs) {
   uint64_t esr;
   __asm__ volatile("mrs %0, esr_el1" : "=r"(esr));
@@ -988,21 +1543,39 @@ void syscall_handler(ARM64Registers* regs) {
   } else if (syscall_num == 64) { // sys_write
     regs->x[0] = krn_write(regs, arg0, (const void*)arg1, arg2);
   } else if (syscall_num == 63) { // sys_read
-    int ret = krn_read(regs, arg0, (void*)arg1, arg2);
-    if (ret != IPC_BLOCKED) {
-      regs->x[0] = ret;
-    }
+    regs->x[0] = krn_read(regs, arg0, (void*)arg1, arg2);
   } else if (syscall_num == 66) { // sys_writev
     regs->x[0] = krn_writev(regs, arg0, (const struct iovec*)arg1, arg2);
   } else if (syscall_num == 93 || syscall_num == 94) { // sys_exit / sys_exit_group
     pl011_puts("Linux process exited.\n");
     thread_exit();
   } else if (syscall_num == 29) { // sys_ioctl
-    // arg0 = fd, arg1 = cmd
-    if (arg1 == 0x5401 || arg1 == 0x5413) { // TCGETS / TIOCGWINSZ
-      regs->x[0] = (uint64_t)-25; // ENOTTY (to make ash fall back to simple terminal)
+    // arg0 = fd, arg1 = cmd, arg2 = arg
+    pl011_puts("sys_ioctl fd="); print_hex(arg0);
+    pl011_puts(" cmd="); print_hex(arg1);
+    pl011_puts(" arg="); print_hex(arg2);
+    pl011_puts("\n");
+    if (arg1 == 0x5401) { // TCGETS
+      if (copy_to_user(arg2, &g_console_termios, sizeof(g_console_termios)) < 0) {
+        regs->x[0] = -14; // -EFAULT
+      } else {
+        regs->x[0] = 0; // Success
+      }
+    } else if (arg1 == 0x5402 || arg1 == 0x5403 || arg1 == 0x5404) { // TCSETS/W/F
+      if (copy_from_user(&g_console_termios, arg2, sizeof(g_console_termios)) < 0) {
+        regs->x[0] = -14; // -EFAULT
+      } else {
+        regs->x[0] = 0; // Success
+      }
+    } else if (arg1 == 0x5413) { // TIOCGWINSZ
+      short winsz[4] = {24, 80, 0, 0}; // 24x80
+      if (copy_to_user(arg2, winsz, 8) < 0) {
+        regs->x[0] = -14; // -EFAULT
+      } else {
+        regs->x[0] = 0; // Success
+      }
     } else {
-      regs->x[0] = (uint64_t)-25; // ENOTTY
+      regs->x[0] = -25; // -ENOTTY
     }
   } else if (syscall_num == 214) { // sys_brk
     pl011_puts("sys_brk arg0="); print_hex(arg0);
@@ -1074,6 +1647,18 @@ brk_done:
   } else if (syscall_num == 215) { // sys_munmap
     pl011_puts("sys_munmap arg0="); print_hex(arg0); pl011_puts("\n");
     regs->x[0] = 0; // Success
+  } else if (syscall_num == 220) { // sys_clone
+    pl011_puts("sys_clone flags="); print_hex(arg0);
+    pl011_puts(" newsp="); print_hex(arg1);
+    pl011_puts(" parent_tidptr="); print_hex(arg2);
+    pl011_puts(" tls="); print_hex(arg3);
+    pl011_puts(" child_tidptr="); print_hex(arg4);
+    pl011_puts("\n");
+    extern int thread_fork(ARM64Registers* regs, uint64_t flags, uint64_t newsp);
+    regs->x[0] = thread_fork(regs, arg0, arg1);
+  } else if (syscall_num == 221) { // sys_execve
+    extern int krn_execve(ARM64Registers* regs, const char* user_pathname, char* const user_argv[], char* const user_envp[]);
+    regs->x[0] = krn_execve(regs, (const char*)arg0, (char* const*)arg1, (char* const*)arg2);
   } else if (syscall_num == 226) { // sys_mprotect
     regs->x[0] = 0;
 
@@ -1112,6 +1697,10 @@ void krn_entry(void) {
 
 #if CONFIG_KDBGER
   kdbger_initialization();
+  gicv2_set_irq_target(UART_IRQ, 1);
+  gicv2_enable_irq(UART_IRQ);
+#else
+  krn_uart_init();
   gicv2_set_irq_target(UART_IRQ, 1);
   gicv2_enable_irq(UART_IRQ);
 #endif

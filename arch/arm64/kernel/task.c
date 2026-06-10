@@ -8,11 +8,12 @@
 #include <kernel/pmm.h>
 
 void pl011_puts(const char* s);
+void pl011_putc(char c);
 void print_hex(uint64_t val);
 void thread_entry_wrapper(void);  // Assembly wrapper
 uint64_t translate_user_va(Thread* t, uint64_t va);
 
-static Thread threads[MAX_THREADS];
+Thread threads[MAX_THREADS];
 static uint8_t thread_stacks[MAX_THREADS][STACK_SIZE]
     __attribute__((aligned(16)));
 Thread* current_thread = NULL;
@@ -84,6 +85,18 @@ int thread_create(void (*entry)(void)) {
 
 void thread_exit(void) {
   IntDisable();
+  pl011_puts("thread_exit: tid="); print_hex(current_thread->tid);
+  pl011_puts(" clear_child_tid="); print_hex(current_thread->clear_child_tid);
+  pl011_puts(" pgdir="); print_hex(current_thread->pg_dir_phys);
+  pl011_puts("\n");
+
+  if (current_thread->clear_child_tid) {
+    uint64_t pa = translate_user_va(current_thread, current_thread->clear_child_tid);
+    pl011_puts("  clear_child_tid pa="); print_hex(pa); pl011_puts("\n");
+    if (pa != 0) {
+      *(int*)pa = 0;
+    }
+  }
 
   if (current_thread->pg_dir_phys != 0 && current_thread->pg_dir_phys != (uint64_t)pg_dir) {
       vmm_free_aspace(current_thread->pg_dir_phys);
@@ -105,36 +118,20 @@ void schedule(void) {
 
   IntDisable();
 
-  // Check UART blocked threads
-  extern int pl011_hasc(void);
-  extern char pl011_getc(void);
-  if (pl011_hasc()) {
-    for (i = 1; i < MAX_THREADS; i++) {
-      if (threads[i].state == THREAD_STATE_BLOCKED &&
-          threads[i].ipc_partner == UART_HARDWARE) {
-        char c = pl011_getc();
-        uint64_t phys = translate_user_va(&threads[i], (uint64_t)threads[i].ipc_buf);
-        if (phys) {
-          *(char*)phys = c;
-          threads[i].regs->x[0] = 1; // 1 byte read
-          threads[i].state = THREAD_STATE_READY;
-        }
-        break; // Wake up one
-      }
-    }
-  }
+// pl011_puts("SCHED: curr="); print_hex(curr_idx); pl011_puts("\n");
 
 retry:
   next_idx = -1;
   for (i = 1; i <= MAX_THREADS; i++) {
     int idx = (curr_idx + i) % MAX_THREADS;
-    if (threads[idx].state == THREAD_STATE_READY) {
+    if (idx != 0 && threads[idx].state == THREAD_STATE_READY) {
       next_idx = idx;
       break;
     }
   }
 
   if (next_idx != -1) {
+    // pl011_puts("SCHED: pick="); print_hex(next_idx); pl011_puts("\n");
     Thread* prev = current_thread;
     Thread* next = &threads[next_idx];
 
@@ -146,6 +143,7 @@ retry:
 
     // Switch page tables
     uint64_t next_pg_dir = next->pg_dir_phys;
+    // pl011_puts("SCHED: switch pgdir to "); print_hex(next_pg_dir); pl011_puts("\n");
     __asm__ volatile(
         "msr ttbr0_el1, %0\n"
         "tlbi vmalle1is\n"
@@ -153,11 +151,29 @@ retry:
         "isb\n" ::"r"(next_pg_dir)
         : "memory");
 
+    // pl011_puts("SCHED: cpu_switch_to "); print_hex(prev->tid); pl011_puts(" -> "); print_hex(next->tid); pl011_puts("\n");
     cpu_switch_to(&prev->context, &next->context);
+    // pl011_puts("SCHED: returned to "); print_hex(current_thread->tid); pl011_puts("\n");
   } else {
     if (current_thread->state == THREAD_STATE_RUNNING) {
       return;
     }
+    uint64_t current_ttbr0;
+    __asm__ volatile("mrs %0, ttbr0_el1" : "=r"(current_ttbr0));
+    if (current_ttbr0 != (uint64_t)pg_dir) {
+      __asm__ volatile(
+          "msr ttbr0_el1, %0\n"
+          "tlbi vmalle1is\n"
+          "dsb sy\n"
+          "isb\n" ::"r"((uint64_t)pg_dir)
+          : "memory");
+    }
+    /*
+    pl011_puts("SCHED: idle\n");
+    for (i = 1; i < MAX_THREADS; i++) {
+        pl011_puts("  tid="); print_hex(i); pl011_puts(" state="); print_hex(threads[i].state); pl011_puts(" partner="); print_hex(threads[i].ipc_partner); pl011_puts("\n");
+    }
+    */
     // Idle loop
     IntEnable();
     __asm__ volatile("wfi");
@@ -747,8 +763,126 @@ int thread_block_on_uart(void* buf, uint32_t len) {
   current_thread->ipc_buf = buf;
   current_thread->ipc_size = len;
   schedule();
+
+  // Resumed here! Interrupts are still disabled.
+  // Now read from ring buffer!
+  extern int rx_buf_pop(char* c);
+  extern int copy_to_user(uint64_t user_dest, const void* src, int len);
+
+  char c;
+  int count_read = 0;
+  while (count_read < len && rx_buf_pop(&c)) {
+    if ((g_console_termios.c_iflag & 0x100) && c == '\r') { // ICRNL
+      c = '\n';
+    }
+    if (copy_to_user((uint64_t)buf + count_read, &c, 1) < 0) {
+      pl011_puts("thread_block_on_uart: copy_to_user failed!\n");
+      break;
+    }
+    // Echo
+    if (g_console_termios.c_lflag & 0x008) { // ECHO
+      if (c == '\n') pl011_putc('\r');
+      pl011_putc(c);
+    }
+    count_read++;
+  }
+
   IntEnable();
-  return IPC_BLOCKED;
+  return count_read;
 }
+
+int thread_fork(ARM64Registers* regs, uint64_t flags, uint64_t newsp) {
+  int i;
+  IntDisable();
+  for (i = 1; i < MAX_THREADS; i++) {
+    if (threads[i].state == THREAD_STATE_FREE) {
+      Thread* child = &threads[i];
+      Thread* parent = current_thread;
+
+      // Save child's private stack info before overwrite
+      void* child_stack_base = child->stack_base;
+      uint32_t child_stack_size = child->stack_size;
+
+      // Copy thread struct (including FDs, CWD, etc.)
+      CbMemCpy((int8_t*)child, (const int8_t*)parent, sizeof(Thread));
+      child->tid = i; // Keep correct TID
+      child->stack_base = child_stack_base;
+      child->stack_size = child_stack_size;
+      child->clear_child_tid = 0; // Reset for child
+      child->ipc_partner = 0;
+      child->ipc_buf = NULL;
+      child->ipc_size = 0;
+
+      // Duplicate address space
+      child->pg_dir_phys = vmm_dup_aspace(parent->pg_dir_phys);
+      if (child->pg_dir_phys == 0) {
+        child->state = THREAD_STATE_FREE;
+        IntEnable();
+        return -1;
+      }
+
+      // Copy parent's registers to child's kernel stack
+      uint8_t* child_stk_top = (uint8_t*)child->stack_base + child->stack_size;
+      child_stk_top -= sizeof(ARM64Registers);
+      ARM64Registers* child_regs = (ARM64Registers*)child_stk_top;
+
+      // Copy parent's saved registers
+      CbMemCpy((int8_t*)child_regs, (const int8_t*)regs, sizeof(ARM64Registers));
+
+      // Child should return 0 from clone/fork
+      child_regs->x[0] = 0;
+
+      // If newsp (child_sp) is specified, use it. Otherwise use parent's SP_EL0.
+      if (newsp != 0) {
+        child_regs->sp = newsp;
+      }
+
+      // Handle TID pointers
+      if (flags & CLONE_PARENT_SETTID) {
+        uint64_t parent_tidptr = regs->x[2];
+        uint64_t pa = translate_user_va(parent, parent_tidptr);
+        if (pa != 0) {
+          *(int*)pa = child->tid;
+        }
+      }
+
+      if (flags & CLONE_CHILD_SETTID) {
+        uint64_t child_tidptr = regs->x[4];
+        uint64_t pa = translate_user_va(child, child_tidptr);
+        if (pa != 0) {
+          *(int*)pa = child->tid;
+        }
+      }
+
+      if (flags & CLONE_CHILD_CLEARTID) {
+        child->clear_child_tid = regs->x[4]; // child_tidptr is in x4 for sys_clone
+      }
+
+      child->regs = child_regs;
+
+      // Set up CPU context for scheduler to switch to child
+      CbMemSet((int8_t*)&child->context, 0, sizeof(CpuContext));
+      child->context.sp = (uint64_t)child_regs;
+      
+      extern void fork_child_restore(void);
+      child->context.lr = (uint64_t)fork_child_restore;
+      child->context.fp = (uint64_t)child_regs;
+
+      child->state = THREAD_STATE_READY;
+
+      pl011_puts("Forked thread tid=");
+      print_hex(child->tid);
+      pl011_puts(" parent=");
+      print_hex(parent->tid);
+      pl011_puts("\n");
+
+      IntEnable();
+      return child->tid; // Parent returns child's TID
+    }
+  }
+  IntEnable();
+  return -1; // EAGAIN
+}
+
 
 

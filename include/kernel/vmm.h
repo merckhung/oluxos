@@ -15,5 +15,6 @@ int vmm_map(uint64_t aspace, uint64_t va, uint64_t pa, uint64_t flags);
 int vmm_unmap(uint64_t aspace, uint64_t va);
 void vmm_free_aspace(uint64_t aspace);
 void vmm_dump_path(uint64_t aspace, uint64_t va);
+uint64_t vmm_dup_aspace(uint64_t src_aspace);
 
 #endif // __KERNEL_VMM_H__

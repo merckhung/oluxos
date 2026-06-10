@@ -157,8 +157,20 @@ static void format_filename(const char* src, char* dest) {
   memset(dest, ' ', 11);
   int i = 0;
   int d = 0;
-  // Skip leading '/' if present
-  if (src[i] == '/') i++;
+
+  // Find the last '/' to extract filename
+  int last_slash = -1;
+  int k = 0;
+  while (src[k]) {
+    if (src[k] == '/') {
+      last_slash = k;
+    }
+    k++;
+  }
+  if (last_slash != -1) {
+    i = last_slash + 1;
+  }
+
   while (src[i] && src[i] != '.' && d < 8) {
     char c = src[i];
     if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
@@ -1130,6 +1142,10 @@ void main(void) {
           } else {
             read_bytes = fat32_read_file_handle(
                 req.args.read.handle, reply.data, req.args.read.count);
+          }
+          if (req.sender == 5) {
+            printf("[FS] Read loader: handle=%d count=%d ret=%d\n",
+                   req.args.read.handle, req.args.read.count, read_bytes);
           }
           reply.size = read_bytes;
           sys_send(req.sender, &reply,
