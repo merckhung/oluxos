@@ -1,6 +1,0 @@
-#!/usr/bin/expect -f
-set timeout 10
-spawn qemu-system-i386 -drive file=bazel-bin/OluxOS.img,format=raw,snapshot=on -m 256 -serial stdio -display none
-expect "OluxOS >"
-send "help\r"
-expect "Usage:"
