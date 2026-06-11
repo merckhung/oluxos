@@ -132,7 +132,7 @@ genrule(
 
 sh_binary(
     name = "run_qemu",
-    srcs = ["run_qemu.sh"],
+    srcs = ["scripts/run_qemu.sh"],
     data = [":OluxOS_img"],
     args = ["$(location :OluxOS_img)"],
 )
@@ -440,7 +440,7 @@ genrule(
 
 sh_binary(
     name = "run_qemu_arm64",
-    srcs = ["run_qemu_arm64.sh"],
+    srcs = ["scripts/run_qemu_arm64.sh"],
     data = [
         ":arm64_kernel_elf",
         "fat.img",
@@ -573,7 +573,7 @@ genrule(
 
 sh_binary(
     name = "run_qemu_rpi4",
-    srcs = ["run_qemu_rpi4.sh"],
+    srcs = ["scripts/run_qemu_rpi4.sh"],
     data = [
         ":rpi4_kernel_elf",
         "fat.img",
@@ -733,7 +733,7 @@ genrule(
 
 sh_binary(
     name = "run_qemu_arm32",
-    srcs = ["run_qemu_arm32.sh"],
+    srcs = ["scripts/run_qemu_arm32.sh"],
     data = [":arm32_kernel_elf"],
     args = ["$(location :arm32_kernel_elf)"],
 )
@@ -785,7 +785,7 @@ genrule(
 
 sh_binary(
     name = "run_qemu_riscv64",
-    srcs = ["run_qemu_riscv64.sh"],
+    srcs = ["scripts/run_qemu_riscv64.sh"],
     data = [
         ":riscv64_kernel_elf",
         "fat.img",
@@ -838,7 +838,7 @@ genrule(
 
 sh_binary(
     name = "run_qemu_riscv32",
-    srcs = ["run_qemu_riscv32.sh"],
+    srcs = ["scripts/run_qemu_riscv32.sh"],
     data = [
         ":riscv32_kernel_elf",
     ],
