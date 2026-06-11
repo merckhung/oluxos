@@ -1,0 +1,194 @@
+diff -ruN '--exclude=build' baseline/llvm-project-22.1.7.src/clang/lib/Basic/Targets/OSTargets.h llvm-project-22.1.7.src/clang/lib/Basic/Targets/OSTargets.h
+--- baseline/llvm-project-22.1.7.src/clang/lib/Basic/Targets/OSTargets.h	2026-06-01 07:23:32.000000000 +0000
++++ llvm-project-22.1.7.src/clang/lib/Basic/Targets/OSTargets.h	2026-06-07 16:04:34.519415562 +0000
+@@ -34,6 +34,21 @@
+   }
+ };
+ 
++// OluxOS Target
++template <typename Target>
++class LLVM_LIBRARY_VISIBILITY OluxOSTargetInfo : public OSTargetInfo<Target> {
++protected:
++  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
++                    MacroBuilder &Builder) const override {
++    Builder.defineMacro("__oluxos__");
++    Builder.defineMacro("__ELF__");
++  }
++
++public:
++  OluxOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
++      : OSTargetInfo<Target>(Triple, Opts) {}
++};
++
+ void getAppleMachODefines(MacroBuilder &Builder, const LangOptions &Opts,
+                           const llvm::Triple &Triple);
+ 
+diff -ruN '--exclude=build' baseline/llvm-project-22.1.7.src/clang/lib/Basic/Targets.cpp llvm-project-22.1.7.src/clang/lib/Basic/Targets.cpp
+--- baseline/llvm-project-22.1.7.src/clang/lib/Basic/Targets.cpp	2026-06-01 07:23:32.000000000 +0000
++++ llvm-project-22.1.7.src/clang/lib/Basic/Targets.cpp	2026-06-07 16:04:56.343380047 +0000
+@@ -175,6 +175,9 @@
+     case llvm::Triple::Hurd:
+       return std::make_unique<HurdTargetInfo<AArch64leTargetInfo>>(Triple,
+                                                                    Opts);
++    case llvm::Triple::OluxOS:
++      return std::make_unique<OluxOSTargetInfo<AArch64leTargetInfo>>(Triple,
++                                                                     Opts);
+     case llvm::Triple::Win32:
+       switch (Triple.getEnvironment()) {
+       case llvm::Triple::GNU:
+diff -ruN '--exclude=build' baseline/llvm-project-22.1.7.src/clang/lib/Driver/CMakeLists.txt llvm-project-22.1.7.src/clang/lib/Driver/CMakeLists.txt
+--- baseline/llvm-project-22.1.7.src/clang/lib/Driver/CMakeLists.txt	2026-06-01 07:23:32.000000000 +0000
++++ llvm-project-22.1.7.src/clang/lib/Driver/CMakeLists.txt	2026-06-07 16:05:35.383316516 +0000
+@@ -74,6 +74,7 @@
+   ToolChains/MSVC.cpp
+   ToolChains/NetBSD.cpp
+   ToolChains/OHOS.cpp
++  ToolChains/OluxOS.cpp
+   ToolChains/OpenBSD.cpp
+   ToolChains/PS4CPU.cpp
+   ToolChains/Solaris.cpp
+diff -ruN '--exclude=build' baseline/llvm-project-22.1.7.src/clang/lib/Driver/Driver.cpp llvm-project-22.1.7.src/clang/lib/Driver/Driver.cpp
+--- baseline/llvm-project-22.1.7.src/clang/lib/Driver/Driver.cpp	2026-06-01 07:23:32.000000000 +0000
++++ llvm-project-22.1.7.src/clang/lib/Driver/Driver.cpp	2026-06-07 16:05:22.175338010 +0000
+@@ -39,6 +39,7 @@
+ #include "ToolChains/MipsLinux.h"
+ #include "ToolChains/NetBSD.h"
+ #include "ToolChains/OHOS.h"
++#include "ToolChains/OluxOS.h"
+ #include "ToolChains/OpenBSD.h"
+ #include "ToolChains/PPCFreeBSD.h"
+ #include "ToolChains/PPCLinux.h"
+@@ -6954,6 +6955,9 @@
+     case llvm::Triple::LiteOS:
+       TC = std::make_unique<toolchains::OHOS>(*this, Target, Args);
+       break;
++    case llvm::Triple::OluxOS:
++      TC = std::make_unique<toolchains::OluxOS>(*this, Target, Args);
++      break;
+     case llvm::Triple::ZOS:
+       TC = std::make_unique<toolchains::ZOS>(*this, Target, Args);
+       break;
+diff -ruN '--exclude=build' baseline/llvm-project-22.1.7.src/clang/lib/Driver/ToolChains/OluxOS.cpp llvm-project-22.1.7.src/clang/lib/Driver/ToolChains/OluxOS.cpp
+--- baseline/llvm-project-22.1.7.src/clang/lib/Driver/ToolChains/OluxOS.cpp	1970-01-01 00:00:00.000000000 +0000
++++ llvm-project-22.1.7.src/clang/lib/Driver/ToolChains/OluxOS.cpp	2026-06-07 16:05:45.723299691 +0000
+@@ -0,0 +1,43 @@
++#include "OluxOS.h"
++#include "CommonArgs.h"
++#include "clang/Driver/Compilation.h"
++#include "clang/Driver/Driver.h"
++#include "clang/Driver/Options.h"
++#include "llvm/Option/ArgList.h"
++
++using namespace clang::driver;
++using namespace clang::driver::toolchains;
++using namespace clang::driver::tools;
++using namespace clang;
++using namespace llvm::opt;
++
++OluxOS::OluxOS(const Driver &D, const llvm::Triple &Triple,
++               const ArgList &Args)
++    : Generic_ELF(D, Triple, Args) {}
++
++Tool *OluxOS::buildLinker() const {
++  return new tools::oluxos::Linker(*this);
++}
++
++void oluxos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
++                                  const InputInfo &Output,
++                                  const InputInfoList &Inputs,
++                                  const ArgList &Args,
++                                  const char *LinkingOutput) const {
++  const ToolChain &ToolChain = getToolChain();
++  const Driver &D = ToolChain.getDriver();
++  ArgStringList CmdArgs;
++
++  CmdArgs.push_back("-o");
++  CmdArgs.push_back(Output.getFilename());
++
++  for (const auto &II : Inputs) {
++    if (II.isFilename())
++      CmdArgs.push_back(II.getFilename());
++  }
++
++  const char *Exec = Args.MakeArgString("linker/oluxos-ld.py");
++  C.addCommand(std::make_unique<Command>(JA, *this,
++                                         ResponseFileSupport::AtFileCurCP(),
++                                         Exec, CmdArgs, Inputs, Output));
++}
+diff -ruN '--exclude=build' baseline/llvm-project-22.1.7.src/clang/lib/Driver/ToolChains/OluxOS.h llvm-project-22.1.7.src/clang/lib/Driver/ToolChains/OluxOS.h
+--- baseline/llvm-project-22.1.7.src/clang/lib/Driver/ToolChains/OluxOS.h	1970-01-01 00:00:00.000000000 +0000
++++ llvm-project-22.1.7.src/clang/lib/Driver/ToolChains/OluxOS.h	2026-06-07 16:05:45.651299808 +0000
+@@ -0,0 +1,41 @@
++#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_OLUXOS_H
++#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_OLUXOS_H
++
++#include "Gnu.h"
++#include "clang/Driver/ToolChain.h"
++
++namespace clang {
++namespace driver {
++namespace toolchains {
++
++class LLVM_LIBRARY_VISIBILITY OluxOS : public Generic_ELF {
++public:
++  OluxOS(const Driver &D, const llvm::Triple &Triple,
++         const llvm::opt::ArgList &Args);
++
++protected:
++  Tool *buildLinker() const override;
++};
++
++} // end namespace toolchains
++
++namespace tools {
++namespace oluxos {
++class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
++public:
++  Linker(const ToolChain &TC) : Tool("oluxos::Linker", "linker", TC) {}
++
++  bool hasIntegratedCPP() const override { return false; }
++  bool isLinkJob() const override { return true; }
++
++  void ConstructJob(Compilation &C, const JobAction &JA,
++                    const InputInfo &Output, const InputInfoList &Inputs,
++                    const llvm::opt::ArgList &TCArgs,
++                    const char *LinkingOutput) const override;
++};
++} // end namespace oluxos
++} // end namespace tools
++} // end namespace driver
++} // end namespace clang
++
++#endif
+diff -ruN '--exclude=build' baseline/llvm-project-22.1.7.src/llvm/include/llvm/TargetParser/Triple.h llvm-project-22.1.7.src/llvm/include/llvm/TargetParser/Triple.h
+--- baseline/llvm-project-22.1.7.src/llvm/include/llvm/TargetParser/Triple.h	2026-06-01 07:23:32.000000000 +0000
++++ llvm-project-22.1.7.src/llvm/include/llvm/TargetParser/Triple.h	2026-06-07 16:03:28.407523163 +0000
+@@ -252,7 +252,8 @@
+     Serenity,
+     Vulkan, // Vulkan SPIR-V
+     CheriotRTOS,
+-    LastOSType = CheriotRTOS
++    OluxOS,
++    LastOSType = OluxOS
+   };
+   enum EnvironmentType {
+     UnknownEnvironment,
+diff -ruN '--exclude=build' baseline/llvm-project-22.1.7.src/llvm/lib/TargetParser/Triple.cpp llvm-project-22.1.7.src/llvm/lib/TargetParser/Triple.cpp
+--- baseline/llvm-project-22.1.7.src/llvm/lib/TargetParser/Triple.cpp	2026-06-01 07:23:32.000000000 +0000
++++ llvm-project-22.1.7.src/llvm/lib/TargetParser/Triple.cpp	2026-06-07 16:04:23.439433594 +0000
+@@ -337,6 +337,7 @@
+   case ZOS: return "zos";
+   case ShaderModel: return "shadermodel";
+   case LiteOS: return "liteos";
++  case OluxOS: return "oluxos";
+   case XROS: return "xros";
+   case Vulkan: return "vulkan";
+   case CheriotRTOS:
+@@ -751,6 +752,7 @@
+       .StartsWith("emscripten", Triple::Emscripten)
+       .StartsWith("shadermodel", Triple::ShaderModel)
+       .StartsWith("liteos", Triple::LiteOS)
++      .StartsWith("oluxos", Triple::OluxOS)
+       .StartsWith("serenity", Triple::Serenity)
+       .StartsWith("vulkan", Triple::Vulkan)
+       .StartsWith("cheriotrtos", Triple::CheriotRTOS)

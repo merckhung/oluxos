@@ -1,0 +1,108 @@
+#!/bin/bash
+# Wrapper to compile C source code to OluxOS executable using clang
+# Target: aarch64-unknown-oluxos (freestanding ELF with static libc)
+
+CLANG="${CLANG:-clang}"
+LINKER="$(cd "$(dirname "$0")" && pwd)/linker/oluxos-ld.py"
+AARCH64_LIBC="/usr/aarch64-linux-gnu/lib"
+AARCH64_LIBGCC="/usr/lib/gcc-cross/aarch64-linux-gnu/15"
+
+# Check if we have arguments
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 [options] <input files>"
+    echo "  OluxOS clang wrapper (aarch64-unknown-oluxos)"
+    exit 1
+fi
+
+# Detect if this is a link step (no -c flag and multiple inputs or .o/.a inputs present)
+IS_LINK=0
+HAS_C_FLAG=0
+for arg in "$@"; do
+    if [ "$arg" = "-c" ]; then
+        HAS_C_FLAG=1
+    fi
+done
+
+# If -c is explicitly passed, do compile-only
+if [ $HAS_C_FLAG -eq 1 ]; then
+    $CLANG --target=aarch64-none-elf \
+        -nostdlib \
+        -ffreestanding \
+        -fPIC \
+        -I/usr/aarch64-linux-gnu/include \
+        "$@"
+    exit $?
+fi
+
+# Check if any input is a .c/.S source file (needs compilation)
+HAS_SOURCE=0
+OBJ_FILES=()
+SRC_FILES=()
+OTHER_ARGS=()
+for arg in "$@"; do
+    case "$arg" in
+        *.c|*.S|*.s) HAS_SOURCE=1; SRC_FILES+=("$arg") ;;
+        *.o|*.a) OBJ_FILES+=("$arg") ;;
+        *) OTHER_ARGS+=("$arg") ;;
+    esac
+done
+
+# Determine output file
+OUTPUT="a.out"
+for i in "${!OTHER_ARGS[@]}"; do
+    if [ "${OTHER_ARGS[$i]}" = "-o" ] && [ $((i+1)) -lt ${#OTHER_ARGS[@]} ]; then
+        OUTPUT="${OTHER_ARGS[$((i+1))]}"
+    fi
+done
+
+# Also check positional args for -o
+for i in "${!@"}"; do
+    :
+done
+
+# Re-parse to find -o
+args=("$@")
+for i in "${!args[@]}"; do
+    if [ "${args[$i]}" = "-o" ] && [ $((i+1)) -lt ${#args[@]} ]; then
+        OUTPUT="${args[$((i+1))]}"
+    fi
+done
+
+if [ $HAS_SOURCE -eq 1 ]; then
+    # Compile source files to objects, then link
+    TMPDIR=$(mktemp -d)
+    trap "rm -rf $TMPDIR" EXIT
+
+    for src in "${SRC_FILES[@]}"; do
+        base=$(basename "$src" | sed 's/\.[^.]*$//')
+        obj="$TMPDIR/${base}.o"
+        $CLANG --target=aarch64-none-elf \
+            -nostdlib \
+            -ffreestanding \
+            -fPIC \
+            -I/usr/aarch64-linux-gnu/include \
+            -c "$src" -o "$obj"
+        if [ $? -ne 0 ]; then
+            echo "Compilation failed for $src"
+            exit 1
+        fi
+        OBJ_FILES+=("$obj")
+    done
+
+    # Link using OluxOS linker
+    echo "[oluxos-clang] Linking with OluxOS linker..."
+    python3 "$LINKER" -static -o "$OUTPUT" "${OBJ_FILES[@]}"
+    exit $?
+fi
+
+# No source files - just link existing objects
+if [ ${#OBJ_FILES[@]} -gt 0 ]; then
+    python3 "$LINKER" -static -o "$OUTPUT" "${OBJ_FILES[@]}"
+    exit $?
+fi
+
+# Fallback: pass through to clang with aarch64 target
+$CLANG --target=aarch64-none-elf \
+    --sysroot=/usr/aarch64-linux-gnu \
+    -static \
+    "$@"
