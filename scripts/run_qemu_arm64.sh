@@ -14,4 +14,4 @@ qemu-system-aarch64 \
     -cpu max \
     -m 1024M \
     -kernel "$KERNEL_PATH" -nographic \
-    -device loader,file=fat.img,addr=0x48000000,force-raw=on
+    -device loader,file=testdata/fat.img,addr=0x48000000,force-raw=on

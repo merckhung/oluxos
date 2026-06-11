@@ -443,7 +443,7 @@ sh_binary(
     srcs = ["scripts/run_qemu_arm64.sh"],
     data = [
         ":arm64_kernel_elf",
-        "fat.img",
+        "testdata/fat.img",
     ],
     args = ["$(location :arm64_kernel_elf)"],
 )
@@ -553,13 +553,13 @@ genrule(
     name = "rpi4_boot_zip",
     srcs = [
         ":rpi4_kernel_img",
-        "fat.img",
+        "testdata/fat.img",
     ],
     outs = ["rpi4_boot.zip"],
     cmd = """
         mkdir -p $(@D)/rpi4_boot_dir
         cp $(location :rpi4_kernel_img) $(@D)/rpi4_boot_dir/kernel8.img
-        cp $(location fat.img) $(@D)/rpi4_boot_dir/fat.img
+        cp $(location testdata/fat.img) $(@D)/rpi4_boot_dir/fat.img
         echo "arm_64bit=1" > $(@D)/rpi4_boot_dir/config.txt
         echo "enable_uart=1" >> $(@D)/rpi4_boot_dir/config.txt
         echo "dtoverlay=disable-bt" >> $(@D)/rpi4_boot_dir/config.txt
@@ -576,7 +576,7 @@ sh_binary(
     srcs = ["scripts/run_qemu_rpi4.sh"],
     data = [
         ":rpi4_kernel_elf",
-        "fat.img",
+        "testdata/fat.img",
     ],
     args = ["$(location :rpi4_kernel_elf)"],
 )
@@ -788,7 +788,7 @@ sh_binary(
     srcs = ["scripts/run_qemu_riscv64.sh"],
     data = [
         ":riscv64_kernel_elf",
-        "fat.img",
+        "testdata/fat.img",
     ],
     args = ["$(location :riscv64_kernel_elf)"],
 )
