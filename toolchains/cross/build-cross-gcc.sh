@@ -155,7 +155,8 @@ main() {
     ln -sfn "$BUILD/mpc-src" "$BUILD/gcc-src/mpc"
     mkdir -p "$BUILD/gcc" && cd "$BUILD/gcc"
     "$BUILD/gcc-src/configure" --target=$TARGET --prefix="$PREFIX" \
-      --with-sysroot="$SYSROOT" --enable-languages=c --disable-shared \
+      --with-sysroot="$SYSROOT" --with-native-system-header-dir=/include \
+      --enable-languages=c --disable-shared \
       --disable-multilib --disable-nls --disable-libssp --disable-libsanitizer \
       --disable-libquadmath --disable-libgomp --disable-libatomic --disable-libitm \
       --disable-libvtv --disable-libstdcxx --enable-default-pie=no \

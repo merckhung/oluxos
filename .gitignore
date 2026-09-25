@@ -13,3 +13,4 @@ toolchains/cross/sources/
 toolchains/llvm/work/
 toolchains/llvm/llvm-install/
 bazel-*
+out/
