@@ -42,6 +42,8 @@ enum pent {
   P_PID_STATM,
   P_PID_MOUNTS,
   P_THREAD_SELF,
+  P_NET,
+  P_NET_FILE,
 };
 
 struct pnode {
@@ -55,13 +57,21 @@ static const struct {
   enum pent type;
   mode_t mode;
 } root_entries[] = {
-    {"self", P_SELF, S_IFLNK | 0777},        {"thread-self", P_THREAD_SELF, S_IFLNK | 0777},
-    {"meminfo", P_MEMINFO, S_IFREG | 0444},  {"cpuinfo", P_CPUINFO, S_IFREG | 0444},
-    {"uptime", P_UPTIME, S_IFREG | 0444},    {"loadavg", P_LOADAVG, S_IFREG | 0444},
-    {"stat", P_STAT, S_IFREG | 0444},        {"version", P_VERSION, S_IFREG | 0444},
-    {"mounts", P_MOUNTS, S_IFREG | 0444},    {"cmdline", P_CMDLINE, S_IFREG | 0444},
-    {"filesystems", P_FILESYSTEMS, S_IFREG | 0444}, {"interrupts", P_INTERRUPTS, S_IFREG | 0444},
-    {"kmsg", P_KMSG, S_IFREG | 0400},        {"devices", P_DEVICES, S_IFREG | 0444},
+    {"self", P_SELF, S_IFLNK | 0777},
+    {"thread-self", P_THREAD_SELF, S_IFLNK | 0777},
+    {"meminfo", P_MEMINFO, S_IFREG | 0444},
+    {"cpuinfo", P_CPUINFO, S_IFREG | 0444},
+    {"uptime", P_UPTIME, S_IFREG | 0444},
+    {"loadavg", P_LOADAVG, S_IFREG | 0444},
+    {"stat", P_STAT, S_IFREG | 0444},
+    {"version", P_VERSION, S_IFREG | 0444},
+    {"mounts", P_MOUNTS, S_IFREG | 0444},
+    {"cmdline", P_CMDLINE, S_IFREG | 0444},
+    {"filesystems", P_FILESYSTEMS, S_IFREG | 0444},
+    {"interrupts", P_INTERRUPTS, S_IFREG | 0444},
+    {"kmsg", P_KMSG, S_IFREG | 0400},
+    {"devices", P_DEVICES, S_IFREG | 0444},
+    {"net", P_NET, S_IFDIR | 0555},
 };
 
 static const struct {
@@ -76,6 +86,18 @@ static const struct {
     {"environ", P_PID_ENVIRON, S_IFREG | 0400}, {"maps", P_PID_MAPS, S_IFREG | 0444},
     {"statm", P_PID_STATM, S_IFREG | 0444},     {"mounts", P_PID_MOUNTS, S_IFREG | 0444},
 };
+
+/* /proc/net/<name> files registered by the network stack */
+#define MAX_NET_FILES 16
+static struct {
+  const char *name;
+  void (*show)(seq_printf_t pr, void *ctx);
+} net_files[MAX_NET_FILES];
+static int nnet_files;
+
+void proc_net_register(const char *name, void (*show)(seq_printf_t pr, void *ctx)) {
+  if (nnet_files < MAX_NET_FILES) net_files[nnet_files++] = (typeof(net_files[0])){name, show};
+}
 
 static const struct inode_operations proc_dir_iops, proc_link_iops;
 static const struct file_operations proc_dir_fops, proc_file_fops;
@@ -143,6 +165,14 @@ static int proc_lookup(struct inode *dir, const char *name, struct inode **out) 
       }
     return -ENOENT;
   }
+  if (d->type == P_NET) {
+    for (int k = 0; k < nnet_files; k++)
+      if (!strcmp(name, net_files[k].name)) {
+        *out = proc_inode(dir->sb, P_NET_FILE, 0, k, S_IFREG | 0444);
+        return *out ? 0 : -ENOMEM;
+      }
+    return -ENOENT;
+  }
   if (d->type == P_PID_FDDIR) {
     char *end;
     long fd = strtol(name, &end, 10);
@@ -158,12 +188,12 @@ static int proc_iterate(struct file *f, struct dir_context *ctx) {
   struct pnode *d = pn(f->inode);
   char name[24];
   loff_t idx = 0;
-#define EMIT(nm, ino, type)                                                        \
-  do {                                                                             \
-    if (idx++ >= ctx->pos) {                                                       \
-      if (!ctx->actor(ctx, nm, strlen(nm), ino, type)) return 0;                   \
-      ctx->pos = idx;                                                              \
-    }                                                                              \
+#define EMIT(nm, ino, type)                                      \
+  do {                                                           \
+    if (idx++ >= ctx->pos) {                                     \
+      if (!ctx->actor(ctx, nm, strlen(nm), ino, type)) return 0; \
+      ctx->pos = idx;                                            \
+    }                                                            \
   } while (0)
   EMIT(".", f->inode->ino, DT_DIR);
   EMIT("..", 1, DT_DIR);
@@ -179,6 +209,8 @@ static int proc_iterate(struct file *f, struct dir_context *ctx) {
   } else if (d->type == P_PID_DIR) {
     for (unsigned k = 0; k < ARRAY_SIZE(pid_entries); k++)
       EMIT(pid_entries[k].name, ((u64)d->pid << 20) | (pid_entries[k].type << 12), mode_to_dtype(pid_entries[k].mode));
+  } else if (d->type == P_NET) {
+    for (int k = 0; k < nnet_files; k++) EMIT(net_files[k].name, 0x7000000 + k, DT_REG);
   } else if (d->type == P_PID_FDDIR) {
     struct process *p = process_find(d->pid);
     if (p && p->files)
@@ -243,10 +275,10 @@ struct pbuf {
   size_t len, cap;
 };
 
-__printf(2, 3) static void pb(struct pbuf *b, const char *fmt, ...) {
+static void vpb(struct pbuf *b, const char *fmt, va_list ap0) {
   va_list ap;
   for (;;) {
-    va_start(ap, fmt);
+    va_copy(ap, ap0);
     size_t room = b->cap - b->len;
     int n = vsnprintf(b->data + b->len, room, fmt, ap);
     va_end(ap);
@@ -262,6 +294,20 @@ __printf(2, 3) static void pb(struct pbuf *b, const char *fmt, ...) {
     b->data = nd;
     b->cap = ncap;
   }
+}
+
+__printf(2, 3) static void pb(struct pbuf *b, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vpb(b, fmt, ap);
+  va_end(ap);
+}
+
+__printf(2, 3) static void pb_ctx(void *ctx, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vpb(ctx, fmt, ap);
+  va_end(ap);
 }
 
 static char state_char(struct process *p) {
@@ -316,8 +362,8 @@ static void gen_pid_status(struct pbuf *b, struct process *p) {
      "VmSize:\t%llu kB\nVmRSS:\t%llu kB\nThreads:\t%d\nSigPnd:\t%016llx\nSigBlk:\t%016llx\n",
      p->comm, p->umask, sn, p->pid, p->pid, p->parent ? p->parent->pid : 0, p->cred.uid, p->cred.euid, p->cred.suid,
      p->cred.euid, p->cred.gid, p->cred.egid, p->cred.sgid, p->cred.egid, (unsigned long long)(vsize >> 10),
-     (unsigned long long)((p->mm ? p->mm->rss_pages : 0) * 4), p->nr_threads,
-     (unsigned long long)p->shared_pending, (unsigned long long)(t ? t->sig_blocked : 0));
+     (unsigned long long)((p->mm ? p->mm->rss_pages : 0) * 4), p->nr_threads, (unsigned long long)p->shared_pending,
+     (unsigned long long)(t ? t->sig_blocked : 0));
 }
 
 static void gen_user_range(struct pbuf *b, struct process *p, u64 start, u64 end) {
@@ -336,10 +382,14 @@ static void gen_maps(struct pbuf *b, struct process *p) {
   struct vma *v;
   list_for_each_entry(v, &p->mm->vmas, link) {
     char path[128] = "";
-    if (v->file && v->file->path.dentry) d_path(&v->file->path, path, sizeof(path));
-    else if (v->flags & VM_GROWSDOWN) strlcpy(path, "[stack]", sizeof(path));
-    else if (v->start == p->mm->sigtramp) strlcpy(path, "[sigpage]", sizeof(path));
-    else if (v->start >= p->mm->brk_start && v->end <= ALIGN_UP(p->mm->brk, PAGE_SIZE) + PAGE_SIZE && v->start < p->mm->brk + PAGE_SIZE)
+    if (v->file && v->file->path.dentry)
+      d_path(&v->file->path, path, sizeof(path));
+    else if (v->flags & VM_GROWSDOWN)
+      strlcpy(path, "[stack]", sizeof(path));
+    else if (v->start == p->mm->sigtramp)
+      strlcpy(path, "[sigpage]", sizeof(path));
+    else if (v->start >= p->mm->brk_start && v->end <= ALIGN_UP(p->mm->brk, PAGE_SIZE) + PAGE_SIZE &&
+             v->start < p->mm->brk + PAGE_SIZE)
       strlcpy(path, "[heap]", sizeof(path));
     pb(b, "%010llx-%010llx %c%c%c%c %08llx 00:00 0 %s\n", (unsigned long long)v->start, (unsigned long long)v->end,
        (v->flags & VM_READ) ? 'r' : '-', (v->flags & VM_WRITE) ? 'w' : '-', (v->flags & VM_EXEC) ? 'x' : '-',
@@ -388,9 +438,8 @@ static void gen_stat(struct pbuf *b) {
     nproc++;
     if (state_char(p) == 'R') running++;
   }
-  pb(b, "intr %llu\nctxt %llu\nbtime %llu\nprocesses %d\nprocs_running %d\nprocs_blocked 0\n",
-     (unsigned long long)intr, (unsigned long long)ctxt,
-     (unsigned long long)((ktime_realtime_ns() - ktime_ns()) / NSEC_PER_SEC), nproc, running);
+  pb(b, "intr %llu\nctxt %llu\nbtime %llu\nprocesses %d\nprocs_running %d\nprocs_blocked 0\n", (unsigned long long)intr,
+     (unsigned long long)ctxt, (unsigned long long)((ktime_realtime_ns() - ktime_ns()) / NSEC_PER_SEC), nproc, running);
 }
 
 static int generate(struct inode *i, struct pbuf *b) {
@@ -406,7 +455,8 @@ static int generate(struct inode *i, struct pbuf *b) {
       u64 total = nr_total_pages() * 4, free = nr_free_pages() * 4;
       pb(b,
          "MemTotal:       %8llu kB\nMemFree:        %8llu kB\nMemAvailable:   %8llu kB\nBuffers:        %8llu kB\n"
-         "Cached:         %8llu kB\nSwapCached:            0 kB\nSwapTotal:             0 kB\nSwapFree:              0 kB\n"
+         "Cached:         %8llu kB\nSwapCached:            0 kB\nSwapTotal:             0 kB\nSwapFree:              0 "
+         "kB\n"
          "Shmem:                 0 kB\nSlab:           %8llu kB\n",
          (unsigned long long)total, (unsigned long long)free, (unsigned long long)free, 0ULL, 0ULL,
          (unsigned long long)(kmalloc_bytes_in_use() >> 10));
@@ -460,9 +510,13 @@ static int generate(struct inode *i, struct pbuf *b) {
       for (int irq = 0; irq < NR_IRQS; irq++)
         if (irq_name(irq)) pb(b, "%4d: %10llu  %s\n", irq, (unsigned long long)irq_count(irq), irq_name(irq));
       break;
+    case P_NET_FILE:
+      if (n->fd < nnet_files) net_files[n->fd].show(pb_ctx, b);
+      break;
     case P_DEVICES:
-      pb(b, "Character devices:\n  1 mem\n  4 tty\n  5 /dev/tty\n  5 /dev/console\n 29 fb\n204 ttyAMA\n\nBlock devices:\n"
-            "179 mmc\n254 virtblk\n");
+      pb(b,
+         "Character devices:\n  1 mem\n  4 tty\n  5 /dev/tty\n  5 /dev/console\n 29 fb\n204 ttyAMA\n\nBlock devices:\n"
+         "179 mmc\n254 virtblk\n");
       break;
     case P_KMSG: {
       size_t pos = 0;

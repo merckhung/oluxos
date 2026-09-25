@@ -342,6 +342,10 @@ struct fdtable *fdtable_dup(struct fdtable *t);
 void fdtable_put(struct fdtable *t);
 void fdtable_close_on_exec(struct fdtable *t);
 struct file *fget(int fd); /* referenced */
+
+/* /proc/net/<name>: `show` prints the file's contents with pr(ctx, ...). */
+typedef void (*seq_printf_t)(void *ctx, const char *fmt, ...) __printf(2, 3);
+void proc_net_register(const char *name, void (*show)(seq_printf_t pr, void *ctx));
 int fd_install(struct file *f, int min_fd, bool cloexec);
 int fd_close(int fd);
 

@@ -69,12 +69,32 @@ KLDFLAGS := -nostdlib -static -z max-page-size=4096 -z noexecstack \
 KSRCS := $(filter-out arch/arm64/kernel.lds.S,$(wildcard arch/arm64/*.S arch/arm64/*.c)) \
 	$(wildcard kernel/*.c mm/*.c lib/*.c fs/*.c net/*.c) \
 	$(wildcard drivers/*/*.c)
+# lwIP (third_party/lwip), built with its own include paths and without
+# the kernel's stricter warnings.
+LWIP := third_party/lwip/src
+LWIP_SRCS := $(addprefix $(LWIP)/core/,def.c dns.c inet_chksum.c init.c ip.c mem.c memp.c netif.c pbuf.c \
+	raw.c stats.c sys.c tcp.c tcp_in.c tcp_out.c timeouts.c udp.c) \
+	$(addprefix $(LWIP)/core/ipv4/,acd.c autoip.c dhcp.c etharp.c icmp.c igmp.c ip4.c ip4_addr.c ip4_frag.c) \
+	$(LWIP)/netif/ethernet.c
+LWIP_INC := -Inet/lwip/port -Inet/lwip/shim -I$(LWIP)/include
+KSRCS += $(LWIP_SRCS) $(wildcard net/lwip/*.c net/lwip/port/*.c)
 KOBJS := $(patsubst %,$(O)/%.o,$(basename $(KSRCS)))
 KDEPS := $(KOBJS:.o=.d)
 
 all: kernel initramfs
 
 kernel: $(O)/Image
+
+$(O)/$(LWIP)/%.o: $(LWIP)/%.c
+	@mkdir -p $(dir $@)
+	@$(if $(Q),echo "  CC      $<")
+	$(Q)$(CC) $(filter-out -Werror -Wmissing-prototypes -Wshadow=local -Wimplicit-fallthrough,$(KCFLAGS)) \
+		$(LWIP_INC) -Wno-address -Wno-unused-but-set-variable -MMD -MP -c $< -o $@
+
+$(O)/net/%.o: net/%.c
+	@mkdir -p $(dir $@)
+	@$(if $(Q),echo "  CC      $<")
+	$(Q)$(CC) $(KCFLAGS) $(LWIP_INC) -MMD -MP -c $< -o $@
 
 $(O)/%.o: %.c
 	@mkdir -p $(dir $@)

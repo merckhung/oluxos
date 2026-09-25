@@ -10,7 +10,7 @@
 #include <olux/uaccess.h>
 #include <olux/vm.h>
 
-static char hostname[65] = "oluxos";
+char hostname[65] = "oluxos"; /* also used as the DHCP client name */
 static char domainname[65] = "(none)";
 
 /* ---------------- process lifecycle ---------------- */
