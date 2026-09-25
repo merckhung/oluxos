@@ -75,6 +75,7 @@ LWIP := third_party/lwip/src
 LWIP_SRCS := $(addprefix $(LWIP)/core/,def.c dns.c inet_chksum.c init.c ip.c mem.c memp.c netif.c pbuf.c \
 	raw.c stats.c sys.c tcp.c tcp_in.c tcp_out.c timeouts.c udp.c) \
 	$(addprefix $(LWIP)/core/ipv4/,acd.c autoip.c dhcp.c etharp.c icmp.c igmp.c ip4.c ip4_addr.c ip4_frag.c) \
+	$(addprefix $(LWIP)/core/ipv6/,ethip6.c icmp6.c inet6.c ip6.c ip6_addr.c ip6_frag.c mld6.c nd6.c) \
 	$(LWIP)/netif/ethernet.c
 LWIP_INC := -Inet/lwip/port -Inet/lwip/shim -I$(LWIP)/include
 KSRCS += $(LWIP_SRCS) $(wildcard net/lwip/*.c net/lwip/port/*.c)

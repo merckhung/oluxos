@@ -16,8 +16,10 @@
 #include "lwip/dhcp.h"
 #include "lwip/dns.h"
 #include "lwip/etharp.h"
+#include "lwip/ethip6.h"
 #include "lwip/igmp.h"
 #include "lwip/init.h"
+#include "lwip/nd6.h"
 #include "lwip/netif.h"
 #include "lwip/pbuf.h"
 #include "lwip/timeouts.h"
@@ -69,11 +71,12 @@ static err_t eth_netif_init(struct netif *nif) {
   nif->name[0] = 'e';
   nif->name[1] = 't';
   nif->output = etharp_output;
+  nif->output_ip6 = ethip6_output;
   nif->linkoutput = linkoutput;
   nif->mtu = d->mtu ? d->mtu : 1500;
   nif->hwaddr_len = ETH_HWADDR_LEN;
   memcpy(nif->hwaddr, d->mac, 6);
-  nif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_ETHERNET | NETIF_FLAG_IGMP;
+  nif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_ETHERNET | NETIF_FLAG_IGMP | NETIF_FLAG_MLD6;
   netif_set_hostname(nif, d->hostname);
   return ERR_OK;
 }
@@ -127,6 +130,8 @@ int netdev_register(struct net_device *d) {
   }
   list_add_tail(&d->link, &devices);
   if (!netif_default || netif_default == netif_find("lo0")) netif_set_default(nif);
+  netif_create_ip6_linklocal_address(nif, 1);
+  netif_set_ip6_autoconfig_enabled(nif, 1); /* SLAAC */
   netif_set_up(nif);
   if (d->link_up) netif_set_link_up(nif);
   net_unlock();
@@ -430,7 +435,10 @@ long netdev_ioctl(unsigned cmd, u64 arg) {
   if (cmd == SIOCOLUX_DNS) {
     u32 servers[DNS_MAX_SERVERS];
     net_lock();
-    for (int i = 0; i < DNS_MAX_SERVERS; i++) servers[i] = ip4_addr_get_u32(ip_2_ip4(dns_getserver((u8_t)i)));
+    for (int i = 0; i < DNS_MAX_SERVERS; i++) {
+      const ip_addr_t *a = dns_getserver((u8_t)i);
+      servers[i] = IP_IS_V4(a) ? ip4_addr_get_u32(ip_2_ip4(a)) : 0;
+    }
     net_unlock();
     return copy_to_user(arg, servers, sizeof(servers));
   }
@@ -484,6 +492,26 @@ static void show_route(seq_printf_t pr, void *ctx) {
   net_unlock();
 }
 
+static void show_if_inet6(seq_printf_t pr, void *ctx) {
+  net_lock();
+  struct netif *nif;
+  NETIF_FOREACH(nif) {
+    char n[16];
+    if_name(nif, n);
+    for (int k = 0; k < LWIP_IPV6_NUM_ADDRESSES; k++) {
+      if (!ip6_addr_isvalid(netif_ip6_addr_state(nif, k))) continue;
+      const ip6_addr_t *a = netif_ip6_addr(nif, k);
+      u32 w[4];
+      memcpy(w, a->addr, 16);
+      int scope = ip6_addr_isloopback(a) ? 0x10 : ip6_addr_islinklocal(a) ? 0x20 : 0x00;
+      pr(ctx, "%08x%08x%08x%08x %02x %02x %02x %02x %8s\n", lwip_ntohl(w[0]), lwip_ntohl(w[1]), lwip_ntohl(w[2]),
+         lwip_ntohl(w[3]), netif_get_index(nif), ip6_addr_isloopback(a) ? 128 : 64, scope,
+         ip6_addr_istentative(netif_ip6_addr_state(nif, k)) ? 0x40 : 0x80, n);
+    }
+  }
+  net_unlock();
+}
+
 /* ---------------- init ---------------- */
 
 static void net_stack_init(void) {
@@ -495,6 +523,7 @@ static void net_stack_init(void) {
   if (netd_thread) sched_add_new(netd_thread);
   proc_net_register("dev", show_dev);
   proc_net_register("route", show_route);
+  proc_net_register("if_inet6", show_if_inet6);
 }
 
 static int net_init(void) {

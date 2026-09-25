@@ -16,7 +16,10 @@
 #include <olux/uaccess.h>
 
 #include "lwip/igmp.h"
+#include "lwip/ip.h"
 #include "lwip/ip4.h"
+#include "lwip/mld6.h"
+#include "lwip/netif.h"
 #include "lwip/pbuf.h"
 #include "lwip/priv/tcp_priv.h"
 #include "lwip/raw.h"
@@ -46,13 +49,25 @@
 #define FIONREAD 0x541b
 #define TIOCOUTQ 0x5411
 #define CHUNK 16384
+#define IPPROTO_ICMPV6 58
+#define IPPROTO_IPV6 41
+#define IPV6_CHECKSUM 7
+#define IPV6_UNICAST_HOPS 16
+#define IPV6_MULTICAST_HOPS 18
+#define IPV6_MULTICAST_LOOP 19
+#define IPV6_JOIN_GROUP 20
+#define IPV6_LEAVE_GROUP 21
+#define IPV6_V6ONLY 26
+#define IPV6_RECVPKTINFO 49
+#define IPV6_RECVHOPLIMIT 51
+#define IPV6_TCLASS 67
 
 enum { S_CLOSED, S_BOUND, S_LISTEN, S_CONNECTING, S_CONNECTED };
 
 struct dgram {
   struct list_head link;
   struct pbuf *p;
-  u32 addr; /* network order */
+  ip_addr_t addr;
   u16 port; /* host order */
 };
 
@@ -78,7 +93,9 @@ struct isock {
   struct list_head dgq;
   size_t dgq_bytes;
   bool hdrincl;
-  u32 peer_addr; /* connected raw socket */
+  bool v6only;
+  bool has_peer; /* connected raw socket */
+  ip_addr_t peer;
 };
 
 static struct isock *is(struct socket *s) { return s->priv; }
@@ -130,18 +147,65 @@ struct sin {
   u8 zero[8];
 };
 
-static int get_sin(const void *a, u32 len, ip_addr_t *ip, u16 *port) {
-  const struct sin *s = a;
-  if (len < 8 || (s->family != AF_INET && s->family != AF_UNSPEC)) return -EAFNOSUPPORT;
-  ip_addr_set_ip4_u32_val(*ip, s->addr);
-  *port = lwip_ntohs(s->port);
+struct sin6 {
+  u16 family;
+  u16 port;
+  u32 flowinfo;
+  u8 addr[16];
+  u32 scope_id;
+};
+
+/* Socket address -> lwIP address. AF_INET6 sockets are dual-stack: a
+ * v4-mapped address (::ffff:a.b.c.d) means IPv4. */
+static int get_addr(struct socket *s, const void *a, u32 len, ip_addr_t *ip, u16 *port) {
+  u16 fam = len >= 2 ? *(const u16 *)a : 0;
+  if (s->family == AF_INET) {
+    const struct sin *in = a;
+    if (len < 8 || (fam != AF_INET && fam != AF_UNSPEC)) return -EAFNOSUPPORT;
+    ip_addr_set_ip4_u32_val(*ip, in->addr);
+    *port = lwip_ntohs(in->port);
+    return 0;
+  }
+  if (fam == AF_INET && len >= 8) { /* tolerated, as on Linux for connect() */
+    const struct sin *in = a;
+    ip_addr_set_ip4_u32_val(*ip, in->addr);
+    *port = lwip_ntohs(in->port);
+    return 0;
+  }
+  const struct sin6 *in6 = a;
+  if (len < 24 || fam != AF_INET6) return -EAFNOSUPPORT;
+  *port = lwip_ntohs(in6->port);
+  u32 w[4];
+  memcpy(w, in6->addr, 16);
+  if (w[0] == 0 && w[1] == 0 && w[2] == lwip_htonl(0xffff)) {
+    ip_addr_set_ip4_u32_val(*ip, w[3]);
+    return 0;
+  }
+  IP_ADDR6(ip, w[0], w[1], w[2], w[3]);
+  if (ip6_addr_islinklocal(ip_2_ip6(ip))) {
+    struct netif *nif = len >= 28 && in6->scope_id ? netif_get_by_index((u8_t)in6->scope_id) : netif_default;
+    if (nif) ip6_addr_assign_zone(ip_2_ip6(ip), IP6_UNICAST, nif);
+  }
   return 0;
 }
 
-static void put_sin(void *a, u32 *len, u32 addr, u16 port) {
-  struct sin s = {AF_INET, lwip_htons(port), addr, {0}};
-  memcpy(a, &s, sizeof(s));
-  *len = sizeof(s);
+static void put_addr(struct socket *s, void *a, u32 *len, const ip_addr_t *ip, u16 port) {
+  if (s->family == AF_INET) {
+    struct sin in = {AF_INET, lwip_htons(port), IP_IS_V4(ip) ? ip4_addr_get_u32(ip_2_ip4(ip)) : 0, {0}};
+    memcpy(a, &in, sizeof(in));
+    *len = sizeof(in);
+    return;
+  }
+  struct sin6 in6 = {AF_INET6, lwip_htons(port), 0, {0}, 0};
+  if (IP_IS_V4(ip)) {
+    u32 w[4] = {0, 0, lwip_htonl(0xffff), ip4_addr_get_u32(ip_2_ip4(ip))};
+    memcpy(in6.addr, w, 16);
+  } else {
+    memcpy(in6.addr, ip_2_ip6(ip)->addr, 16);
+    if (ip6_addr_has_zone(ip_2_ip6(ip))) in6.scope_id = ip6_addr_zone(ip_2_ip6(ip));
+  }
+  memcpy(a, &in6, sizeof(in6));
+  *len = sizeof(in6);
 }
 
 /* ---------------- TCP callbacks (stack lock held) ---------------- */
@@ -214,7 +278,7 @@ static err_t tcp_accept_cb(void *arg, struct tcp_pcb *newpcb, err_t err) {
     tcp_abort(newpcb);
     return ERR_ABRT;
   }
-  struct socket *ns = sock_alloc(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  struct socket *ns = sock_alloc(l->sock->family, SOCK_STREAM, IPPROTO_TCP);
   struct isock *ni = ns ? isock_new(ns) : NULL;
   if (!ni) {
     kfree(ns);
@@ -235,7 +299,7 @@ static err_t tcp_accept_cb(void *arg, struct tcp_pcb *newpcb, err_t err) {
 
 /* ---------------- UDP / raw receive (stack lock held) ---------------- */
 
-static void queue_dgram(struct isock *i, struct pbuf *p, u32 addr, u16 port) {
+static void queue_dgram(struct isock *i, struct pbuf *p, const ip_addr_t *addr, u16 port) {
   if (i->dgq_bytes + p->tot_len > i->sock->rcvbuf) {
     pbuf_free(p);
     return;
@@ -246,7 +310,7 @@ static void queue_dgram(struct isock *i, struct pbuf *p, u32 addr, u16 port) {
     return;
   }
   d->p = p;
-  d->addr = addr;
+  ip_addr_copy(d->addr, *addr);
   d->port = port;
   list_add_tail(&d->link, &i->dgq);
   i->dgq_bytes += p->tot_len;
@@ -259,15 +323,17 @@ static void udp_recv_cb(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip
     pbuf_free(p);
     return;
   }
-  queue_dgram(i, p, ip4_addr_get_u32(ip_2_ip4(addr)), port);
+  queue_dgram(i, p, addr, port);
 }
 
 static u8_t raw_recv_cb(void *arg, struct raw_pcb *pcb, struct pbuf *p, const ip_addr_t *addr) {
   struct isock *i = arg;
-  if (i && !i->shut_rd && (!i->peer_addr || i->peer_addr == ip4_addr_get_u32(ip_2_ip4(addr)))) {
+  if (i && !i->shut_rd && (!i->has_peer || ip_addr_eq(&i->peer, addr))) {
     /* copy: the packet continues to the stack (e.g. ICMP echo handling) */
     struct pbuf *c = pbuf_clone(PBUF_RAW, PBUF_RAM, p);
-    if (c) queue_dgram(i, c, ip4_addr_get_u32(ip_2_ip4(addr)), 0);
+    /* like Linux, IPv6 raw sockets see the payload without the IP header */
+    if (c && IP_IS_V6(addr)) pbuf_remove_header(c, ip_current_header_tot_len());
+    if (c) queue_dgram(i, c, addr, 0);
   }
   return 0; /* not eaten */
 }
@@ -354,9 +420,12 @@ static int in_bind(struct socket *s, const void *addr, u32 len) {
   struct isock *i = is(s);
   ip_addr_t ip;
   u16 port;
-  int r = get_sin(addr, len, &ip, &port);
+  int r = get_addr(s, addr, len, &ip, &port);
   if (r) return r;
   if (port && port < 1024 && current->proc->cred.euid != 0) return -EACCES;
+  /* "::" on a dual-stack socket also accepts IPv4 (like Linux without IPV6_V6ONLY) */
+  if (s->family == AF_INET6 && !i->v6only && s->type != SOCK_RAW && IP_IS_V6(&ip) && ip_addr_isany(&ip))
+    ip_addr_copy(ip, *IP_ANY_TYPE);
   net_lock();
   apply_reuse(s);
   err_t e = ERR_OK;
@@ -391,7 +460,7 @@ static int in_listen(struct socket *s, int backlog) {
   } else {
     if (i->state == S_CLOSED) { /* listen on an ephemeral port */
       apply_reuse(s);
-      if (tcp_bind(i->pcb.tcp, IP_ANY_TYPE, 0) != ERR_OK) r = -EADDRINUSE;
+      if (tcp_bind(i->pcb.tcp, s->family == AF_INET ? IP4_ADDR_ANY : IP_ANY_TYPE, 0) != ERR_OK) r = -EADDRINUSE;
     }
     struct tcp_pcb *l = r ? NULL : tcp_listen_with_backlog(i->pcb.tcp, (u8_t)MIN(backlog, 255));
     if (!r && !l) r = -ENOBUFS;
@@ -438,11 +507,11 @@ static int in_connect(struct socket *s, const void *addr, u32 len) {
     if (s->type == SOCK_DGRAM)
       udp_disconnect(i->pcb.udp);
     else
-      i->peer_addr = 0;
+      i->has_peer = false;
     net_unlock();
     return 0;
   }
-  int r = get_sin(addr, len, &ip, &port);
+  int r = get_addr(s, addr, len, &ip, &port);
   if (r) return r;
   if (s->type == SOCK_DGRAM) {
     net_lock();
@@ -451,7 +520,8 @@ static int in_connect(struct socket *s, const void *addr, u32 len) {
     return lwip_errno(e);
   }
   if (s->type == SOCK_RAW) {
-    i->peer_addr = ip4_addr_get_u32(ip_2_ip4(&ip));
+    ip_addr_copy(i->peer, ip);
+    i->has_peer = true;
     return 0;
   }
   net_lock();
@@ -609,7 +679,7 @@ static ssize_t dgram_send(struct socket *s, struct kmsg *m, int flags) {
   u16 port = 0;
   bool to = m->namelen;
   if (to) {
-    int r = get_sin(m->name, m->namelen, &ip, &port);
+    int r = get_addr(s, m->name, m->namelen, &ip, &port);
     if (r) {
       pbuf_free(p);
       return r;
@@ -625,10 +695,10 @@ static ssize_t dgram_send(struct socket *s, struct kmsg *m, int flags) {
     else
       e = udp_send(i->pcb.udp, p);
   } else {
-    if (!to && !i->peer_addr)
+    if (!to && !i->has_peer)
       e = ERR_CONN;
     else {
-      if (!to) ip_addr_set_ip4_u32_val(ip, i->peer_addr);
+      if (!to) ip_addr_copy(ip, i->peer);
       e = raw_sendto(i->pcb.raw, p, &ip);
     }
   }
@@ -658,7 +728,7 @@ static ssize_t dgram_recv(struct socket *s, struct kmsg *m, int flags) {
         if (kmsg_copy_to(m, 0, buf, n)) r = -EFAULT;
       }
       kfree(buf);
-      put_sin(m->name, &m->namelen, d->addr, d->port);
+      put_addr(s, m->name, &m->namelen, &d->addr, d->port);
       if (n < full) m->flags |= MSG_TRUNC;
       if (!(flags & MSG_PEEK)) {
         net_lock();
@@ -718,7 +788,9 @@ static int in_getname(struct socket *s, void *addr, u32 *len, bool peer) {
   struct isock *i = is(s);
   net_lock();
   int r = 0;
-  u32 a = 0;
+  ip_addr_t a;
+  ip_addr_set_zero(&a);
+  if (s->family == AF_INET) ip_addr_set_zero_ip4(&a);
   u16 port = 0;
   switch (s->type) {
     case SOCK_STREAM:
@@ -726,29 +798,33 @@ static int in_getname(struct socket *s, void *addr, u32 *len, bool peer) {
         if (peer) r = -ENOTCONN;
       } else if (peer) {
         if (i->state != S_CONNECTED) r = -ENOTCONN;
-        a = ip4_addr_get_u32(ip_2_ip4(&i->pcb.tcp->remote_ip));
+        ip_addr_copy(a, i->pcb.tcp->remote_ip);
         port = i->pcb.tcp->remote_port;
       } else {
-        a = ip4_addr_get_u32(ip_2_ip4(&i->pcb.tcp->local_ip));
+        ip_addr_copy(a, i->pcb.tcp->local_ip);
         port = i->pcb.tcp->local_port;
       }
       break;
     case SOCK_DGRAM:
       if (peer) {
         if (!(i->pcb.udp->flags & UDP_FLAGS_CONNECTED)) r = -ENOTCONN;
-        a = ip4_addr_get_u32(ip_2_ip4(&i->pcb.udp->remote_ip));
+        ip_addr_copy(a, i->pcb.udp->remote_ip);
         port = i->pcb.udp->remote_port;
       } else {
-        a = ip4_addr_get_u32(ip_2_ip4(&i->pcb.udp->local_ip));
+        ip_addr_copy(a, i->pcb.udp->local_ip);
         port = i->pcb.udp->local_port;
       }
       break;
     default:
-      if (peer && !i->peer_addr) r = -ENOTCONN;
-      a = peer ? i->peer_addr : ip4_addr_get_u32(ip_2_ip4(&i->pcb.raw->local_ip));
+      if (peer && !i->has_peer) r = -ENOTCONN;
+      if (peer)
+        ip_addr_copy(a, i->peer);
+      else
+        ip_addr_copy(a, i->pcb.raw->local_ip);
   }
   net_unlock();
-  if (!r) put_sin(addr, len, a, port);
+  if (IP_IS_ANY_TYPE_VAL(a)) IP_SET_TYPE_VAL(a, s->family == AF_INET ? IPADDR_TYPE_V4 : IPADDR_TYPE_V6);
+  if (!r) put_addr(s, addr, len, &a, port);
   return r;
 }
 
@@ -810,6 +886,63 @@ static int in_setsockopt(struct socket *s, int level, int opt, const void *val, 
     net_unlock();
     return r;
   }
+  if (level == IPPROTO_IPV6 && s->family == AF_INET6) {
+    if (opt == IPV6_JOIN_GROUP || opt == IPV6_LEAVE_GROUP) {
+      if (len < 20) return -EINVAL;
+      struct {
+        u8 addr[16];
+        u32 ifindex;
+      } mr;
+      memcpy(&mr, val, sizeof(mr));
+      ip6_addr_t group;
+      u32 w[4];
+      memcpy(w, mr.addr, 16);
+      IP6_ADDR(&group, w[0], w[1], w[2], w[3]);
+      net_lock();
+      struct netif *nif = mr.ifindex ? netif_get_by_index((u8_t)mr.ifindex) : netif_default;
+      err_t e = !nif                     ? ERR_IF
+                : opt == IPV6_JOIN_GROUP ? mld6_joingroup_netif(nif, &group)
+                                         : mld6_leavegroup_netif(nif, &group);
+      net_unlock();
+      return lwip_errno(e);
+    }
+    if (getint(val, len, &v)) return -EINVAL;
+    net_lock();
+    struct tcp_pcb *pp = i->pcb.any;
+    switch (opt) {
+      case IPV6_V6ONLY:
+        i->v6only = v != 0;
+        if (pp && s->type != SOCK_RAW) {
+          IP_SET_TYPE_VAL(pp->local_ip, v ? IPADDR_TYPE_V6 : IPADDR_TYPE_ANY);
+          IP_SET_TYPE_VAL(pp->remote_ip, v ? IPADDR_TYPE_V6 : IPADDR_TYPE_ANY);
+        }
+        break;
+      case IPV6_UNICAST_HOPS:
+        if (pp) pp->ttl = (u8_t)(v < 0 ? 64 : v);
+        break;
+      case IPV6_MULTICAST_HOPS:
+        if (s->type == SOCK_DGRAM) udp_set_multicast_ttl(i->pcb.udp, (u8_t)(v < 0 ? 1 : v));
+        break;
+      case IPV6_CHECKSUM:
+        if (s->type == SOCK_RAW) {
+          i->pcb.raw->chksum_reqd = v >= 0;
+          i->pcb.raw->chksum_offset = (u16_t)(v >= 0 ? v : 0);
+        }
+        break;
+      case IPV6_TCLASS:
+        if (pp) pp->tos = (u8_t)v;
+        break;
+      case IPV6_MULTICAST_LOOP:
+      case IPV6_RECVPKTINFO:
+      case IPV6_RECVHOPLIMIT:
+        break;
+      default:
+        r = -ENOPROTOOPT;
+    }
+    net_unlock();
+    return r;
+  }
+  if (level == IPPROTO_ICMPV6) return 0; /* ICMP6_FILTER: everything is delivered */
   if (level == IPPROTO_IP) {
     if (opt == IP_ADD_MEMBERSHIP || opt == IP_DROP_MEMBERSHIP) {
       if (len < 8) return -EINVAL;
@@ -971,24 +1104,32 @@ static int in_create(struct socket *s, int type, int protocol) {
   if (type == SOCK_STREAM && protocol && protocol != IPPROTO_TCP) return -EPROTONOSUPPORT;
   if (type == SOCK_DGRAM && protocol && protocol != IPPROTO_UDP) return -EPROTONOSUPPORT;
   if (type == SOCK_RAW && (protocol <= 0 || protocol > 255)) return -EPROTONOSUPPORT;
+  if (type == SOCK_STREAM && s->family == AF_INET6 && protocol == 0) protocol = IPPROTO_TCP;
   if (type != SOCK_STREAM && type != SOCK_DGRAM && type != SOCK_RAW) return -ESOCKTNOSUPPORT;
   struct isock *i = isock_new(s);
   if (!i) return -ENOMEM;
   s->ops = &inet_ops;
   s->protocol = type == SOCK_STREAM ? IPPROTO_TCP : type == SOCK_DGRAM ? IPPROTO_UDP : protocol;
+  u8_t iptype = s->family == AF_INET ? IPADDR_TYPE_V4 : IPADDR_TYPE_ANY; /* AF_INET6 is dual-stack */
   net_lock();
   switch (type) {
     case SOCK_STREAM:
-      i->pcb.tcp = tcp_new_ip_type(IPADDR_TYPE_V4);
+      i->pcb.tcp = tcp_new_ip_type(iptype);
       if (i->pcb.tcp) tcp_setup(i, i->pcb.tcp);
       break;
     case SOCK_DGRAM:
-      i->pcb.udp = udp_new_ip_type(IPADDR_TYPE_V4);
+      i->pcb.udp = udp_new_ip_type(iptype);
       if (i->pcb.udp) udp_recv(i->pcb.udp, udp_recv_cb, i);
       break;
     case SOCK_RAW:
-      i->pcb.raw = raw_new_ip_type(IPADDR_TYPE_V4, (u8_t)protocol);
-      if (i->pcb.raw) raw_recv(i->pcb.raw, raw_recv_cb, i);
+      i->pcb.raw = raw_new_ip_type(s->family == AF_INET ? IPADDR_TYPE_V4 : IPADDR_TYPE_V6, (u8_t)protocol);
+      if (i->pcb.raw) {
+        raw_recv(i->pcb.raw, raw_recv_cb, i);
+        if (s->family == AF_INET6 && protocol == IPPROTO_ICMPV6) { /* the kernel computes ICMPv6 checksums */
+          i->pcb.raw->chksum_reqd = 1;
+          i->pcb.raw->chksum_offset = 2;
+        }
+      }
       break;
   }
   net_unlock();
@@ -1014,38 +1155,94 @@ static void show_pcb(seq_printf_t pr, void *ctx, int *n, u32 la, u16 lp, u32 ra,
      (*n)++, la, lp, ra, rp, st);
 }
 
-static void show_tcp(seq_printf_t pr, void *ctx) {
-  pr(ctx, "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n");
+static void hex6(char *out, const ip_addr_t *a) {
+  u32 w[4] = {0, 0, 0, 0};
+  if (IP_IS_V6(a))
+    memcpy(w, ip_2_ip6(a)->addr, 16);
+  else if (IP_IS_V4(a) && !ip_addr_isany(a))
+    w[2] = lwip_htonl(0xffff), w[3] = ip4_addr_get_u32(ip_2_ip4(a));
+  snprintf(out, 33, "%08X%08X%08X%08X", w[0], w[1], w[2], w[3]);
+}
+
+static void show_pcb6(seq_printf_t pr, void *ctx, int *n, const ip_addr_t *la, u16 lp, const ip_addr_t *ra, u16 rp,
+                      int st) {
+  char l[33], r[33];
+  hex6(l, la);
+  hex6(r, ra);
+  pr(ctx, "%4d: %s:%04X %s:%04X %02X 00000000:00000000 00:00000000 00000000     0        0 0 1 0000000000000000\n",
+     (*n)++, l, lp, r, rp, st);
+}
+
+static bool is6(const ip_addr_t *local) { return !IP_IS_V4(local); }
+
+static void show_tcp_family(seq_printf_t pr, void *ctx, bool v6) {
+  pr(ctx,
+     v6 ? "  sl  local_address                         remote_address                        st tx_queue rx_queue tr "
+          "tm->when retrnsmt   uid  timeout inode\n"
+        : "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n");
   int n = 0;
   net_lock();
-  for (struct tcp_pcb_listen *l = tcp_listen_pcbs.listen_pcbs; l; l = l->next)
-    show_pcb(pr, ctx, &n, ip4_addr_get_u32(ip_2_ip4(&l->local_ip)), l->local_port, 0, 0, 10);
+  for (struct tcp_pcb_listen *l = tcp_listen_pcbs.listen_pcbs; l; l = l->next) {
+    if (is6(&l->local_ip) != v6) continue;
+    if (v6)
+      show_pcb6(pr, ctx, &n, &l->local_ip, l->local_port, IP6_ADDR_ANY, 0, 10);
+    else
+      show_pcb(pr, ctx, &n, ip4_addr_get_u32(ip_2_ip4(&l->local_ip)), l->local_port, 0, 0, 10);
+  }
   struct tcp_pcb *lists[] = {tcp_active_pcbs, tcp_tw_pcbs};
   for (int k = 0; k < 2; k++)
-    for (struct tcp_pcb *p = lists[k]; p; p = p->next)
-      show_pcb(pr, ctx, &n, ip4_addr_get_u32(ip_2_ip4(&p->local_ip)), p->local_port,
-               ip4_addr_get_u32(ip_2_ip4(&p->remote_ip)), p->remote_port, linux_tcp_state(p->state));
+    for (struct tcp_pcb *p = lists[k]; p; p = p->next) {
+      if (is6(&p->local_ip) != v6) continue;
+      if (v6)
+        show_pcb6(pr, ctx, &n, &p->local_ip, p->local_port, &p->remote_ip, p->remote_port, linux_tcp_state(p->state));
+      else
+        show_pcb(pr, ctx, &n, ip4_addr_get_u32(ip_2_ip4(&p->local_ip)), p->local_port,
+                 ip4_addr_get_u32(ip_2_ip4(&p->remote_ip)), p->remote_port, linux_tcp_state(p->state));
+    }
   net_unlock();
 }
 
-extern struct udp_pcb *udp_pcbs;
+static void show_tcp(seq_printf_t pr, void *ctx) { show_tcp_family(pr, ctx, false); }
+static void show_tcp6(seq_printf_t pr, void *ctx) { show_tcp_family(pr, ctx, true); }
 
-static void show_udp(seq_printf_t pr, void *ctx) {
+static void show_udp_family(seq_printf_t pr, void *ctx, bool v6) {
   pr(ctx, "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n");
   int n = 0;
   net_lock();
-  for (struct udp_pcb *p = udp_pcbs; p; p = p->next)
-    show_pcb(pr, ctx, &n, ip4_addr_get_u32(ip_2_ip4(&p->local_ip)), p->local_port,
-             ip4_addr_get_u32(ip_2_ip4(&p->remote_ip)), p->remote_port, 7);
+  for (struct udp_pcb *p = udp_pcbs; p; p = p->next) {
+    if (is6(&p->local_ip) != v6) continue;
+    if (v6)
+      show_pcb6(pr, ctx, &n, &p->local_ip, p->local_port, &p->remote_ip, p->remote_port, 7);
+    else
+      show_pcb(pr, ctx, &n, ip4_addr_get_u32(ip_2_ip4(&p->local_ip)), p->local_port,
+               ip4_addr_get_u32(ip_2_ip4(&p->remote_ip)), p->remote_port, 7);
+  }
   net_unlock();
 }
 
+static void show_udp(seq_printf_t pr, void *ctx) { show_udp_family(pr, ctx, false); }
+static void show_udp6(seq_printf_t pr, void *ctx) { show_udp_family(pr, ctx, true); }
+
+/* raw sockets are not enumerable through lwIP's API: the tables list none */
+static void show_raw_family(seq_printf_t pr, void *ctx, bool v6) {
+  pr(ctx, "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n");
+}
+
+static void show_raw(seq_printf_t pr, void *ctx) { show_raw_family(pr, ctx, false); }
+static void show_raw6(seq_printf_t pr, void *ctx) { show_raw_family(pr, ctx, true); }
+
 static const struct net_family inet_family = {.family = AF_INET, .create = in_create};
+static const struct net_family inet6_family = {.family = AF_INET6, .create = in_create};
 
 static int inet_init(void) {
   net_register_family(&inet_family);
+  net_register_family(&inet6_family);
   proc_net_register("tcp", show_tcp);
   proc_net_register("udp", show_udp);
+  proc_net_register("tcp6", show_tcp6);
+  proc_net_register("udp6", show_udp6);
+  proc_net_register("raw", show_raw);
+  proc_net_register("raw6", show_raw6);
   return 0;
 }
 core_initcall(inet_init);

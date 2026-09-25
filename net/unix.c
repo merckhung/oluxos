@@ -653,11 +653,30 @@ static int u_create(struct socket *s, int type, int protocol) {
   return 0;
 }
 
+static void show_unix(seq_printf_t pr, void *ctx) {
+  pr(ctx, "Num       RefCount Protocol Flags    Type St Inode Path\n");
+  mutex_lock(&ulock);
+  struct usock *u;
+  list_for_each_entry(u, &bound, bound_link) {
+    int st = u->state == U_LISTENING ? 1 : u->state == U_CONNECTED ? 3 : 1;
+    int type = u->sock ? u->sock->type : SOCK_STREAM;
+    char path[UNIX_PATH_MAX + 2];
+    size_t n = u->addrlen > 2 ? u->addrlen - 2 : 0;
+    memcpy(path, u->addr + 2, n);
+    path[n] = 0;
+    if (n && path[0] == 0) path[0] = '@'; /* abstract */
+    pr(ctx, "%016lx: %08X %08X %08X %04X %02X %5d %s\n", (unsigned long)(uintptr_t)u, u->refs, 0,
+       u->state == U_LISTENING ? 0x10000 : 0, type, st, 0, path);
+  }
+  mutex_unlock(&ulock);
+}
+
 static const struct net_family unix_family = {.family = AF_UNIX, .create = u_create};
 
 static int unix_init(void) {
   mutex_init(&ulock);
   net_register_family(&unix_family);
+  proc_net_register("unix", show_unix);
   return 0;
 }
 core_initcall(unix_init);

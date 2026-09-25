@@ -20,7 +20,15 @@
 
 /* Protocols */
 #define LWIP_IPV4 1
-#define LWIP_IPV6 0
+#define LWIP_IPV6 1
+#define LWIP_IPV6_AUTOCONFIG 1 /* SLAAC from router advertisements */
+#define LWIP_IPV6_NUM_ADDRESSES 4
+#define LWIP_IPV6_MLD 1
+#define LWIP_IPV6_FRAG 1
+#define LWIP_IPV6_REASS 1
+#define IPV6_FRAG_COPYHEADER 1 /* 64-bit pointers do not fit the fragment header */
+#define LWIP_ND6_RDNSS_MAX_DNS_SERVERS 1
+#define LWIP_IPV6_DHCP6 0
 #define LWIP_ARP 1
 #define LWIP_ETHERNET 1
 #define ETHARP_SUPPORT_STATIC_ENTRIES 1
@@ -35,7 +43,7 @@
 #define LWIP_DHCP 1
 #define LWIP_DHCP_DOES_ACD_CHECK 0
 #define LWIP_DNS 1 /* only to keep the DNS servers DHCP reports */
-#define DNS_MAX_SERVERS 3
+#define DNS_MAX_SERVERS 3 /* DHCP servers first, then RDNSS */
 #define IP_FORWARD 0
 #define IP_REASSEMBLY 1
 #define IP_FRAG 1

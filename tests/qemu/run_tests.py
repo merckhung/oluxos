@@ -346,6 +346,12 @@ def t_network(c):
     out, rc = c.run("for i in $(seq 1 100); do netcfg | grep -q dhcp && break; sleep 0.1; done; netcfg; "
                     "cat /etc/resolv.conf; ping -c 2 -W 2 10.0.2.2")
     assert rc == 0 and "10.0.2.15/24 (dhcp)" in out and "nameserver 10.0.2.3" in out and "2 packets received" in out, out
+    # IPv6: SLAAC address from QEMU's router advertisements, ICMPv6, TCP over IPv6
+    out, rc = c.run("for i in $(seq 1 50); do grep -q '^fec0' /proc/net/if_inet6 && break; sleep 0.1; done; "
+                    "ifconfig eth0 | grep inet6; ping6 -c 2 fec0::2 && "
+                    "(echo v6-server | nc -l -p 7777 > /tmp/v6got &) && sleep 0.3 && echo v6-client | nc ::1 7777 && "
+                    "sleep 0.3 && cat /tmp/v6got && netstat -tan")
+    assert rc == 0 and "fec0::" in out and "2 packets received" in out and "v6-server" in out and "v6-client" in out, out
     # outbound: fetch from a server on the host (10.0.2.2 is the host for QEMU)
     payload = os.urandom(1 << 20)
     class H(http.server.BaseHTTPRequestHandler):
