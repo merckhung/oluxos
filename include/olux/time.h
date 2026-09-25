@@ -41,6 +41,9 @@ void time_cpu_init(void);
 
 u64 ktime_ns(void);
 u64 ktime_realtime_ns(void);
+/* Clock discipline for adjtimex(): step, slew (<= 500 ppm) and frequency. */
+void realtime_adjust(s64 step_ns, bool have_step, s64 slew_ns, bool have_slew, s64 freq_ppb, bool have_freq,
+                     s64 *slew_left, s64 *freq);
 void set_realtime_ns(u64 ns);
 extern volatile u64 jiffies;
 

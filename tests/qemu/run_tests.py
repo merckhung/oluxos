@@ -424,6 +424,45 @@ def t_network(c):
         assert "HOST-SSH-OK" in r.stdout and "OluxOS" in r.stdout, r.stdout + r.stderr
 
 
+def t_ntp(c):
+    """ntpd sets the clock from an SNTP server on the host; adjtimex works."""
+    if c.args.machine != "virt":
+        return
+    import socket
+    import struct
+    import threading
+    srv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    srv.bind(("127.0.0.1", 0))
+    srv.settimeout(0.5)
+    port = srv.getsockname()[1]
+    stop = []
+
+    def serve():
+        while not stop:
+            try:
+                data, addr = srv.recvfrom(512)
+            except socket.timeout:
+                continue
+            if len(data) < 48:
+                continue
+            now = time.time() + 2208988800
+            ts = struct.pack("!II", int(now), int((now % 1) * (1 << 32)))
+            reply = struct.pack("!BBbb", 0x24, 1, 4, -20) + struct.pack("!II", 0, 0) + b"GPS\0" + ts + data[40:48] + ts + ts
+            srv.sendto(reply, addr)
+    th = threading.Thread(target=serve, daemon=True)
+    th.start()
+    try:
+        out, rc = c.run("killall ntpd; date -s 2001-01-01 >/dev/null; ntpd -n -q -p 10.0.2.2:%d; date +%%Y" % port,
+                        timeout=120)
+    finally:
+        stop.append(1)
+        th.join()
+        srv.close()
+    assert rc == 0 and time.strftime("%Y") in out.split()[-1], out
+    out, rc = c.run("adjtimex | grep -E 'status|frequency'")
+    assert rc == 0 and "status" in out, out
+
+
 def t_init_respawn(c):
     c.send("exit\n")
     c.expect(PROMPT, 20)
@@ -436,7 +475,7 @@ def t_init_respawn(c):
 TESTS = [
     t_boot_banner, t_smp, t_selftest, t_pipeline_and_redirect, t_shell_scripting, t_file_utilities,
     t_background_jobs, t_ctrl_c, t_job_control, t_proc_tools, t_mounts, t_segfault_contained,
-    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_network, t_rpi_platform, t_init_respawn,
+    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_network, t_ntp, t_rpi_platform, t_init_respawn,
 ]
 
 

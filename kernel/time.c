@@ -9,7 +9,15 @@
 #include <olux/time.h>
 
 static const struct clock_ops *clock;
-static s64 realtime_offset; /* realtime = monotonic + offset */
+/* Wall clock: realtime = monotonic + offset. NTP-style discipline: a
+ * frequency correction and an offset being slewed at up to 500 ppm are
+ * folded into the offset whenever the clock is read. */
+static s64 realtime_offset;
+static u64 disc_last;    /* monotonic time of the last fold */
+static s64 slew_left_ns; /* remaining offset correction */
+static s64 freq_ppb;     /* frequency correction, parts per billion */
+static DEFINE_SPINLOCK(realtime_lock);
+#define MAX_SLEW_PPM 500
 volatile u64 jiffies;
 
 struct cpu_timers {
@@ -22,8 +30,68 @@ static struct cpu_timers cpu_timers[NR_CPUS];
 void register_clock(const struct clock_ops *ops) { clock = ops; }
 
 u64 ktime_ns(void) { return clock ? clock->read_ns() : 0; }
-u64 ktime_realtime_ns(void) { return ktime_ns() + realtime_offset; }
-void set_realtime_ns(u64 ns) { realtime_offset = (s64)ns - (s64)ktime_ns(); }
+static s64 freq_rem, slew_rem; /* sub-nanosecond carries (units of 1e-9 ns / 1e-6 ns) */
+
+static void fold(u64 now) { /* realtime_lock held */
+  if (!disc_last) disc_last = now;
+  s64 elapsed = (s64)(now - disc_last);
+  disc_last = now;
+  if (elapsed <= 0) return;
+  if (freq_ppb) {
+    if (elapsed < 1000000000000LL) { /* exact, carrying the remainder */
+      freq_rem += elapsed * freq_ppb;
+      realtime_offset += freq_rem / 1000000000;
+      freq_rem %= 1000000000;
+    } else {
+      realtime_offset += elapsed / 1000 * freq_ppb / 1000000;
+    }
+  }
+  if (slew_left_ns) {
+    s64 max;
+    if (elapsed < 1000000000000LL) {
+      slew_rem += elapsed * MAX_SLEW_PPM;
+      max = slew_rem / 1000000;
+      slew_rem %= 1000000;
+    } else {
+      max = elapsed / 1000000 * MAX_SLEW_PPM;
+    }
+    s64 step = slew_left_ns > 0 ? MIN(slew_left_ns, max) : MAX(slew_left_ns, -max);
+    realtime_offset += step;
+    slew_left_ns -= step;
+  } else {
+    slew_rem = 0;
+  }
+}
+
+u64 ktime_realtime_ns(void) {
+  unsigned long f = spin_lock_irqsave(&realtime_lock);
+  u64 now = ktime_ns();
+  fold(now);
+  u64 r = now + realtime_offset;
+  spin_unlock_irqrestore(&realtime_lock, f);
+  return r;
+}
+
+void set_realtime_ns(u64 ns) {
+  unsigned long f = spin_lock_irqsave(&realtime_lock);
+  u64 now = ktime_ns();
+  fold(now);
+  realtime_offset = (s64)ns - (s64)now;
+  slew_left_ns = 0;
+  spin_unlock_irqrestore(&realtime_lock, f);
+}
+
+void realtime_adjust(s64 step_ns, bool have_step, s64 slew_ns, bool have_slew, s64 new_freq_ppb, bool have_freq,
+                     s64 *slew_left_out, s64 *freq_out) {
+  unsigned long f = spin_lock_irqsave(&realtime_lock);
+  fold(ktime_ns());
+  if (have_step) realtime_offset += step_ns;
+  if (have_slew) slew_left_ns = slew_ns;
+  if (have_freq) freq_ppb = new_freq_ppb;
+  if (slew_left_out) *slew_left_out = slew_left_ns;
+  if (freq_out) *freq_out = freq_ppb;
+  spin_unlock_irqrestore(&realtime_lock, f);
+}
 
 void udelay(u64 us) {
   u64 end = ktime_ns() + us * NSEC_PER_USEC;

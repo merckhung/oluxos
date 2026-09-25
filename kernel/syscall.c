@@ -21,7 +21,7 @@
   X(70, pwritev) X(71, sendfile) X(72, pselect6) X(73, ppoll) X(78, readlinkat) X(79, newfstatat)            \
   X(80, fstat) X(81, sync) X(82, fsync) X(83, fdatasync) X(88, utimensat) X(90, capget) X(91, capset)      \
   X(93, exit) X(94, exit_group) X(95, waitid) X(96, set_tid_address) X(98, futex) X(99, set_robust_list)   \
-  X(100, get_robust_list) X(101, nanosleep) X(102, getitimer) X(103, setitimer) X(113, clock_gettime)       \
+  X(100, get_robust_list) X(101, nanosleep) X(102, getitimer) X(103, setitimer) X(112, clock_settime) X(113, clock_gettime)       \
   X(114, clock_getres) X(115, clock_nanosleep) X(116, syslog) X(118, sched_setparam)                       \
   X(119, sched_setscheduler) X(120, sched_getscheduler) X(121, sched_getparam) X(122, sched_setaffinity)    \
   X(123, sched_getaffinity) X(124, sched_yield) X(125, sched_get_priority_max)                              \
@@ -33,13 +33,13 @@
   X(152, setfsgid) X(153, times) X(154, setpgid) X(155, getpgid) X(156, getsid) X(157, setsid)             \
   X(158, getgroups) X(159, setgroups) X(160, uname) X(161, sethostname) X(162, setdomainname)              \
   X(163, getrlimit) X(164, setrlimit) X(165, getrusage) X(166, umask) X(167, prctl) X(168, getcpu)         \
-  X(169, gettimeofday) X(170, settimeofday) X(172, getpid) X(173, getppid) X(174, getuid) X(175, geteuid)  \
+  X(169, gettimeofday) X(170, settimeofday) X(171, adjtimex) X(172, getpid) X(173, getppid) X(174, getuid) X(175, geteuid)  \
   X(176, getgid) X(177, getegid) X(178, gettid) X(179, sysinfo) X(198, socket) X(199, socketpair)          \
   X(200, bind) X(201, listen) X(202, accept) X(203, connect) X(204, getsockname) X(205, getpeername)        \
   X(206, sendto) X(207, recvfrom) X(208, setsockopt) X(209, getsockopt) X(210, shutdown) X(211, sendmsg)   \
   X(212, recvmsg) X(214, brk) X(215, munmap) X(216, mremap) X(220, clone) X(221, execve) X(222, mmap)      \
   X(223, fadvise64) X(226, mprotect) X(227, msync) X(228, mlock) X(229, munlock) X(230, mlockall)          \
-  X(231, munlockall) X(232, mincore) X(233, madvise) X(242, accept4) X(260, wait4) X(261, prlimit64)       \
+  X(231, munlockall) X(232, mincore) X(233, madvise) X(242, accept4) X(260, wait4) X(261, prlimit64) X(266, clock_adjtime)       \
   X(276, renameat2) X(278, getrandom) X(279, memfd_create) X(291, statx) X(293, rseq) X(435, clone3)       \
   X(439, faccessat2)
 

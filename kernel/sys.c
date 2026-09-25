@@ -210,8 +210,7 @@ long sys_setpgid(u64 upid, u64 upgid) {
   if (pgid != pid) {
     bool found = false;
     struct process *q;
-    list_for_each_entry(q, &all_processes, all_link)
-      if (q->pgid == pgid && q->sid == self->sid) found = true;
+    list_for_each_entry(q, &all_processes, all_link) if (q->pgid == pgid && q->sid == self->sid) found = true;
     if (!found) return -EPERM;
   }
   p->pgid = pgid;
@@ -234,8 +233,7 @@ long sys_setsid(void);
 long sys_setsid(void) {
   struct process *p = current->proc;
   struct process *q;
-  list_for_each_entry(q, &all_processes, all_link)
-    if (q->pgid == p->pid) return -EPERM;
+  list_for_each_entry(q, &all_processes, all_link) if (q->pgid == p->pid) return -EPERM;
   p->sid = p->pgid = p->pid;
   p->tty = NULL;
   return p->sid;
@@ -638,6 +636,116 @@ long sys_settimeofday(u64 utv, u64 utz) {
   return 0;
 }
 
+long sys_clock_settime(u64 clk, u64 uts);
+long sys_clock_settime(u64 clk, u64 uts) {
+  if (clk != 0 /* CLOCK_REALTIME */) return -EINVAL;
+  if (!capable_root()) return -EPERM;
+  s64 ts[2];
+  if (copy_from_user(ts, uts, sizeof(ts))) return -EFAULT;
+  if (ts[0] < 0 || ts[1] < 0 || ts[1] >= (s64)NSEC_PER_SEC) return -EINVAL;
+  u64 ns = (u64)ts[0] * NSEC_PER_SEC + ts[1];
+  set_realtime_ns(ns);
+  rtc_set_time(ns);
+  return 0;
+}
+
+/* struct timex (Linux, 64-bit) */
+#define MAX_FREQ_PPM 500
+
+struct timex {
+  u32 modes, pad0;
+  s64 offset, freq, maxerror, esterror;
+  s32 status, pad1;
+  s64 constant, precision, tolerance;
+  s64 time_sec, time_usec;
+  s64 tick, ppsfreq, jitter;
+  s32 shift, pad2;
+  s64 stabil, jitcnt, calcnt, errcnt, stbcnt;
+  s32 tai;
+  s32 reserved[11];
+};
+
+#define ADJ_OFFSET 0x0001
+#define ADJ_FREQUENCY 0x0002
+#define ADJ_MAXERROR 0x0004
+#define ADJ_ESTERROR 0x0008
+#define ADJ_STATUS 0x0010
+#define ADJ_TIMECONST 0x0020
+#define ADJ_TAI 0x0080
+#define ADJ_SETOFFSET 0x0100
+#define ADJ_MICRO 0x1000
+#define ADJ_NANO 0x2000
+#define ADJ_TICK 0x4000
+#define ADJ_OFFSET_SINGLESHOT 0x8001
+#define ADJ_OFFSET_SS_READ 0xa001
+#define STA_NANO 0x2000
+#define STA_UNSYNC 0x0040
+
+static struct {
+  s32 status;
+  s64 maxerror, esterror, constant;
+  s32 tai;
+} ntp = {STA_UNSYNC, 16000000, 16000000, 2, 0};
+
+long sys_adjtimex(u64 utx);
+long sys_adjtimex(u64 utx) {
+  struct timex tx;
+  if (copy_from_user(&tx, utx, sizeof(tx))) return -EFAULT;
+  u32 m = tx.modes;
+  if (m && m != ADJ_OFFSET_SS_READ && !capable_root()) return -EPERM;
+  bool nano = (ntp.status & STA_NANO) || (m & ADJ_NANO);
+  if (m & ADJ_NANO) ntp.status |= STA_NANO;
+  if (m & ADJ_MICRO) ntp.status &= ~STA_NANO, nano = (m & ADJ_NANO) != 0;
+  s64 step = 0, slew = 0, freq = 0;
+  bool have_step = false, have_slew = false, have_freq = false;
+  if ((m & ADJ_SETOFFSET) && m != ADJ_OFFSET_SS_READ) {
+    have_step = true;
+    step = tx.time_sec * (s64)NSEC_PER_SEC + (nano ? tx.time_usec : tx.time_usec * 1000);
+  }
+  if ((m & ADJ_OFFSET) && m != ADJ_OFFSET_SS_READ) {
+    have_slew = true;
+    slew = (m == ADJ_OFFSET_SINGLESHOT) ? tx.offset * 1000 : (nano ? tx.offset : tx.offset * 1000);
+  }
+  if ((m & ADJ_FREQUENCY) && m != ADJ_OFFSET_SINGLESHOT && m != ADJ_OFFSET_SS_READ) {
+    have_freq = true;
+    s64 lim = (s64)MAX_FREQ_PPM << 16;
+    s64 fr = tx.freq < -lim ? -lim : tx.freq > lim ? lim : tx.freq; /* ppm with 16 fractional bits */
+    freq = fr * 1000 / 65536;
+  }
+  if (m != ADJ_OFFSET_SINGLESHOT && m != ADJ_OFFSET_SS_READ) {
+    if (m & ADJ_MAXERROR) ntp.maxerror = tx.maxerror;
+    if (m & ADJ_ESTERROR) ntp.esterror = tx.esterror;
+    if (m & ADJ_STATUS) ntp.status = (tx.status & ~STA_NANO) | (ntp.status & STA_NANO);
+    if (m & ADJ_TIMECONST) ntp.constant = tx.constant;
+    if (m & ADJ_TAI) ntp.tai = (s32)tx.constant;
+  }
+  s64 left, cur_freq;
+  realtime_adjust(step, have_step, slew, have_slew, freq, have_freq, &left, &cur_freq);
+  if (have_step) rtc_set_time(ktime_realtime_ns());
+  u64 now = ktime_realtime_ns();
+  memset(&tx, 0, sizeof(tx));
+  tx.offset = (ntp.status & STA_NANO) ? left : left / 1000;
+  tx.freq = cur_freq * 65536 / 1000;
+  tx.maxerror = ntp.maxerror;
+  tx.esterror = ntp.esterror;
+  tx.status = ntp.status;
+  tx.constant = ntp.constant;
+  tx.precision = 1;
+  tx.tolerance = (s64)MAX_FREQ_PPM << 16;
+  tx.time_sec = (s64)(now / NSEC_PER_SEC);
+  tx.time_usec = (ntp.status & STA_NANO) ? (s64)(now % NSEC_PER_SEC) : (s64)(now % NSEC_PER_SEC / 1000);
+  tx.tick = 10000;
+  tx.tai = ntp.tai;
+  if (copy_to_user(utx, &tx, sizeof(tx))) return -EFAULT;
+  return (ntp.status & STA_UNSYNC) ? 5 /* TIME_ERROR */ : 0 /* TIME_OK */;
+}
+
+long sys_clock_adjtime(u64 clk, u64 utx);
+long sys_clock_adjtime(u64 clk, u64 utx) {
+  if (clk != 0) return -EOPNOTSUPP;
+  return sys_adjtimex(utx);
+}
+
 /* ITIMER_REAL (alarm) */
 static void alarm_fire(struct ktimer *t) {
   struct process *p = t->arg;
@@ -731,8 +839,8 @@ long sys_reboot(u64 m1, u64 m2, u64 cmd, u64 arg) {
 long sys_syslog(u64 type, u64 buf, u64 len);
 long sys_syslog(u64 type, u64 buf, u64 len) {
   switch (type) {
-    case 2: /* READ */
-    case 3: /* READ_ALL */
+    case 2:   /* READ */
+    case 3:   /* READ_ALL */
     case 4: { /* READ_CLEAR */
       static size_t clear_pos;
       size_t pos = type == 2 ? clear_pos : (klog_size() > 65536 ? klog_size() - 65536 : 0);
@@ -750,7 +858,7 @@ long sys_syslog(u64 type, u64 buf, u64 len) {
     case 8: /* CONSOLE_LEVEL */
       console_loglevel = CLAMP((int)len, 1, 8);
       return 0;
-    case 9: /* SIZE_UNREAD */
+    case 9:  /* SIZE_UNREAD */
     case 10: /* SIZE_BUFFER */
       return 65536;
     default:
