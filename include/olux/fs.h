@@ -312,6 +312,8 @@ struct cdev {
 };
 int register_chrdev(dev_t dev, const char *name, const struct file_operations *fops, void *priv);
 struct cdev *cdev_lookup(dev_t dev);
+void unregister_chrdev(dev_t dev);
+int devfs_remove(const char *name);
 /* Create a node in /dev for a registered device. */
 int devfs_create(const char *name, mode_t mode, dev_t dev);
 void devfs_mount_all(void);

@@ -87,6 +87,7 @@ struct process {
 #define current_proc (current->proc)
 
 extern struct list_head all_processes;
+extern spinlock_t procs_lock;
 extern struct process *init_process;
 
 void process_init(void);

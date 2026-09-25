@@ -27,6 +27,23 @@ int register_chrdev(dev_t dev, const char *name, const struct file_operations *f
   return 0;
 }
 
+void unregister_chrdev(dev_t dev) {
+  for (struct cdev **pp = &cdevs; *pp; pp = &(*pp)->next) {
+    if ((*pp)->dev == dev) {
+      struct cdev *c = *pp;
+      *pp = c->next;
+      kfree(c);
+      return;
+    }
+  }
+}
+
+int devfs_remove(const char *name) {
+  char path[48];
+  snprintf(path, sizeof(path), "/dev/%s", name);
+  return vfs_unlink(AT_FDCWD, path);
+}
+
 struct cdev *cdev_lookup(dev_t dev) {
   for (struct cdev *c = cdevs; c; c = c->next)
     if (c->dev == dev) return c;

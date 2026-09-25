@@ -79,6 +79,8 @@ struct tty;
 struct tty_ops {
   void (*write)(struct tty *t, const char *buf, size_t n);
   void (*set_termios)(struct tty *t, const struct termios *old);
+  /* Optional: bytes the output side can accept now (flow control). */
+  unsigned (*write_room)(struct tty *t);
 };
 
 #define TTY_BUF 4096
@@ -106,6 +108,15 @@ struct tty {
 };
 
 struct tty *tty_register(const char *name, const struct tty_ops *ops, void *priv);
+struct file;
+struct file_operations;
+/* Dynamic ttys (pseudo-terminals): not listed as /dev/ttyXXX. */
+struct tty *tty_alloc(const char *name, const struct tty_ops *ops, void *priv);
+void tty_free(struct tty *t); /* detaches it from every session */
+unsigned tty_input_room(struct tty *t);
+void tty_hangup(struct tty *t);
+int tty_attach(struct tty *t, struct file *f);
+const struct file_operations *tty_generic_fops(void);
 void tty_receive(struct tty *t, const char *buf, size_t n); /* IRQ context */
 struct tty *tty_console(void);
 void tty_set_console(struct tty *t);

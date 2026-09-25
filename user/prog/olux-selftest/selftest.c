@@ -921,6 +921,51 @@ static int t_unix_nonblock_poll(void) {
   return 0;
 }
 
+/* ---------------- pseudo-terminals ---------------- */
+
+static int t_pty(void) {
+  int m = posix_openpt(O_RDWR | O_NOCTTY);
+  CHECK(m >= 0);
+  CHECK(grantpt(m) == 0 && unlockpt(m) == 0);
+  char *name = ptsname(m);
+  CHECK(name && !strncmp(name, "/dev/pts/", 9));
+  struct winsize ws = {40, 100, 0, 0};
+  CHECK(ioctl(m, TIOCSWINSZ, &ws) == 0);
+  pid_t p = fork();
+  CHECK(p >= 0);
+  if (p == 0) {
+    setsid();
+    int s = open(name, O_RDWR); /* becomes the controlling terminal */
+    if (s < 0) _exit(1);
+    dup2(s, 0);
+    dup2(s, 1);
+    dup2(s, 2);
+    execl("/bin/sh", "sh", "-c", "read line; echo got:$line; tty; stty size", (char *)NULL);
+    _exit(2);
+  }
+  CHECK(write(m, "hello\n", 6) == 6);
+  char buf[512] = {0};
+  size_t got = 0;
+  for (int tries = 0; tries < 100 && !strstr(buf, "40 100"); tries++) {
+    struct pollfd pfd = {m, POLLIN, 0};
+    if (poll(&pfd, 1, 100) <= 0) continue;
+    ssize_t n = read(m, buf + got, sizeof(buf) - 1 - got);
+    if (n <= 0) break;
+    got += n;
+  }
+  CHECK(strstr(buf, "hello\r\n"));     /* echoed by the line discipline, with ONLCR */
+  CHECK(strstr(buf, "got:hello\r\n")); /* the shell read a line */
+  CHECK(strstr(buf, name));            /* tty(1) sees the slave */
+  CHECK(strstr(buf, "40 100"));        /* window size from the master */
+  int st;
+  CHECK(waitpid(p, &st, 0) == p && WIFEXITED(st) && WEXITSTATUS(st) == 0);
+  char c;
+  CHECK(read(m, &c, 1) == -1 && errno == EIO); /* all slave ends closed */
+  close(m);
+  CHECK(access(name, F_OK) == -1); /* the node goes away with the master */
+  return 0;
+}
+
 struct test {
   const char *name;
   int (*fn)(void);
@@ -975,6 +1020,7 @@ static const struct test tests[] = {
     {"unix_seqpacket", t_unix_seqpacket},
     {"unix_pass_fd", t_unix_pass_fd},
     {"unix_nonblock_poll", t_unix_nonblock_poll},
+    {"pty", t_pty},
     {"framebuffer", t_framebuffer},
     {"spidev", t_spidev},
 };

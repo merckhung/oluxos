@@ -189,6 +189,32 @@ void tty_receive(struct tty *t, const char *buf, size_t n) {
 
 /* ---- registration ---- */
 
+struct tty *tty_alloc(const char *name, const struct tty_ops *ops, void *priv) {
+  struct tty *t = kzalloc(sizeof(*t), 0);
+  if (!t) return NULL;
+  strlcpy(t->name, name, sizeof(t->name));
+  t->ops = ops;
+  t->priv = priv;
+  t->index = -1;
+  default_termios(&t->termios);
+  t->winsize.ws_row = 24;
+  t->winsize.ws_col = 80;
+  spin_lock_init(&t->lock);
+  wq_init(&t->read_wait);
+  wq_init(&t->write_wait);
+  return t;
+}
+
+void tty_free(struct tty *t) {
+  unsigned long f = spin_lock_irqsave(&procs_lock);
+  struct process *p;
+  list_for_each_entry(p, &all_processes, all_link) if (p->tty == t) p->tty = NULL;
+  spin_unlock_irqrestore(&procs_lock, f);
+  kfree(t);
+}
+
+unsigned tty_input_room(struct tty *t) { return TTY_BUF - 1 - ibuf_count(t); }
+
 struct tty *tty_register(const char *name, const struct tty_ops *ops, void *priv) {
   if (nttys == MAX_TTYS) return NULL;
   struct tty *t = kzalloc(sizeof(*t), 0);
@@ -295,6 +321,15 @@ static ssize_t tty_write(struct file *f, struct iobuf *b, loff_t *pos) {
   size_t done = 0;
   while (done < b->len) {
     size_t n = MIN(b->len - done, sizeof(tmp));
+    if (t->ops->write_room) { /* flow control (e.g. a pty master not reading) */
+      if (t->hangup) return done ? (ssize_t)done : -EIO;
+      if (t->ops->write_room(t) < 2 * n) {
+        if (f->flags & O_NONBLOCK) return done ? (ssize_t)done : -EAGAIN;
+        int r = wait_event_interruptible(t->write_wait, t->hangup || t->ops->write_room(t) >= 2 * n);
+        if (r) return done ? (ssize_t)done : r;
+        continue;
+      }
+    }
     if (iob_read(b, done, tmp, n)) return done ? (ssize_t)done : -EFAULT;
     unsigned long fl = spin_lock_irqsave(&t->lock);
     if (t->termios.c_oflag & OPOST) {
@@ -312,6 +347,10 @@ static unsigned tty_poll(struct file *f, struct poll_table *pt) {
   struct tty *t = file_tty(f);
   poll_wait(f, &t->read_wait, pt);
   unsigned m = POLLOUT | POLLWRNORM;
+  if (t->ops->write_room) {
+    poll_wait(f, &t->write_wait, pt);
+    if (t->ops->write_room(t) < 512 && !t->hangup) m = 0;
+  }
   if (can_read(t) || (!(t->termios.c_lflag & ICANON) && ibuf_count(t))) m |= POLLIN | POLLRDNORM;
   if (t->hangup) m |= POLLHUP;
   return m;
@@ -481,15 +520,14 @@ static const struct file_operations devtty_fops = {.open = devtty_open,
                                                    .ioctl = tty_ioctl};
 
 /* Shared by the pseudo-terminal driver. */
-const struct file_operations *tty_generic_fops(void);
 const struct file_operations *tty_generic_fops(void) { return &ttydev_fops; }
-int tty_attach(struct tty *t, struct file *f);
 int tty_attach(struct tty *t, struct file *f) { return tty_open_common(t, f); }
-void tty_hangup(struct tty *t);
 void tty_hangup(struct tty *t) {
   t->hangup = true;
   if (t->pgrp > 0) kill_pgrp(t->pgrp, SIGHUP, NULL);
+  if (t->session > 0 && t->session != t->pgrp) kill_pgrp(t->session, SIGHUP, NULL);
   wake_up(&t->read_wait);
+  wake_up(&t->write_wait);
 }
 
 static int tty_devices(void) {

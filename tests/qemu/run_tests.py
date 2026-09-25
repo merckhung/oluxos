@@ -142,7 +142,10 @@ def qemu_cmd(args, extra_append=""):
         snap = "" if getattr(args, "disk", None) else ",snapshot=on"
         cmd += ["-drive", "if=none,file=%s,format=raw,id=hd0%s" % (disk, snap),
                 "-device", "virtio-blk-device,drive=hd0"]
-    cmd += ["-device", "virtio-rng-device", "-netdev", "user,id=n0", "-device", "virtio-net-device,netdev=n0"]
+    fwd = ""
+    if getattr(args, "fwd_http", 0):
+        fwd = ",hostfwd=tcp:127.0.0.1:%d-:80,hostfwd=tcp:127.0.0.1:%d-:23" % (args.fwd_http, args.fwd_telnet)
+    cmd += ["-device", "virtio-rng-device", "-netdev", "user,id=n0" + fwd, "-device", "virtio-net-device,netdev=n0"]
     return cmd
 
 
@@ -323,6 +326,76 @@ def t_rpi_platform(c):
     assert rc == 0 and "SELFTEST PASSED" in out, out
 
 
+def free_port():
+    import socket
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def t_network(c):
+    """DHCP at boot, ICMP, outbound HTTP to a server on the host, inbound
+    HTTP (BusyBox httpd) and an interactive telnet session over a pty."""
+    if c.args.machine != "virt":
+        return
+    import hashlib
+    import http.server
+    import socket
+    import threading
+    import urllib.request
+    out, rc = c.run("for i in $(seq 1 100); do netcfg | grep -q dhcp && break; sleep 0.1; done; netcfg; "
+                    "cat /etc/resolv.conf; ping -c 2 -W 2 10.0.2.2")
+    assert rc == 0 and "10.0.2.15/24 (dhcp)" in out and "nameserver 10.0.2.3" in out and "2 packets received" in out, out
+    # outbound: fetch from a server on the host (10.0.2.2 is the host for QEMU)
+    payload = os.urandom(1 << 20)
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+        def log_message(self, *a):
+            pass
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        out, rc = c.run("wget -q -O - http://10.0.2.2:%d/blob | sha256sum" % srv.server_address[1], timeout=120)
+    finally:
+        srv.shutdown()
+    assert rc == 0 and hashlib.sha256(payload).hexdigest() in out, out
+    # inbound HTTP
+    out, rc = c.run("mkdir -p /tmp/www && dd if=/dev/urandom of=/tmp/www/big bs=4096 count=1024 2>/dev/null && "
+                    "echo hello-from-guest > /tmp/www/index.html && httpd -p 80 -h /tmp/www && "
+                    "for i in $(seq 1 50); do netstat -tln | grep -q ':80 ' && break; sleep 0.1; done; "
+                    "sha256sum /tmp/www/big")
+    want = re.search(r"([0-9a-f]{64})", out).group(1)
+    base = "http://127.0.0.1:%d/" % c.args.fwd_http
+    body = urllib.request.urlopen(base + "index.html", timeout=30).read()
+    assert body == b"hello-from-guest\n", body
+    big = urllib.request.urlopen(base + "big", timeout=120).read()
+    assert hashlib.sha256(big).hexdigest() == want, "download corrupted (%d bytes)" % len(big)
+    # telnet: a login-less shell on a pty
+    c.run("telnetd -p 23 -l /bin/sh; for i in $(seq 1 50); do netstat -tln | grep -q ':23 ' && break; sleep 0.1; done")
+    tel = socket.create_connection(("127.0.0.1", c.args.fwd_telnet), timeout=30)
+    try:
+        tel.sendall(b"echo TEL$((40+2))NET; tty\r\n")
+        data, deadline = b"", time.time() + 30
+        while b"TEL42NET" not in data or b"/dev/pts/" not in data:
+            if time.time() > deadline:
+                break
+            try:
+                chunk = tel.recv(4096)
+            except socket.timeout:
+                break
+            if not chunk:
+                break
+            data += chunk
+    finally:
+        tel.close()
+    assert b"TEL42NET" in data and b"/dev/pts/" in data, data
+    c.run("killall httpd telnetd")
+
+
 def t_init_respawn(c):
     c.send("exit\n")
     c.expect(PROMPT, 20)
@@ -335,7 +408,7 @@ def t_init_respawn(c):
 TESTS = [
     t_boot_banner, t_smp, t_selftest, t_pipeline_and_redirect, t_shell_scripting, t_file_utilities,
     t_background_jobs, t_ctrl_c, t_job_control, t_proc_tools, t_mounts, t_segfault_contained,
-    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_rpi_platform, t_init_respawn,
+    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_network, t_rpi_platform, t_init_respawn,
 ]
 
 
@@ -466,6 +539,7 @@ def main():
     if args.machine == "raspi4b":
         args.smp = 4
     args.logdir = os.path.join(args.out, "test-logs")
+    args.fwd_http, args.fwd_telnet = free_port(), free_port()
     os.makedirs(args.logdir, exist_ok=True)
 
     selected = [t for t in TESTS if args.pattern in t.__name__]
