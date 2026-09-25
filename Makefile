@@ -4,6 +4,7 @@
 #   make run             boot in QEMU virt
 #   make test            host unit tests + QEMU integration tests
 #   make rpi4            SD-card boot directory for Raspberry Pi 4B
+#   make sdcard          bootable SD card image (out/sdcard.img) for Raspberry Pi 4B
 #
 # Variables: CROSS (compiler prefix), O (output dir), V=1 (verbose),
 #            DEBUG=1 (-O0 + extra checks), SMP (cpus for `make run`).
@@ -166,6 +167,9 @@ debug: all $(O)/disk.img
 rpi4: all
 	$(Q)scripts/mkrpi4.sh $(O) $(O)/rpi4
 
+sdcard: rpi4
+	$(Q)scripts/mksdcard.sh $(O)/rpi4 $(O)/sdcard.img
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -183,6 +187,6 @@ clean:
 distclean: clean
 	rm -rf $(USERSPACE_OUT) toolchains/cross/build
 
-.PHONY: all kernel initramfs run debug rpi4 test unit-test qemu-test clean distclean
+.PHONY: all kernel initramfs run debug rpi4 sdcard test unit-test qemu-test clean distclean
 
 -include $(KDEPS)

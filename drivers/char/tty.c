@@ -73,11 +73,14 @@ static void out_char(struct tty *t, char c) {
     t->column = 0;
     return;
   }
-  if (c == '\r') t->column = 0;
+  if (c == '\r')
+    t->column = 0;
   else if (c == '\b') {
     if (t->column) t->column--;
-  } else if (c == '\t') t->column = (t->column | 7) + 1;
-  else if (isprint((u8)c)) t->column++;
+  } else if (c == '\t')
+    t->column = (t->column | 7) + 1;
+  else if (isprint((u8)c))
+    t->column++;
   tty_out(t, &c, 1);
 }
 
@@ -120,14 +123,19 @@ static void input_char(struct tty *t, char c) {
     goto store;
   }
   if (tm->c_iflag & IGNCR && c == '\r') return;
-  if (tm->c_iflag & ICRNL && c == '\r') c = '\n';
-  else if (tm->c_iflag & INLCR && c == '\n') c = '\r';
+  if (tm->c_iflag & ICRNL && c == '\r')
+    c = '\n';
+  else if (tm->c_iflag & INLCR && c == '\n')
+    c = '\r';
 
   if (tm->c_lflag & ISIG) {
     int sig = 0;
-    if (c == tm->c_cc[VINTR]) sig = SIGINT;
-    else if (c == tm->c_cc[VQUIT]) sig = SIGQUIT;
-    else if (c == tm->c_cc[VSUSP]) sig = SIGTSTP;
+    if (c == tm->c_cc[VINTR])
+      sig = SIGINT;
+    else if (c == tm->c_cc[VQUIT])
+      sig = SIGQUIT;
+    else if (c == tm->c_cc[VSUSP])
+      sig = SIGTSTP;
     if (sig && c) {
       echo_char(t, c);
       tty_signal(t, sig);
@@ -324,10 +332,13 @@ static long tty_ioctl(struct file *f, unsigned cmd, u64 arg) {
       if (copy_from_user(&nt, arg, sizeof(nt))) return -EFAULT;
       unsigned long fl = spin_lock_irqsave(&t->lock);
       bool was_canon = t->termios.c_lflag & ICANON;
+      struct termios old = t->termios;
       t->termios = nt;
       if (was_canon && !(nt.c_lflag & ICANON)) t->icanon_end = t->ihead;
       spin_unlock_irqrestore(&t->lock, fl);
       wake_up(&t->read_wait);
+      if (t->ops->set_termios && ((old.c_cflag ^ nt.c_cflag) & (CBAUD | CSIZE | CSTOPB | PARENB | PARODD)))
+        t->ops->set_termios(t, &old);
       return 0;
     }
     case TIOCGWINSZ:
@@ -351,8 +362,7 @@ static long tty_ioctl(struct file *f, unsigned cmd, u64 arg) {
       if (pg <= 0) return -EINVAL;
       struct process *q;
       bool ok = false;
-      list_for_each_entry(q, &all_processes, all_link)
-        if (q->pgid == pg && q->sid == p->sid) ok = true;
+      list_for_each_entry(q, &all_processes, all_link) if (q->pgid == pg && q->sid == p->sid) ok = true;
       if (!ok) return -EPERM;
       t->pgrp = pg;
       return 0;
@@ -400,8 +410,10 @@ static long tty_ioctl(struct file *f, unsigned cmd, u64 arg) {
     case FIONBIO: {
       s32 on;
       if (get_user(on, arg)) return -EFAULT;
-      if (on) f->flags |= O_NONBLOCK;
-      else f->flags &= ~O_NONBLOCK;
+      if (on)
+        f->flags |= O_NONBLOCK;
+      else
+        f->flags &= ~O_NONBLOCK;
       return 0;
     }
     default:
@@ -449,15 +461,24 @@ static int devtty_open(struct inode *i, struct file *f) {
   return 0;
 }
 
-static const struct file_operations ttydev_fops = {
-    .open = ttydev_open, .release = tty_release, .read = tty_read,
-    .write = tty_write, .poll = tty_poll, .ioctl = tty_ioctl};
-static const struct file_operations console_fops = {
-    .open = console_open, .release = tty_release, .read = tty_read,
-    .write = tty_write, .poll = tty_poll, .ioctl = tty_ioctl};
-static const struct file_operations devtty_fops = {
-    .open = devtty_open, .release = tty_release, .read = tty_read,
-    .write = tty_write, .poll = tty_poll, .ioctl = tty_ioctl};
+static const struct file_operations ttydev_fops = {.open = ttydev_open,
+                                                   .release = tty_release,
+                                                   .read = tty_read,
+                                                   .write = tty_write,
+                                                   .poll = tty_poll,
+                                                   .ioctl = tty_ioctl};
+static const struct file_operations console_fops = {.open = console_open,
+                                                    .release = tty_release,
+                                                    .read = tty_read,
+                                                    .write = tty_write,
+                                                    .poll = tty_poll,
+                                                    .ioctl = tty_ioctl};
+static const struct file_operations devtty_fops = {.open = devtty_open,
+                                                   .release = tty_release,
+                                                   .read = tty_read,
+                                                   .write = tty_write,
+                                                   .poll = tty_poll,
+                                                   .ioctl = tty_ioctl};
 
 /* Shared by the pseudo-terminal driver. */
 const struct file_operations *tty_generic_fops(void);

@@ -16,9 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/eventfd.h>
-#include <sys/random.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/random.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
@@ -33,12 +33,12 @@
 static int ntest, nfail;
 static char failmsg[256];
 
-#define CHECK(cond)                                                                   \
-  do {                                                                                \
-    if (!(cond)) {                                                                    \
+#define CHECK(cond)                                                                                 \
+  do {                                                                                              \
+    if (!(cond)) {                                                                                  \
       snprintf(failmsg, sizeof(failmsg), "%s:%d: %s (errno %d)", __func__, __LINE__, #cond, errno); \
-      return 1;                                                                       \
-    }                                                                                 \
+      return 1;                                                                                     \
+    }                                                                                               \
   } while (0)
 
 static long long now_ns(void) {
@@ -692,6 +692,38 @@ static int t_many_processes(void) {
   return 0;
 }
 
+/* /dev/fb0 (Raspberry Pi only; passes trivially elsewhere): the mmap view
+ * and read() must agree, and the screen info must be consistent. */
+static int t_framebuffer(void) {
+  int fd = open("/dev/fb0", O_RDWR);
+  if (fd < 0 && errno == ENOENT) return 0;
+  CHECK(fd >= 0);
+  struct {
+    char id[16];
+    unsigned long smem_start;
+    uint32_t smem_len, type, type_aux, visual;
+    uint16_t xpanstep, ypanstep, ywrapstep;
+    uint32_t line_length;
+    unsigned long mmio_start;
+    uint32_t mmio_len, accel;
+    uint16_t capabilities, reserved[2];
+  } fix;
+  uint32_t var[40];
+  CHECK(ioctl(fd, 0x4602, &fix) == 0 && ioctl(fd, 0x4600, var) == 0);
+  CHECK(fix.line_length >= var[0] * var[6] / 8 && fix.smem_len >= fix.line_length * var[1]);
+  volatile uint32_t *px = mmap(NULL, fix.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  CHECK(px != MAP_FAILED);
+  for (uint32_t i = 0; i < fix.smem_len / 4; i += 997) px[i] = i * 2654435761u;
+  uint32_t v;
+  for (uint32_t i = 0; i < fix.smem_len / 4; i += 997 * 13) {
+    CHECK(pread(fd, &v, 4, (off_t)i * 4) == 4);
+    CHECK(v == i * 2654435761u);
+  }
+  munmap((void *)px, fix.smem_len);
+  close(fd);
+  return 0;
+}
+
 struct test {
   const char *name;
   int (*fn)(void);
@@ -740,6 +772,7 @@ static const struct test tests[] = {
     {"uname_rlimit", t_uname_rlimit},
     {"process_groups", t_process_groups},
     {"many_processes", t_many_processes},
+    {"framebuffer", t_framebuffer},
 };
 
 int main(int argc, char **argv) {

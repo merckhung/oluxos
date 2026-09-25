@@ -48,14 +48,17 @@ jobs:
       - name: Install QEMU 9.2 (raspi4b machine)
         run: sudo scripts/ci/install-qemu9.sh
       - name: Build kernel, userspace and Pi 4 boot files
-        run: make -j"$(nproc)" && make out/disk.img rpi4
+        run: make -j"$(nproc)" && make out/disk.img sdcard
       - name: QEMU raspi4b integration tests
         run: sudo python3 tests/qemu/run_tests.py --out out --machine raspi4b --qemu qemu9-aarch64
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: rpi4-boot-files
-          path: out/rpi4/
+          path: |
+            out/rpi4/
+            out/sdcard.img
+            out/test-logs/
 
   static-analysis:
     runs-on: ubuntu-24.04

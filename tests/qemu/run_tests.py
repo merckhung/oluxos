@@ -90,6 +90,8 @@ class Console:
 
 def sd_image(args):
     """The test disk padded to a power-of-two size, as QEMU's SD card needs."""
+    if getattr(args, "sd", None):
+        return args.sd
     disk = os.path.join(args.out, "disk.img")
     if not os.path.exists(disk):
         return None
@@ -370,6 +372,25 @@ def t_watchdog(args):
         c.close()
 
 
+def t_sdcard(args):
+    """Separate raspi4b boot from the `make sdcard` image: boot partition at
+    /boot, writable data partition at /data."""
+    img = os.path.join(args.out, "sdcard.img")
+    boot_args = argparse.Namespace(**vars(args))
+    boot_args.sd = img
+    c = Console(qemu_cmd(boot_args), os.path.join(args.logdir, "sdcard.log"))
+    c.args = boot_args
+    try:
+        c.expect(PROMPT, 90)
+        c.quiet()
+        wait_mount(c, "/data")
+        wait_mount(c, "/boot")
+        out, rc = c.run("ls /boot && echo ok > /data/probe && cat /data/probe /data/README.txt")
+        assert rc == 0 and "kernel8.img" in out and "start4.elf" in out and "ok" in out, out
+    finally:
+        c.close()
+
+
 def t_persistence(args):
     """Two boots on a private disk copy: data written to FAT in the first
     boot survives a clean power-off; the second mount finds a clean volume."""
@@ -478,6 +499,15 @@ def main():
         except (AssertionError, TimeoutError, EOFError) as e:
             failures.append("watchdog")
             print("FAIL watchdog %s" % e)
+
+    sdcard = os.path.join(args.out, "sdcard.img")
+    if (not args.pattern or "sdcard" in args.pattern) and args.machine == "raspi4b" and os.path.exists(sdcard):
+        try:
+            t_sdcard(args)
+            print("PASS sdcard")
+        except (AssertionError, TimeoutError, EOFError) as e:
+            failures.append("sdcard")
+            print("FAIL sdcard %s" % e)
 
     if (not args.pattern or "persist" in args.pattern) and args.machine == "virt":
         try:

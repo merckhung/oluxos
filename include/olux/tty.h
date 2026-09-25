@@ -42,9 +42,26 @@ struct winsize {
 #define OPOST 0000001
 #define ONLCR 0000004
 /* c_cflag */
+#define CBAUD 0010017
+#define CBAUDEX 0010000
+#define CSIZE 0000060
+#define CS5 0000000
+#define CS6 0000020
+#define CS7 0000040
 #define CS8 0000060
+#define CSTOPB 0000100
 #define CREAD 0000200
+#define PARENB 0000400
+#define PARODD 0001000
 #define B115200 0010002
+
+/* Baud rate encoded in c_cflag, or 0 if unknown. */
+static inline u32 tty_baud(u32 cflag) {
+  static const u32 low[16] = {0, 50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400};
+  static const u32 high[16] = {0,       57600,   115200,  230400,  460800,  500000,  576000,  921600,
+                               1000000, 1152000, 1500000, 2000000, 2500000, 3000000, 3500000, 4000000};
+  return (cflag & CBAUDEX) ? high[cflag & 017] : low[cflag & 017];
+}
 /* c_lflag */
 #define ISIG 0000001
 #define ICANON 0000002

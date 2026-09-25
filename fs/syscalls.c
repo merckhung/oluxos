@@ -31,8 +31,8 @@ static char *getname(u64 uptr, int *err) {
   return strndup_user(uptr, PATH_MAX, err);
 }
 
-#define GETNAME(var, uptr)            \
-  int __err_##var;                    \
+#define GETNAME(var, uptr)                 \
+  int __err_##var;                         \
   char *var = getname(uptr, &__err_##var); \
   if (!var) return __err_##var
 
@@ -72,8 +72,10 @@ long sys_dup3(u64 oldfd, u64 newfd, u64 flags) {
   if (!f) return -EBADF;
   if (t->fd[newfd]) file_put(t->fd[newfd]);
   t->fd[newfd] = f;
-  if (flags & O_CLOEXEC) t->cloexec[newfd / 64] |= 1UL << (newfd % 64);
-  else t->cloexec[newfd / 64] &= ~(1UL << (newfd % 64));
+  if (flags & O_CLOEXEC)
+    t->cloexec[newfd / 64] |= 1UL << (newfd % 64);
+  else
+    t->cloexec[newfd / 64] &= ~(1UL << (newfd % 64));
   return newfd;
 }
 
@@ -98,12 +100,18 @@ long sys_fcntl(u64 fd, u64 cmd, u64 arg) {
       r = (t->cloexec[fd / 64] >> (fd % 64)) & 1;
       break;
     case F_SETFD:
-      if (arg & FD_CLOEXEC) t->cloexec[fd / 64] |= 1UL << (fd % 64);
-      else t->cloexec[fd / 64] &= ~(1UL << (fd % 64));
+      if (arg & FD_CLOEXEC)
+        t->cloexec[fd / 64] |= 1UL << (fd % 64);
+      else
+        t->cloexec[fd / 64] &= ~(1UL << (fd % 64));
       break;
     case F_GETFL:
-      r = f->flags | ((f->mode & FMODE_READ) && (f->mode & FMODE_WRITE) ? O_RDWR : (f->mode & FMODE_WRITE) ? O_WRONLY : 0);
-      r = (r & ~O_ACCMODE) | ((f->mode & FMODE_READ) && (f->mode & FMODE_WRITE) ? O_RDWR : (f->mode & FMODE_WRITE) ? O_WRONLY : O_RDONLY);
+      r = f->flags | ((f->mode & FMODE_READ) && (f->mode & FMODE_WRITE) ? O_RDWR
+                      : (f->mode & FMODE_WRITE)                         ? O_WRONLY
+                                                                        : 0);
+      r = (r & ~O_ACCMODE) | ((f->mode & FMODE_READ) && (f->mode & FMODE_WRITE) ? O_RDWR
+                              : (f->mode & FMODE_WRITE)                         ? O_WRONLY
+                                                                                : O_RDONLY);
       break;
     case F_SETFL:
       f->flags = (f->flags & ~(O_APPEND | O_NONBLOCK | O_ASYNC | O_DIRECT | O_NOATIME)) |
@@ -116,7 +124,8 @@ long sys_fcntl(u64 fd, u64 cmd, u64 arg) {
         s64 start, len;
         s32 pid;
       } fl;
-      if (copy_from_user(&fl, arg, sizeof(fl))) r = -EFAULT;
+      if (copy_from_user(&fl, arg, sizeof(fl)))
+        r = -EFAULT;
       else {
         fl.type = 2; /* F_UNLCK */
         r = copy_to_user(arg, &fl, sizeof(fl));
@@ -162,8 +171,10 @@ long sys_ioctl(u64 fd, u64 cmd, u64 arg) {
         r = -EFAULT;
         break;
       }
-      if (on) f->flags |= O_NONBLOCK;
-      else f->flags &= ~O_NONBLOCK;
+      if (on)
+        f->flags |= O_NONBLOCK;
+      else
+        f->flags &= ~O_NONBLOCK;
       r = 0;
       if (f->f_op && f->f_op->ioctl) f->f_op->ioctl(f, (unsigned)cmd, arg);
       break;
@@ -190,7 +201,8 @@ long sys_flock(u64 fd, u64 op) {
 
 static bool is_seekable(struct file *f) {
   mode_t m = f->inode ? f->inode->mode : 0;
-  return !S_ISFIFO(m) && !S_ISSOCK(m) && !S_ISCHR(m);
+  if (S_ISCHR(m)) return f->f_op && f->f_op->llseek; /* e.g. /dev/fb0, /dev/mem */
+  return !S_ISFIFO(m) && !S_ISSOCK(m);
 }
 
 static long rw(u64 fd, struct iobuf *b, bool write, loff_t *explicit_pos) {
@@ -203,9 +215,12 @@ static long rw(u64 fd, struct iobuf *b, bool write, loff_t *explicit_pos) {
   if (b->len > 0x7ffff000) b->len = 0x7ffff000;
   long r;
   if (explicit_pos) {
-    if (!is_seekable(f)) r = -ESPIPE;
-    else if (*explicit_pos < 0) r = -EINVAL;
-    else r = write ? vfs_write(f, b, explicit_pos) : vfs_read(f, b, explicit_pos);
+    if (!is_seekable(f))
+      r = -ESPIPE;
+    else if (*explicit_pos < 0)
+      r = -EINVAL;
+    else
+      r = write ? vfs_write(f, b, explicit_pos) : vfs_read(f, b, explicit_pos);
   } else {
     loff_t pos = f->pos;
     r = write ? vfs_write(f, b, &pos) : vfs_read(f, b, &pos);
@@ -282,13 +297,18 @@ long sys_lseek(u64 fd, u64 off, u64 whence) {
   struct file *f = fget((int)fd);
   if (!f) return -EBADF;
   long r;
-  if (!is_seekable(f)) r = -ESPIPE;
-  else if (f->f_op && f->f_op->llseek) r = f->f_op->llseek(f, (loff_t)off, (int)whence);
+  if (!is_seekable(f))
+    r = -ESPIPE;
+  else if (f->f_op && f->f_op->llseek)
+    r = f->f_op->llseek(f, (loff_t)off, (int)whence);
   else {
     loff_t base = whence == SEEK_SET ? 0 : whence == SEEK_CUR ? f->pos : whence == SEEK_END ? f->inode->size : -1;
-    if (base < 0) r = -EINVAL;
-    else if (base + (loff_t)off < 0) r = -EINVAL;
-    else r = f->pos = base + (loff_t)off;
+    if (base < 0)
+      r = -EINVAL;
+    else if (base + (loff_t)off < 0)
+      r = -EINVAL;
+    else
+      r = f->pos = base + (loff_t)off;
   }
   file_put(f);
   return r;
@@ -334,8 +354,10 @@ long sys_sendfile(u64 outfd, u64 infd, u64 uoff, u64 count) {
   }
   kfree(buf);
   if (total > 0 || !uoff) {
-    if (uoff) put_user(pos, uoff);
-    else in->pos = pos;
+    if (uoff)
+      put_user(pos, uoff);
+    else
+      in->pos = pos;
   }
   r = total;
 done:
@@ -382,8 +404,10 @@ long sys_getdents64(u64 fd, u64 dirp, u64 count) {
   struct file *f = fget((int)fd);
   if (!f) return -EBADF;
   long r;
-  if (!S_ISDIR(f->inode->mode)) r = -ENOTDIR;
-  else if (!f->f_op || !f->f_op->iterate) r = -ENOTDIR;
+  if (!S_ISDIR(f->inode->mode))
+    r = -ENOTDIR;
+  else if (!f->f_op || !f->f_op->iterate)
+    r = -ENOTDIR;
   else {
     struct getdents_ctx g = {.ctx = {.actor = filldir64, .pos = f->pos}, .ubuf = dirp, .size = count};
     r = f->f_op->iterate(f, &g.ctx);
@@ -400,9 +424,12 @@ long sys_getcwd(u64 buf, u64 size) {
   if (!k) return -ENOMEM;
   int n = d_path(&current->proc->cwd, k, PATH_MAX);
   long r;
-  if (n < 0) r = n;
-  else if ((u64)n + 1 > size) r = -ERANGE;
-  else r = copy_to_user(buf, k, n + 1) ? -EFAULT : n + 1;
+  if (n < 0)
+    r = n;
+  else if ((u64)n + 1 > size)
+    r = -ERANGE;
+  else
+    r = copy_to_user(buf, k, n + 1) ? -EFAULT : n + 1;
   kfree(k);
   return r;
 }
@@ -429,7 +456,8 @@ long sys_fchdir(u64 fd) {
   struct file *f = fget((int)fd);
   if (!f) return -EBADF;
   long r = 0;
-  if (!S_ISDIR(f->inode->mode)) r = -ENOTDIR;
+  if (!S_ISDIR(f->inode->mode))
+    r = -ENOTDIR;
   else {
     path_put(&current->proc->cwd);
     current->proc->cwd = f->path;
@@ -547,7 +575,8 @@ long sys_readlinkat(u64 dfd, u64 upath, u64 buf, u64 size) {
   if (r) return r;
   struct inode *i = p.dentry->inode;
   long ret;
-  if (!S_ISLNK(i->mode) || !i->i_op || !i->i_op->readlink) ret = -EINVAL;
+  if (!S_ISLNK(i->mode) || !i->i_op || !i->i_op->readlink)
+    ret = -EINVAL;
   else {
     char *k = kmalloc(PATH_MAX, 0);
     ssize_t n = k ? i->i_op->readlink(i, k, MIN(size, (u64)PATH_MAX)) : -ENOMEM;
@@ -715,8 +744,10 @@ static long setattr_path(int dfd, u64 upath, int follow, struct iattr *a) {
   if (r) return r;
   struct inode *i = p.dentry->inode;
   struct cred *c = &current->proc->cred;
-  if (c->euid != 0 && c->euid != i->uid) r = -EPERM;
-  else r = vfs_setattr(i, a);
+  if (c->euid != 0 && c->euid != i->uid)
+    r = -EPERM;
+  else
+    r = vfs_setattr(i, a);
   path_put(&p);
   return r;
 }
@@ -884,8 +915,10 @@ long sys_fsync(u64 fd) {
   struct file *f = fget((int)fd);
   if (!f) return -EBADF;
   long r = 0;
-  if (f->f_op && f->f_op->fsync) r = f->f_op->fsync(f);
-  else if (f->inode->sb && f->inode->sb->s_op && f->inode->sb->s_op->sync) r = f->inode->sb->s_op->sync(f->inode->sb);
+  if (f->f_op && f->f_op->fsync)
+    r = f->f_op->fsync(f);
+  else if (f->inode->sb && f->inode->sb->s_op && f->inode->sb->s_op->sync)
+    r = f->inode->sb->s_op->sync(f->inode->sb);
   file_put(f);
   return r;
 }
@@ -920,7 +953,8 @@ long sys_mount(u64 udev, u64 udir, u64 utype, u64 flags, u64 udata) {
     struct path p;
     r = kern_path(dir, LOOKUP_FOLLOW, &p);
     if (!r) {
-      if (p.dentry != p.mnt->sb->root) r = -EINVAL;
+      if (p.dentry != p.mnt->sb->root)
+        r = -EINVAL;
       else {
         if (p.mnt->sb->s_op && p.mnt->sb->s_op->sync) p.mnt->sb->s_op->sync(p.mnt->sb);
         p.mnt->sb->flags = (p.mnt->sb->flags & ~(SB_RDONLY | SB_NOEXEC | SB_NOSUID | SB_NODEV)) | sbf;
@@ -929,8 +963,7 @@ long sys_mount(u64 udev, u64 udir, u64 utype, u64 flags, u64 udata) {
     }
   } else if (!type) {
     r = -EINVAL;
-  } else if (!strcmp(type, "userfs") && data && strstr(data, "attach") &&
-             (r = userfs_try_attach(dir, data)) != 1) {
+  } else if (!strcmp(type, "userfs") && data && strstr(data, "attach") && (r = userfs_try_attach(dir, data)) != 1) {
     /* re-attached (or failed to re-attach) an existing userfs mount */
   } else {
     r = do_mount(dev, dir, type, sbf, data);
@@ -969,8 +1002,10 @@ long sys_fstatfs(u64 fd, u64 buf) {
   struct file *f = fget((int)fd);
   if (!f) return -EBADF;
   u8 st[120];
-  if (f->path.mnt) vfs_statfs(f->path.mnt->sb, st);
-  else memset(st, 0, sizeof(st));
+  if (f->path.mnt)
+    vfs_statfs(f->path.mnt->sb, st);
+  else
+    memset(st, 0, sizeof(st));
   file_put(f);
   return copy_to_user(buf, st, sizeof(st));
 }
