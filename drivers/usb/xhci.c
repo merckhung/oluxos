@@ -172,7 +172,12 @@ static void wr64(u8 *base, u32 off, u64 v) {
 
 static u64 bus(struct xhci *x, phys_addr_t pa) { return pci_bus_addr(x->pci, pa); }
 
-static void *dma_page(struct xhci *x, phys_addr_t *pa, size_t size) { return dma_alloc_coherent(size, pa, GFP_DMA32); }
+/* Below 1 GiB where such memory exists: the BCM2711 PCIe inbound window
+ * covers only the low 3 GiB. QEMU virt has no RAM there, so fall back. */
+static void *dma_page(struct xhci *x, phys_addr_t *pa, size_t size) {
+  void *p = dma_alloc_coherent(size, pa, GFP_DMA);
+  return p ? p : dma_alloc_coherent(size, pa, GFP_DMA32);
+}
 
 static int ring_init(struct xhci *x, struct ring *r) {
   r->t = dma_page(x, &r->pa, RING_TRBS * sizeof(struct trb));

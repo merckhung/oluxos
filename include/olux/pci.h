@@ -72,6 +72,7 @@ struct pci_host {
   u64 mem_cpu, mem_pci, mem_size, mem_next;                              /* 32-bit memory window */
   u64 mem64_cpu, mem64_pci, mem64_size, mem64_next;
   u8 next_bus;
+  bool root_port_no_bars; /* the root port's BARs are host-specific (e.g. brcmstb inbound window) */
   void *priv;
 };
 int pci_host_scan(struct pci_host *h);

@@ -197,7 +197,7 @@ static void scan_fn(struct pci_host *h, u8 bus, u8 dev, u8 fn, struct pci_dev *b
   *hdr_out = hdr;
   list_add_tail(&d->link, &pci_devices);
   if ((hdr & 0x7f) == 1) { /* PCI-to-PCI bridge */
-    assign_bars(d, 2);
+    if (!(bridge == NULL && h->root_port_no_bars)) assign_bars(d, 2);
     u8 sec = ++h->next_bus;
     pci_write32(d, PCI_PRIMARY_BUS, (pci_read32(d, PCI_PRIMARY_BUS) & 0xff000000u) | 0xffu << 16 | (u32)sec << 8 | bus);
     h->mem_next = ALIGN_UP(h->mem_next, 1u << 20);
