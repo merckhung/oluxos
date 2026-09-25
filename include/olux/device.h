@@ -85,6 +85,9 @@ static inline void writeq(u64 v, volatile void *a) {
   *(volatile u64 *)a = v;
 }
 
+/* N such that /aliases has "<stem>N" pointing at `node`, or -1. */
+int dt_alias_id(int node, const char *stem);
+
 /* Bus address for DMA by the device at `node` to CPU physical `pa`. */
 u64 dt_dma_addr(int node, phys_addr_t pa);
 

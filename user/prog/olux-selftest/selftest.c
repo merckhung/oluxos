@@ -724,6 +724,31 @@ static int t_framebuffer(void) {
   return 0;
 }
 
+/* /dev/spidev0.0 (Raspberry Pi with SPI enabled; passes trivially
+ * elsewhere): mode/speed ioctls round-trip and a full-duplex transfer
+ * completes. */
+static int t_spidev(void) {
+  int fd = open("/dev/spidev0.0", O_RDWR);
+  if (fd < 0 && errno == ENOENT) return 0;
+  CHECK(fd >= 0);
+  uint8_t mode = 3, rmode = 0;
+  uint32_t speed = 1000000, rspeed = 0;
+  CHECK(ioctl(fd, 0x40016b01, &mode) == 0 && ioctl(fd, 0x80016b01, &rmode) == 0 && rmode == 3);
+  CHECK(ioctl(fd, 0x40046b04, &speed) == 0 && ioctl(fd, 0x80046b04, &rspeed) == 0 && rspeed == speed);
+  uint8_t tx[100], rx[100];
+  for (int i = 0; i < 100; i++) tx[i] = (uint8_t)i;
+  struct {
+    uint64_t tx_buf, rx_buf;
+    uint32_t len, speed_hz;
+    uint16_t delay_usecs;
+    uint8_t bits_per_word, cs_change, tx_nbits, rx_nbits, word_delay_usecs, pad;
+  } t = {(uintptr_t)tx, (uintptr_t)rx, sizeof(tx), 0, 0, 8, 0, 0, 0, 0, 0};
+  CHECK(ioctl(fd, 0x40006b00 | (sizeof(t) << 16), &t) == (int)sizeof(tx));
+  CHECK(write(fd, tx, 10) == 10 && read(fd, rx, 10) == 10);
+  close(fd);
+  return 0;
+}
+
 struct test {
   const char *name;
   int (*fn)(void);
@@ -773,6 +798,7 @@ static const struct test tests[] = {
     {"process_groups", t_process_groups},
     {"many_processes", t_many_processes},
     {"framebuffer", t_framebuffer},
+    {"spidev", t_spidev},
 };
 
 int main(int argc, char **argv) {

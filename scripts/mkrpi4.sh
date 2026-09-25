@@ -51,6 +51,9 @@ disable_overscan=1
 gpu_mem=64
 # Hardware watchdog is driven by the kernel (bcm2835-pm-wdt)
 dtparam=watchdog=on
+# I2C1 on GPIO 2/3 (/dev/i2c-1) and SPI0 on GPIO 7-11 (/dev/spidev0.*)
+dtparam=i2c_arm=on
+dtparam=spi=on
 EOF
 
 echo "console=ttyAMA0,115200 loglevel=6" >"$OUTDIR/cmdline.txt"

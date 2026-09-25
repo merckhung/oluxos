@@ -117,7 +117,7 @@ UCC           := $(USERSPACE_OUT)/bin/oluxos-cc
 
 $(UCC) $(USERSPACE_OUT)/bin/busybox &: third_party/musl/musl-1.2.5.tar.gz \
 		third_party/busybox/busybox-1.36.1.tar.bz2 toolchains/userspace/build.sh \
-		toolchains/userspace/busybox.config $(wildcard toolchains/userspace/linux-headers/linux/*.h)
+		toolchains/userspace/busybox.config $(wildcard toolchains/userspace/linux-headers/linux/*.h toolchains/userspace/linux-headers/linux/*/*.h)
 	$(Q)OLUXOS_CROSS=$(CROSS) toolchains/userspace/build.sh all
 	@touch $(UCC) $(USERSPACE_OUT)/bin/busybox
 

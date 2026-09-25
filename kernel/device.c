@@ -52,6 +52,18 @@ void do_initcalls(void) {
   }
 }
 
+int dt_alias_id(int node, const char *stem) {
+  int aliases = fdt_path_offset("/aliases");
+  if (aliases < 0) return -1;
+  for (int n = 0; n < 32; n++) {
+    char prop[32];
+    snprintf(prop, sizeof(prop), "%s%d", stem, n);
+    const char *path = fdt_getprop_str(aliases, prop);
+    if (path && fdt_path_offset(path) == node) return n;
+  }
+  return -1;
+}
+
 /* Bus address a device behind `node` must use for CPU physical address
  * `pa`, from the first matching "dma-ranges" entry of its ancestors. */
 u64 dt_dma_addr(int node, phys_addr_t pa) {

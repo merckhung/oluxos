@@ -104,13 +104,29 @@ def sd_image(args):
     return sd
 
 
+def pi_dtb(args):
+    """The Pi 4 DTB with I2C1 and SPI0 enabled, as `dtparam=i2c_arm=on,spi=on`
+    makes the firmware do on real hardware (needs fdtput; else the stock DTB)."""
+    dtb = args.dtb or os.path.join(args.out, "rpi4", "bcm2711-rpi-4-b.dtb")
+    patched = os.path.join(args.logdir, "rpi4-test.dtb")
+    try:
+        with open(dtb, "rb") as src, open(patched, "wb") as dst:
+            dst.write(src.read())
+        for node in ("/soc/i2c@7e804000", "/soc/spi@7e204000"):
+            subprocess.run(["fdtput", "-t", "s", patched, node, "status", "okay"], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return patched
+    except (OSError, subprocess.CalledProcessError):
+        return dtb
+
+
 def qemu_cmd(args, extra_append=""):
     if args.machine == "raspi4b":
         # Raspberry Pi 4B emulation (QEMU >= 9.0): fixed 4x Cortex-A72, GIC-400,
         # PL011 on the first serial port. The Pi DTB comes from `make rpi4`.
         cmd = [args.qemu, "-M", "raspi4b", "-kernel", os.path.join(args.out, "Image"),
                "-initrd", os.path.join(args.out, "initramfs.cpio"),
-               "-dtb", args.dtb or os.path.join(args.out, "rpi4", "bcm2711-rpi-4-b.dtb"),
+               "-dtb", pi_dtb(args),
                "-append", ("console=ttyAMA0 " + extra_append).strip(),
                "-display", "none", "-serial", "stdio", "-no-reboot"]
         sd = sd_image(args)
@@ -301,6 +317,10 @@ def t_rpi_platform(c):
     assert rc == 1 and "timed out" in out, out
     out, rc = c.run("dmesg | grep -E 'mmc: .* card|last reset' && ls /dev/watchdog /dev/mmcblk0p1")
     assert rc == 0 and "card" in out, out
+    out, rc = c.run("ls /dev/i2c-1 /dev/spidev0.0 && i2cdetect -y 1 && i2cget -y 1 0x50 0 b; echo rc=$?")
+    assert "/dev/i2c-1" in out and "70:" in out and "rc=1" in out, out
+    out, rc = c.run("olux-selftest spidev")
+    assert rc == 0 and "SELFTEST PASSED" in out, out
 
 
 def t_init_respawn(c):

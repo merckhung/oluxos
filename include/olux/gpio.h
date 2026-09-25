@@ -10,5 +10,6 @@ int gpio_get_func(unsigned pin);
 int gpio_set_pull(unsigned pin, unsigned pull);
 int gpio_get(unsigned pin);
 int gpio_set(unsigned pin, int value);
+int gpio_apply_pinctrl(int node); /* DT pinctrl-0 of a peripheral */
 
 #endif

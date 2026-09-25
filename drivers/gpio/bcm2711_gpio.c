@@ -96,6 +96,31 @@ int gpio_set(unsigned pin, int value) {
   return 0;
 }
 
+/* Apply a node's "default" pin configuration (pinctrl-0 -> brcm,pins /
+ * brcm,function / brcm,pull), as Linux's pinctrl driver would. */
+int gpio_apply_pinctrl(int node) {
+  if (!G.base) return -ENODEV;
+  int len;
+  const u32 *ph = fdt_getprop(node, "pinctrl-0", &len);
+  for (int i = 0; ph && i < len / 4; i++) {
+    int cfg = fdt_node_by_phandle(fdt32(ph[i]));
+    if (cfg < 0) continue;
+    int np, nf, nu;
+    const u32 *pins = fdt_getprop(cfg, "brcm,pins", &np);
+    const u32 *fn = fdt_getprop(cfg, "brcm,function", &nf);
+    const u32 *pull = fdt_getprop(cfg, "brcm,pull", &nu);
+    for (int k = 0; pins && k < np / 4; k++) {
+      unsigned pin = fdt32(pins[k]);
+      if (fn && nf >= 4) gpio_set_func(pin, fdt32(fn[nf / 4 > k ? k : 0]));
+      if (pull && nu >= 4)
+        gpio_set_pull(pin, fdt32(pull[nu / 4 > k ? k : 0]) == 2   ? GPIO_PULL_UP
+                           : fdt32(pull[nu / 4 > k ? k : 0]) == 1 ? GPIO_PULL_DOWN
+                                                                  : GPIO_PULL_NONE);
+    }
+  }
+  return 0;
+}
+
 /* Program edge detection for the union of all watchers. Lock held. */
 static void update_detect(void) {
   u64 r = 0, fl = 0;

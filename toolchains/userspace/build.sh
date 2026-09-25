@@ -136,6 +136,7 @@ EOF
 
 # Linux-ABI headers (musl has none); refreshed on every build.
 install_linux_headers() {
+  rm -rf "$SYSROOT/include/linux"
   cp -r "$REPO_ROOT/toolchains/userspace/linux-headers/linux" "$SYSROOT/include/"
 }
 
