@@ -1,5 +1,6 @@
 /* Restart / halt / power-off with the best available platform mechanism. */
 #include <olux/kernel.h>
+#include <olux/pstore.h>
 #include <olux/reboot.h>
 #include <olux/smp.h>
 
@@ -17,6 +18,7 @@ static void stop_others(void) {
 }
 
 void machine_restart(void) {
+  pstore_set_state(PSTORE_RESTART);
   stop_others();
   for (int i = nops - 1; i >= 0; i--)
     if (ops[i]->restart) ops[i]->restart();
@@ -25,6 +27,7 @@ void machine_restart(void) {
 }
 
 void machine_poweroff(void) {
+  pstore_set_state(PSTORE_POWEROFF);
   stop_others();
   pr_notice("reboot: CPUs stopped, powering off via %s\n", nops ? ops[nops - 1]->name : "none");
   for (int i = nops - 1; i >= 0; i--)
@@ -34,6 +37,7 @@ void machine_poweroff(void) {
 }
 
 void machine_halt(void) {
+  pstore_set_state(PSTORE_POWEROFF);
   stop_others();
   for (;;) wfi();
 }

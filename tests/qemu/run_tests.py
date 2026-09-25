@@ -136,7 +136,9 @@ def qemu_cmd(args, extra_append=""):
     cmd = [args.qemu, "-M", "virt,gic-version=%s" % args.gic, "-cpu", args.cpu, "-smp", str(args.smp),
            "-m", args.mem, "-kernel", os.path.join(args.out, "Image"),
            "-initrd", os.path.join(args.out, "initramfs.cpio"),
-           "-nographic", "-no-reboot", "-append", ("console=ttyAMA0 " + extra_append).strip()]
+           "-nographic", "-append", ("console=ttyAMA0 " + extra_append).strip()]
+    if not getattr(args, "allow_reboot", False):
+        cmd.insert(cmd.index("-append"), "-no-reboot")
     disk = getattr(args, "disk", None) or os.path.join(args.out, "disk.img")
     if os.path.exists(disk):
         snap = "" if getattr(args, "disk", None) else ",snapshot=on"
@@ -527,6 +529,17 @@ def t_usb(c):
     assert "usb 3: disconnected" in out and "usb 4: disconnected" in out and rc != 0, out
 
 
+def t_rtc(c):
+    """PL031 on virt: the boot sets the system time from it, setting the
+    time writes it back, and hwclock reads it through /dev/rtc0."""
+    if c.args.machine != "virt":
+        return
+    out, rc = c.run("dmesg | grep rtc0; date -u +%Y")
+    assert "system time set to" in out and int(out.strip().split()[-1]) >= 2024, out
+    out, rc = c.run("date -u -s '2031-05-06 07:08:09' >/dev/null && hwclock -r -u")
+    assert rc == 0 and "May  6 07:08" in out and "2031" in out, out
+
+
 def t_init_respawn(c):
     c.send("exit\n")
     c.expect(PROMPT, 20)
@@ -539,7 +552,7 @@ def t_init_respawn(c):
 TESTS = [
     t_boot_banner, t_smp, t_selftest, t_pipeline_and_redirect, t_shell_scripting, t_file_utilities,
     t_background_jobs, t_ctrl_c, t_job_control, t_proc_tools, t_mounts, t_segfault_contained,
-    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_network, t_ntp, t_usb, t_rpi_platform, t_init_respawn,
+    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_network, t_ntp, t_usb, t_rtc, t_rpi_platform, t_init_respawn,
 ]
 
 
@@ -592,6 +605,35 @@ def t_watchdog(args):
         assert wait_exit(c, 20), "no reset after the watchdog expired"
         assert b"no keepalive" in c.buf, c.buf[-500:]
         assert time.time() - t0 < 15, "reset took %.1fs" % (time.time() - t0)
+    finally:
+        c.close()
+
+
+def t_crash_recovery(args):
+    """Separate boot that may reboot: a kernel panic reboots the machine and
+    the next boot finds the crash in /proc/last_kmsg (pstore); then a
+    watchdog expiry is recorded the same way."""
+    if args.machine != "virt":
+        return
+    boot_args = argparse.Namespace(**vars(args))
+    boot_args.allow_reboot = True
+    c = Console(qemu_cmd(boot_args, "panic=1 init.watchdog=0"), os.path.join(args.logdir, "crash.log"))
+    try:
+        c.expect(PROMPT, 90)
+        c.quiet()
+        c.send("echo c > /proc/sysrq-trigger\n")
+        c.expect(rb"Kernel panic - not syncing: sysrq triggered crash", 20)
+        c.expect(rb"OluxOS \d", 30)  # the next boot's banner
+        c.expect(PROMPT, 90)
+        c.quiet()
+        out, rc = c.run("dmesg | grep pstore; grep -c 'sysrq triggered crash' /proc/last_kmsg")
+        assert "ended with a kernel panic" in out and "boot #2" in out and out.strip().endswith("1"), out
+        c.run("watchdog -T 2 -t 1 /dev/watchdog && sleep 1 && kill -9 $(pidof watchdog)")
+        c.expect(rb"no keepalive", 20)
+        c.expect(PROMPT, 90)
+        c.quiet()
+        out, rc = c.run("dmesg | grep 'previous boot'; head -1 /proc/last_kmsg")
+        assert "boot #2 ended with a watchdog reset" in out, out
     finally:
         c.close()
 
@@ -724,6 +766,14 @@ def main():
         except (AssertionError, TimeoutError, EOFError) as e:
             failures.append("watchdog")
             print("FAIL watchdog %s" % e)
+
+    if (not args.pattern or "crash" in args.pattern) and args.machine == "virt":
+        try:
+            t_crash_recovery(args)
+            print("PASS crash_recovery")
+        except (AssertionError, TimeoutError, EOFError) as e:
+            failures.append("crash_recovery")
+            print("FAIL crash_recovery %s" % e)
 
     sdcard = os.path.join(args.out, "sdcard.img")
     if (not args.pattern or "sdcard" in args.pattern) and args.machine == "raspi4b" and os.path.exists(sdcard):

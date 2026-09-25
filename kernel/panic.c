@@ -1,12 +1,14 @@
 /*
  * panic(), BUG(), WARN() and stack unwinding with symbolised backtraces.
  * On panic the other CPUs are stopped, the log is flushed to every console
- * and the system reboots after `panic_timeout` seconds (0 = halt), so an
+ * and the system reboots after `panic_timeout` seconds (0 = halt; "panic="
+ * on the command line overrides it), so an
  * unattended device recovers instead of hanging.
  */
 #include <asm/ptrace.h>
 #include <olux/kernel.h>
 #include <olux/mm.h>
+#include <olux/pstore.h>
 #include <olux/reboot.h>
 #include <olux/smp.h>
 
@@ -87,6 +89,9 @@ static void panic_common(void) {
 
 static void __noreturn panic_finish(void) {
   pr_emerg("---[ end Kernel panic ]---\n");
+  pstore_set_state(PSTORE_PANIC);
+  char val[12];
+  if (cmdline_get("panic", val, sizeof(val))) panic_timeout = (int)strtol(val, NULL, 10); /* as in Linux */
   if (panic_timeout > 0) {
     pr_emerg("Rebooting in %d seconds..\n", panic_timeout);
     u64 end = ktime_ns() + (u64)panic_timeout * 1000000000ULL;

@@ -7,5 +7,3 @@
 STUB(olux_sysinfo)
 STUB(olux_watchdog)
 
-void rtc_set_time(u64 ns);
-__weak void rtc_set_time(u64 ns) {}

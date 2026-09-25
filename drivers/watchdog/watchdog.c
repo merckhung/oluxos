@@ -2,6 +2,7 @@
 #include <olux/device.h>
 #include <olux/fs.h>
 #include <olux/kernel.h>
+#include <olux/pstore.h>
 #include <olux/reboot.h>
 #include <olux/spinlock.h>
 #include <olux/time.h>
@@ -51,6 +52,7 @@ static void heartbeat(struct ktimer *t) {
   u64 now = ktime_ns();
   if (!W.running) return;
   if (now >= W.deadline) {
+    pstore_set_state(PSTORE_WATCHDOG);
     if (!W.wd->max_hw_timeout) {
       pr_emerg("watchdog: %s: no keepalive for %u s; restarting\n", W.wd->name, W.timeout);
       machine_restart();

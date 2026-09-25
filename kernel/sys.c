@@ -1,6 +1,7 @@
 /* Process, credential, scheduling, time and system information syscalls. */
 #include <olux/fs.h>
 #include <olux/kernel.h>
+#include <olux/rtc.h>
 #include <olux/mm.h>
 #include <olux/process.h>
 #include <olux/reboot.h>
@@ -622,7 +623,6 @@ long sys_gettimeofday(u64 utv, u64 utz) {
   return 0;
 }
 
-void rtc_set_time(u64 ns);
 long sys_settimeofday(u64 utv, u64 utz);
 long sys_settimeofday(u64 utv, u64 utz) {
   if (!capable_root()) return -EPERM;

@@ -5,6 +5,7 @@
  * boot before the scheduler exists.
  */
 #include <olux/kernel.h>
+#include <olux/pstore.h>
 #include <olux/smp.h>
 #include <olux/spinlock.h>
 
@@ -79,6 +80,7 @@ int vprintk(int level, const char *fmt, va_list ap) {
   if (in_panic) locked = spin_trylock(&printk_lock);
   else spin_lock(&printk_lock);
   klog_append(line, len);
+  pstore_write(line, len);
   if (level <= console_loglevel)
     for (struct console *c = consoles; c; c = c->next) c->write(c, line, len);
   if (locked) spin_unlock(&printk_lock);

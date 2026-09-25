@@ -8,6 +8,7 @@
 #include <olux/fdt.h>
 #include <olux/irq.h>
 #include <olux/kernel.h>
+#include <olux/pstore.h>
 #include <olux/mm.h>
 #include <olux/sched.h>
 #include <olux/smp.h>
@@ -66,6 +67,7 @@ static void setup_memory(phys_addr_t dtb_pa) {
   u64 a, s;
   for (int i = 0; fdt_mem_rsv(i, &a, &s); i++) memblock_reserve(a, s);
   fdt_for_each_reserved(reserve_memory, NULL);
+  pstore_reserve();
   if (fdt_initrd(&a, &s)) {
     initrd_start = a;
     initrd_end = s;
@@ -109,6 +111,7 @@ void start_kernel(phys_addr_t dtb_pa, phys_addr_t load_pa) {
   fdt_relocate(phys_to_virt(dtb_pa));
   page_alloc_init();
   kmalloc_init();
+  pstore_init();
   pr_info("Memory: %llu MiB total, %llu MiB free\n", (unsigned long long)(memblock_total() >> 20),
           (unsigned long long)((nr_free_pages() * PAGE_SIZE) >> 20));
 

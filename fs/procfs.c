@@ -7,6 +7,8 @@
 #include <olux/kernel.h>
 #include <olux/mm.h>
 #include <olux/process.h>
+#include <olux/pstore.h>
+#include <olux/reboot.h>
 #include <olux/sched.h>
 #include <olux/smp.h>
 #include <olux/tty.h>
@@ -26,6 +28,8 @@ enum pent {
   P_FILESYSTEMS,
   P_INTERRUPTS,
   P_KMSG,
+  P_LAST_KMSG,
+  P_SYSRQ,
   P_DEVICES,
   P_PID_DIR,
   P_PID_STAT,
@@ -70,6 +74,8 @@ static const struct {
     {"filesystems", P_FILESYSTEMS, S_IFREG | 0444},
     {"interrupts", P_INTERRUPTS, S_IFREG | 0444},
     {"kmsg", P_KMSG, S_IFREG | 0400},
+    {"last_kmsg", P_LAST_KMSG, S_IFREG | 0400},
+    {"sysrq-trigger", P_SYSRQ, S_IFREG | 0200},
     {"devices", P_DEVICES, S_IFREG | 0444},
     {"net", P_NET, S_IFDIR | 0555},
 };
@@ -99,8 +105,8 @@ void proc_net_register(const char *name, void (*show)(seq_printf_t pr, void *ctx
   if (nnet_files < MAX_NET_FILES) net_files[nnet_files++] = (typeof(net_files[0])){name, show};
 }
 
-static const struct inode_operations proc_dir_iops, proc_link_iops;
-static const struct file_operations proc_dir_fops, proc_file_fops;
+static const struct inode_operations proc_dir_iops, proc_link_iops, proc_file_iops;
+static const struct file_operations proc_dir_fops, proc_file_fops, proc_sysrq_fops;
 extern u64 load_avg[3]; /* fixed point, <<16 */
 
 static struct inode *proc_inode(struct super_block *sb, enum pent type, int pid, int fd, mode_t mode) {
@@ -123,7 +129,8 @@ static struct inode *proc_inode(struct super_block *sb, enum pent type, int pid,
   } else if (S_ISLNK(mode)) {
     i->i_op = &proc_link_iops;
   } else {
-    i->f_op = &proc_file_fops;
+    i->i_op = &proc_file_iops;
+    i->f_op = type == P_SYSRQ ? &proc_sysrq_fops : &proc_file_fops;
   }
   struct process *p = pid ? process_find(pid) : NULL;
   if (p) {
@@ -518,6 +525,12 @@ static int generate(struct inode *i, struct pbuf *b) {
          "Character devices:\n  1 mem\n  4 tty\n  5 /dev/tty\n  5 /dev/console\n 29 fb\n204 ttyAMA\n\nBlock devices:\n"
          "179 mmc\n254 virtblk\n");
       break;
+    case P_LAST_KMSG: {
+      size_t len;
+      const char *log = pstore_last_log(&len);
+      if (log) pb(b, "--- previous boot ended with %s ---\n%.*s", pstore_last_reason(), (int)len, log);
+      break;
+    }
     case P_KMSG: {
       size_t pos = 0;
       char tmp[256];
@@ -605,9 +618,43 @@ static loff_t proc_llseek(struct file *f, loff_t off, int whence) {
 
 static const struct inode_operations proc_dir_iops = {.lookup = proc_lookup};
 static const struct inode_operations proc_link_iops = {.readlink = proc_readlink};
+/* O_TRUNC on a writable proc file (echo c > /proc/sysrq-trigger) is a no-op */
+static int proc_setattr(struct inode *i, const struct iattr *a) {
+  (void)i;
+  return a->valid & ~(ATTR_SIZE | ATTR_MTIME | ATTR_ATIME) ? -EPERM : 0;
+}
+static const struct inode_operations proc_file_iops = {.setattr = proc_setattr};
 static const struct file_operations proc_dir_fops = {.iterate = proc_iterate};
 static const struct file_operations proc_file_fops = {
     .open = proc_open, .release = proc_release, .read = proc_read, .llseek = proc_llseek};
+/* /proc/sysrq-trigger (as in Linux): c = crash, b = reboot now, s = sync,
+ * o = power off. Used to test crash recovery and to recover a stuck system. */
+static ssize_t sysrq_write(struct file *f, struct iobuf *buf, loff_t *pos) {
+  (void)f;
+  (void)pos;
+  char c;
+  if (!buf->len) return 0;
+  if (iob_read(buf, 0, &c, 1)) return -EFAULT;
+  switch (c) {
+    case 'c':
+      panic("sysrq triggered crash");
+    case 'b':
+      pr_emerg("sysrq: resetting\n");
+      machine_restart();
+    case 'o':
+      pr_emerg("sysrq: powering off\n");
+      machine_poweroff();
+    case 's':
+      pr_notice("sysrq: emergency sync\n");
+      vfs_sync_all();
+      break;
+    default:
+      pr_info("sysrq: unknown command '%c' (c b o s)\n", c);
+  }
+  return (ssize_t)buf->len;
+}
+static const struct file_operations proc_sysrq_fops = {.write = sysrq_write};
+
 static const struct super_operations proc_sops = {.evict = proc_evict};
 
 static int proc_mount(struct super_block *sb, const char *dev, const char *data) {
