@@ -214,6 +214,7 @@ void bcache_sync_all(void) {
 }
 
 u64 bcache_dirty_blocks(void) { return ndirty; }
+u64 bcache_bytes(void) { return nbufs * BCACHE_BLOCK; }
 
 static int flusher(void *arg) {
   for (;;) {

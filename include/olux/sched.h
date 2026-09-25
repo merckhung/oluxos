@@ -96,6 +96,8 @@ static inline struct thread *current_thread(void) { return this_cpu()->curr; }
 
 /* Big kernel lock: serialises process-context kernel code across CPUs.
  * Released automatically while a thread sleeps. */
+void show_threads(void); /* sysrq-t */
+void show_timers(void);
 void lock_kernel(void);
 void unlock_kernel(void);
 bool kernel_locked(void);

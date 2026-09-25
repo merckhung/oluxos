@@ -187,3 +187,17 @@ void time_cpu_init(void) {
   reprogram(ct);
   spin_unlock_irqrestore(&ct->lock, f);
 }
+
+/* sysrq-t: each CPU's timer queue */
+void show_timers(void) {
+  u64 now = ktime_ns();
+  for (int c = 0; c < nr_cpus_possible; c++) {
+    struct cpu_timers *ct = &cpu_timers[c];
+    int n = 0;
+    struct list_head *pos;
+    list_for_each(pos, &ct->pending) n++;
+    struct ktimer *first = n ? list_first_entry(&ct->pending, struct ktimer, link) : NULL;
+    pr_emerg("cpu%d timers: %d pending, next tick %+lld us, first %+lld us\n", c, n,
+             (long long)(ct->next_tick - now) / 1000, first ? (long long)(first->expires - now) / 1000 : 0LL);
+  }
+}

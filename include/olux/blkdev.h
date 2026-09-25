@@ -43,6 +43,7 @@ ssize_t bdev_write(struct blkdev *bd, const void *buf, size_t n, u64 off);
 int bdev_sync(struct blkdev *bd);
 void bcache_sync_all(void);
 u64 bcache_dirty_blocks(void);
+u64 bcache_bytes(void); /* memory held by the buffer cache */
 int blkdev_stats(char *buf, size_t size);
 
 #endif

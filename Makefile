@@ -6,6 +6,7 @@
 #   make rpi4            SD-card boot directory for Raspberry Pi 4B
 #   make sdcard          bootable SD card image (out/sdcard.img) for Raspberry Pi 4B
 #   make update          signed A/B update bundle (out/update.tar)
+#   make soak            long-running load test in QEMU (SOAK_MINUTES=30)
 #
 # Variables: CROSS (compiler prefix), O (output dir), V=1 (verbose),
 #            DEBUG=1 (-O0 + extra checks), SMP (cpus for `make run`).
@@ -224,12 +225,17 @@ unit-test:
 qemu-test: all $(O)/disk.img
 	$(Q)$(PYTHON) tests/qemu/run_tests.py --out $(O) --smp $(SMP)
 
+# Long-running load (FS churn, HTTP, driver kills) watching for hangs and leaks
+SOAK_MINUTES ?= 30
+soak: all $(O)/disk.img
+	$(Q)$(PYTHON) tests/qemu/soak.py --out $(O) --smp $(SMP) --minutes $(SOAK_MINUTES)
+
 clean:
 	rm -rf $(O)
 
 distclean: clean
 	rm -rf $(USERSPACE_OUT) toolchains/cross/build
 
-.PHONY: all kernel initramfs run debug rpi4 sdcard update test unit-test qemu-test clean distclean
+.PHONY: all kernel initramfs run debug rpi4 sdcard update soak test unit-test qemu-test clean distclean
 
 -include $(KDEPS)

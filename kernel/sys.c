@@ -584,17 +584,21 @@ static long do_nanosleep(u64 id, bool abs, u64 ureq, u64 urem) {
   if (abs) dur = dur > now ? dur - now : 0;
   if (!dur) return 0;
   u64 end = ktime_ns() + dur;
-  while (ktime_ns() < end) {
+  for (;;) {
+    /* one clock read per round: the deadline may pass between two reads,
+     * and end - now must never wrap around to an endless sleep */
+    u64 t = ktime_ns();
+    if (t >= end) break;
+    u64 left = end - t;
     if (signal_pending_current()) {
       if (urem && !abs) {
-        u64 left = end - ktime_ns();
         struct timespec64 rem = {(s64)(left / NSEC_PER_SEC), (s64)(left % NSEC_PER_SEC)};
         copy_to_user(urem, &rem, sizeof(rem));
       }
       return -EINTR;
     }
     current->state = TASK_INTERRUPTIBLE;
-    schedule_timeout(end - ktime_ns() > (u64)1 << 62 ? (long)1 << 62 : (long)(end - ktime_ns()));
+    schedule_timeout(left > (u64)1 << 62 ? (long)1 << 62 : (long)left);
     current->state = TASK_RUNNING;
   }
   return 0;

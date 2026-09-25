@@ -361,6 +361,21 @@ static void flush_dgq(struct isock *i) {
   i->dgq_bytes = 0;
 }
 
+/* tcp_close() failed for lack of memory (full send queue): retry from the
+ * poll timer (every second) rather than resetting the connection, which
+ * would throw away data the application already wrote. Give up after about
+ * a minute. The pcb has no socket any more; its arg counts the attempts. */
+static err_t close_retry(void *arg, struct tcp_pcb *pcb) {
+  uintptr_t tries = (uintptr_t)arg + 1;
+  if (tcp_close(pcb) == ERR_OK) return ERR_OK;
+  if (tries > 60) {
+    tcp_abort(pcb);
+    return ERR_ABRT;
+  }
+  tcp_arg(pcb, (void *)tries);
+  return ERR_OK;
+}
+
 static int in_release(struct socket *s) {
   struct isock *i = is(s);
   if (!i) return 0;
@@ -387,7 +402,7 @@ static int in_release(struct socket *s) {
         if (i->state == S_CONNECTED && i->rx_avail)
           tcp_abort(pcb); /* unread data: reset, like Linux */
         else if (tcp_close(pcb) != ERR_OK)
-          tcp_abort(pcb);
+          tcp_poll(pcb, close_retry, 2); /* no memory for the FIN yet: queued data still goes out */
       }
       if (i->rxq) pbuf_free(i->rxq);
       break;

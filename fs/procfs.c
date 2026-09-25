@@ -2,6 +2,7 @@
  * procfs: system and per-process information. File contents are generated
  * when the file is opened (snapshot semantics) and served from a buffer.
  */
+#include <olux/blkdev.h>
 #include <olux/fs.h>
 #include <olux/irq.h>
 #include <olux/kernel.h>
@@ -459,13 +460,14 @@ static int generate(struct inode *i, struct pbuf *b) {
   }
   switch (n->type) {
     case P_MEMINFO: {
-      u64 total = nr_total_pages() * 4, free = nr_free_pages() * 4;
+      u64 total = nr_total_pages() * 4, free = nr_free_pages() * 4, buffers = bcache_bytes() >> 10;
       pb(b,
          "MemTotal:       %8llu kB\nMemFree:        %8llu kB\nMemAvailable:   %8llu kB\nBuffers:        %8llu kB\n"
          "Cached:         %8llu kB\nSwapCached:            0 kB\nSwapTotal:             0 kB\nSwapFree:              0 "
          "kB\n"
          "Shmem:                 0 kB\nSlab:           %8llu kB\n",
-         (unsigned long long)total, (unsigned long long)free, (unsigned long long)free, 0ULL, 0ULL,
+         (unsigned long long)total, (unsigned long long)free, (unsigned long long)(free + buffers),
+         (unsigned long long)buffers, 0ULL,
          (unsigned long long)(kmalloc_bytes_in_use() >> 10));
       break;
     }
@@ -628,7 +630,7 @@ static const struct file_operations proc_dir_fops = {.iterate = proc_iterate};
 static const struct file_operations proc_file_fops = {
     .open = proc_open, .release = proc_release, .read = proc_read, .llseek = proc_llseek};
 /* /proc/sysrq-trigger (as in Linux): c = crash, b = reboot now, s = sync,
- * o = power off. Used to test crash recovery and to recover a stuck system. */
+ * o = power off, t = show threads and where they sleep. */
 static ssize_t sysrq_write(struct file *f, struct iobuf *buf, loff_t *pos) {
   (void)f;
   (void)pos;
@@ -644,12 +646,15 @@ static ssize_t sysrq_write(struct file *f, struct iobuf *buf, loff_t *pos) {
     case 'o':
       pr_emerg("sysrq: powering off\n");
       machine_poweroff();
+    case 't':
+      show_threads();
+      break;
     case 's':
       pr_notice("sysrq: emergency sync\n");
       vfs_sync_all();
       break;
     default:
-      pr_info("sysrq: unknown command '%c' (c b o s)\n", c);
+      pr_info("sysrq: unknown command '%c' (c b o s t)\n", c);
   }
   return (ssize_t)buf->len;
 }

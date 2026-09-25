@@ -1,0 +1,31 @@
+#!/bin/sh
+# sshd-run - start the SSH server (Dropbear) for init.
+# Logins are by key: authorized_keys on the boot partition (/boot) or in
+# /data/ssh are added to root's, as are keys added at run time to
+# /root/.ssh/authorized_keys. The ed25519 host key is kept in /data/ssh so
+# it survives reboots and updates. On an SD card system this waits briefly
+# for the filesystem servers to mount /boot and /data.
+if [ -e /dev/mmcblk0 ]; then
+  for i in $(seq 1 50); do
+    grep -q ' /boot ' /proc/mounts && grep -q ' /data ' /proc/mounts && break
+    sleep 0.2
+  done
+fi
+mkdir -p /root/.ssh /etc/dropbear
+chmod 700 /root/.ssh
+for f in /boot/authorized_keys /data/ssh/authorized_keys; do
+  [ -r "$f" ] || continue
+  while read -r k; do
+    [ -n "$k" ] && ! grep -qxF "$k" /root/.ssh/authorized_keys 2>/dev/null && echo "$k" >>/root/.ssh/authorized_keys
+  done <"$f"
+done
+[ -f /root/.ssh/authorized_keys ] && chmod 600 /root/.ssh/authorized_keys
+key=/etc/dropbear/dropbear_ed25519_host_key
+if grep -q ' /data ' /proc/mounts && mkdir -p /data/ssh 2>/dev/null; then
+  if [ -f /data/ssh/dropbear_ed25519_host_key ]; then
+    cp /data/ssh/dropbear_ed25519_host_key $key
+  elif [ ! -f $key ] && dropbearkey -t ed25519 -f $key >/dev/null 2>&1; then
+    cp $key /data/ssh/ && sync
+  fi
+fi
+exec /usr/sbin/dropbear -F -R -p 22

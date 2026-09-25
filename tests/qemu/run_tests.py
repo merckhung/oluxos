@@ -542,6 +542,14 @@ def t_rtc(c):
     assert rc == 0 and "May  6 07:08" in out and "2031" in out, out
 
 
+def t_latency(c):
+    """Timer wake-up latency and pipe round trips; the budget is loose (QEMU
+    TCG timing is only meaningful relatively; budgets for the Pi are in
+    docs)."""
+    out, rc = c.run("olux-latency -d 2 -n 2000 -l 250000", timeout=120)
+    assert rc == 0 and re.search(r"timer: samples \d+ min", out) and re.search(r"ipc: samples 2000 ", out), out
+
+
 def t_init_respawn(c):
     c.send("exit\n")
     c.expect(PROMPT, 20)
@@ -554,7 +562,7 @@ def t_init_respawn(c):
 TESTS = [
     t_boot_banner, t_smp, t_selftest, t_pipeline_and_redirect, t_shell_scripting, t_file_utilities,
     t_background_jobs, t_ctrl_c, t_job_control, t_proc_tools, t_mounts, t_segfault_contained,
-    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_network, t_ntp, t_usb, t_rtc, t_rpi_platform, t_init_respawn,
+    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_network, t_ntp, t_usb, t_rtc, t_latency, t_rpi_platform, t_init_respawn,
 ]
 
 
@@ -647,7 +655,8 @@ def t_sdcard(args):
     boot_args = argparse.Namespace(**vars(args))
     boot_args.sd = img
     # the firmware would pass slot A's cmdline.txt
-    c = Console(qemu_cmd(boot_args, "olux.slot=a"), os.path.join(args.logdir, "sdcard.log"))
+    # (and a trip point below QEMU's constant 25 'C, to see the thermal governor act)
+    c = Console(qemu_cmd(boot_args, "olux.slot=a rpi_thermal.trip=20000"), os.path.join(args.logdir, "sdcard.log"))
     c.args = boot_args
     try:
         c.expect(PROMPT, 90)
@@ -656,6 +665,8 @@ def t_sdcard(args):
         wait_mount(c, "/boot")
         out, rc = c.run("ls /boot && echo ok > /data/probe && cat /data/probe /data/README.txt")
         assert rc == 0 and "kernel8.img" in out and "start4.elf" in out and "ok" in out, out
+        out, rc = c.run("sleep 2; dmesg | grep rpi-thermal")
+        assert "trip point: ARM clock" in out, out
     finally:
         c.close()
 
@@ -708,6 +719,12 @@ def t_ab_update(args):
     env = dict(os.environ, MTOOLS_SKIP_CHECK="1")
     for f in (good, badsig, tampered):
         subprocess.run(["mcopy", "-i", "%s@@%d" % (img, off), f, "::/"], check=True, env=env)
+    # an SSH key dropped on the boot partition, as a user would
+    keyfile = os.path.join(args.logdir, "authorized_keys")
+    with open(keyfile, "w") as f:
+        f.write("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOluxosTestKeyOnly0000000000000000000000 test@host\n")
+    subprocess.run(["mcopy", "-i", "%s@@%d" % (img, mbr_partition_offset(img, 2)), keyfile, "::/"], check=True,
+                   env=env)
     boot_args = argparse.Namespace(**vars(args))
     boot_args.sd = img
     boot_args.sd_persist = True
@@ -722,6 +739,10 @@ def t_ab_update(args):
             out, rc = c.run("cat /boot/cmdline.txt")
             assert "olux.slot=" + slot in out, out
             if slot == "a":
+                out, rc = c.run("for i in $(seq 1 50); do [ -f /data/ssh/dropbear_ed25519_host_key ] && break; "
+                                "sleep 0.2; done; grep -c OluxosTestKey /root/.ssh/authorized_keys; "
+                                "ls /data/ssh; pidof dropbear")
+                assert "dropbear_ed25519_host_key" in out and re.search(r"^1\r?$", out, re.M) and rc == 0, out
                 out, rc = c.run("olux-update install /data/badsig.tar")
                 assert rc != 0 and "bad signature" in out, out
                 out, rc = c.run("olux-update install /data/tampered.tar")

@@ -433,3 +433,22 @@ void cpu_idle(void) {
     schedule();
   }
 }
+
+/* sysrq-t: every thread with its state and, if it is not running, where
+ * it sleeps. For diagnosing hangs; takes no locks a hung system may hold. */
+void show_threads(void) {
+  struct thread *t;
+  show_timers();
+  pr_emerg("  tid comm             st cpu prio\n");
+  list_for_each_entry(t, &all_threads, all_link) {
+    long st = t->state;
+    char c = st == TASK_RUNNING ? 'R' : st & TASK_INTERRUPTIBLE ? 'S' : st & TASK_UNINTERRUPTIBLE ? 'D'
+             : st & TASK_STOPPED ? 'T' : st & TASK_DEAD ? 'X' : '?';
+    char tm[48] = "";
+    if (t->sleep_timer.pending)
+      snprintf(tm, sizeof(tm), " timer on cpu%d in %lld us", t->sleep_timer.cpu,
+               (long long)(t->sleep_timer.expires - ktime_ns()) / 1000);
+    pr_emerg("%5d %-16s %c %3d %4d%s%s\n", t->tid, t->name, c, t->cpu, t->prio, t->on_cpu ? " (on cpu)" : "", tm);
+    if (!t->on_cpu && st != TASK_DEAD) backtrace_from(t->ctx.fp, t->ctx.pc);
+  }
+}
