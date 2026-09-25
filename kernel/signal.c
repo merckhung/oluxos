@@ -78,7 +78,8 @@ static void wake_stopped(struct process *p) {
 /* Called with sig_lock held. */
 static void queue_signal(sigset_t *set, siginfo_t *infos, int sig, const siginfo_t *info) {
   if (!(*set & sigmask(sig))) {
-    if (info) infos[sig - 1] = *info;
+    if (info)
+      infos[sig - 1] = *info;
     else {
       memset(&infos[sig - 1], 0, sizeof(siginfo_t));
       infos[sig - 1].si_signo = sig;
@@ -112,7 +113,7 @@ int send_signal_thread(struct thread *t, int sig, const siginfo_t *info) {
   if (!p) return -ESRCH;
   unsigned long f = spin_lock_irqsave(&sig_lock);
   prepare_signal(p, sig);
-  if (!sig_ignored(p, sig) || (t->sig_blocked & sigmask(sig))) {
+  if (!sig_ignored(p, sig) || ((t->sig_blocked | t->sig_waiting) & sigmask(sig))) {
     queue_signal(&t->sig_pending, t->sig_info, sig, info);
     if (sig == SIGKILL) p->exiting = p->exiting || false;
   }
@@ -127,7 +128,14 @@ int send_signal_process(struct process *p, int sig, const siginfo_t *info) {
   if (p->state == PROC_ZOMBIE) return 0;
   unsigned long f = spin_lock_irqsave(&sig_lock);
   prepare_signal(p, sig);
+  /* an ignored signal is discarded unless blocked: a thread may be
+   * waiting for it with sigwait()/sigtimedwait() */
   bool ignored = sig_ignored(p, sig);
+  if (ignored) {
+    struct thread *bt;
+    list_for_each_entry(bt, &p->threads, thread_link) if ((bt->sig_blocked | bt->sig_waiting) & sigmask(sig)) ignored =
+        false;
+  }
   if (!ignored) queue_signal(&p->shared_pending, p->shared_info, sig, info);
   spin_unlock_irqrestore(&sig_lock, f);
   if (ignored) return 0;
@@ -209,8 +217,7 @@ void process_stop_all(struct process *p, int sig) {
   p->stop_sig = sig;
   p->stop_reported = false;
   struct thread *t;
-  list_for_each_entry(t, &p->threads, thread_link)
-    if (t != current) signal_wake(t);
+  list_for_each_entry(t, &p->threads, thread_link) if (t != current) signal_wake(t);
   if (p->parent) {
     struct k_sigaction *ka = &p->parent->sighand->action[SIGCHLD];
     if (!(ka->flags & SA_NOCLDSTOP) && ka->handler != SIG_IGN) {
@@ -469,9 +476,12 @@ long sys_rt_sigprocmask(u64 how, u64 set, u64 oset, u64 size) {
     if (copy_from_user(&s, set, sizeof(s))) return -EFAULT;
     s &= ~SIG_KERNEL_ONLY;
     unsigned long f = spin_lock_irqsave(&sig_lock);
-    if (how == SIG_BLOCK) t->sig_blocked |= s;
-    else if (how == SIG_UNBLOCK) t->sig_blocked &= ~s;
-    else if (how == SIG_SETMASK) t->sig_blocked = s;
+    if (how == SIG_BLOCK)
+      t->sig_blocked |= s;
+    else if (how == SIG_UNBLOCK)
+      t->sig_blocked &= ~s;
+    else if (how == SIG_SETMASK)
+      t->sig_blocked = s;
     else {
       spin_unlock_irqrestore(&sig_lock, f);
       return -EINVAL;
@@ -519,33 +529,50 @@ long sys_rt_sigtimedwait(u64 uset, u64 uinfo, u64 uts, u64 size) {
   struct thread *t = current;
   s &= ~SIG_KERNEL_ONLY;
   u64 deadline = timeout >= 0 ? ktime_ns() + timeout : 0;
+  sigset_t saved = t->sig_blocked;
+  long ret;
+  t->sig_waiting = s;
   for (;;) {
-    sigset_t saved = t->sig_blocked;
-    t->sig_blocked = ~s; /* only the waited-for signals are deliverable to us here */
+    t->sig_blocked = ~s; /* only the waited-for signals are dequeued here */
     siginfo_t info;
     int sig = dequeue_signal(t, &info);
     t->sig_blocked = saved;
     if (sig) {
-      if (uinfo && copy_to_user(uinfo, &info, sizeof(info))) return -EFAULT;
-      return sig;
+      ret = uinfo && copy_to_user(uinfo, &info, sizeof(info)) ? -EFAULT : sig;
+      break;
     }
-    if (signal_pending(t)) return -EINTR;
-    if (timeout == 0) return -EAGAIN;
+    if (signal_pending(t)) {
+      ret = -EINTR;
+      break;
+    }
+    if (timeout == 0) {
+      ret = -EAGAIN;
+      break;
+    }
+    /* like Linux, the waited-for signals count as unblocked while we sleep,
+     * so senders wake us even though the caller has them blocked */
+    t->sig_blocked = saved & ~s;
     t->state = TASK_INTERRUPTIBLE;
     sigset_t pend = t->sig_pending | t->proc->shared_pending;
     if (!(pend & s)) {
-      if (timeout < 0) schedule();
-      else {
+      if (timeout < 0) {
+        schedule();
+      } else {
         u64 now = ktime_ns();
         if (now >= deadline) {
           t->state = TASK_RUNNING;
-          return -EAGAIN;
+          t->sig_blocked = saved;
+          ret = -EAGAIN;
+          break;
         }
         schedule_timeout(deadline - now);
       }
     }
     t->state = TASK_RUNNING;
+    t->sig_blocked = saved;
   }
+  t->sig_waiting = 0;
+  return ret;
 }
 
 long sys_sigaltstack(u64 uss, u64 uoss);

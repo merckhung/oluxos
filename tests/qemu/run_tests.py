@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 
-PROMPT = re.compile(rb"root@[\w-]+:[^#]*# $")
+PROMPT = re.compile(rb"root@[\w-]+:[^#\n]*# ")
 
 
 class Console:
@@ -101,9 +101,10 @@ def qemu_cmd(args, extra_append=""):
            "-m", args.mem, "-kernel", os.path.join(args.out, "Image"),
            "-initrd", os.path.join(args.out, "initramfs.cpio"),
            "-nographic", "-no-reboot", "-append", ("console=ttyAMA0 " + extra_append).strip()]
-    disk = os.path.join(args.out, "disk.img")
+    disk = getattr(args, "disk", None) or os.path.join(args.out, "disk.img")
     if os.path.exists(disk):
-        cmd += ["-drive", "if=none,file=%s,format=raw,id=hd0,snapshot=on" % disk,
+        snap = "" if getattr(args, "disk", None) else ",snapshot=on"
+        cmd += ["-drive", "if=none,file=%s,format=raw,id=hd0%s" % (disk, snap),
                 "-device", "virtio-blk-device,drive=hd0"]
     cmd += ["-device", "virtio-rng-device", "-netdev", "user,id=n0", "-device", "virtio-net-device,netdev=n0"]
     return cmd
@@ -214,6 +215,60 @@ def t_block_device(c):
     assert rc == 0 and len(sums) == 2 and sums[0] == sums[1], out
 
 
+def wait_mount(c, path):
+    out, rc = c.run("for i in $(seq 1 100); do grep -q ' %s userfs' /proc/mounts && break; sleep 0.1; done; "
+                    "grep ' %s userfs' /proc/mounts" % (path, path))
+    assert rc == 0, "%s not mounted: %s" % (path, out)
+
+
+def t_fatfs(c):
+    if c.args.machine != "virt":
+        return
+    wait_mount(c, "/mnt/fat")
+    out, rc = c.run("cat /mnt/fat/hello.txt '/mnt/fat/docs/nested/A Long File Name.txt' && cmp /mnt/fat/busybox /bin/busybox")
+    assert rc == 0 and out.count("Hello from FAT32") == 2, out
+    out, rc = c.run("cd /mnt/fat && mkdir -p 'Dir One/sub' && echo payload > 'Dir One/sub/Mixed Case Name.TXT' && "
+                    "mv 'Dir One/sub/Mixed Case Name.TXT' 'Dir One/renamed.txt' && mv 'Dir One' dir2 && "
+                    "cat dir2/renamed.txt && ls dir2 && rmdir dir2/sub && rm dir2/renamed.txt && rmdir dir2 && "
+                    "! ls dir2 2>/dev/null; cd /")
+    assert rc == 0 and "payload" in out and "renamed.txt" in out, out
+    out, rc = c.run("dd if=/dev/urandom of=/tmp/big bs=4096 count=700 2>/dev/null && cp /tmp/big /mnt/fat/big.bin && "
+                    "sha256sum /tmp/big /mnt/fat/big.bin && rm /mnt/fat/big.bin /tmp/big")
+    sums = re.findall(r"([0-9a-f]{64})", out)
+    assert rc == 0 and len(sums) == 2 and sums[0] == sums[1], out
+    out, rc = c.run("f=/mnt/fat/sparse; echo hi > $f && truncate -s 70000 $f && stat -c %s $f && "
+                    "tail -c 5 $f | tr '\\0' Z && echo && truncate -s 2 $f && cat $f && rm $f")
+    assert rc == 0 and "70000" in out and "ZZZZZ" in out and out.strip().endswith("hi"), out
+    out, rc = c.run("for i in $(seq 1 200); do echo $i > /mnt/fat/docs/file_number_$i.txt; done; "
+                    "ls /mnt/fat/docs | wc -l; cat /mnt/fat/docs/file_number_177.txt; rm /mnt/fat/docs/file_number_*")
+    assert rc == 0 and "201" in out and "177" in out, out
+
+
+def t_ext4fs(c):
+    if c.args.machine != "virt":
+        return
+    wait_mount(c, "/mnt/ext")
+    out, rc = c.run("cd /mnt/ext && sha256sum -c data/blob.sha256 && cat link-to-hello etc/app.conf; cd /")
+    assert rc == 0 and "blob.bin: OK" in out and "Hello from ext4" in out and "config=1" in out, out
+    out, rc = c.run("touch /mnt/ext/newfile")
+    assert rc != 0 and "Read-only" in out, out
+
+
+def t_fs_server_restart(c):
+    """Killing a filesystem server must not affect the kernel: I/O fails
+    with EIO, init restarts the server, it re-attaches and I/O resumes."""
+    if c.args.machine != "virt":
+        return
+    wait_mount(c, "/mnt/fat")
+    c.run("echo survives > /mnt/fat/keep.txt")
+    out, rc = c.run("kill -9 $(pidof fatfsd); sleep 0.2; cat /mnt/fat/keep.txt")
+    assert rc != 0 and "I/O error" in out, out
+    out, rc = c.run("for i in $(seq 1 50); do cat /mnt/fat/keep.txt 2>/dev/null && break; sleep 0.2; done")
+    assert rc == 0 and "survives" in out, out
+    out, rc = c.run("dmesg | grep -c 're-attached /dev/vda1'; rm /mnt/fat/keep.txt")
+    assert rc == 0, out
+
+
 def t_init_respawn(c):
     c.send("exit\n")
     c.expect(PROMPT, 20)
@@ -226,7 +281,7 @@ def t_init_respawn(c):
 TESTS = [
     t_boot_banner, t_smp, t_selftest, t_pipeline_and_redirect, t_shell_scripting, t_file_utilities,
     t_background_jobs, t_ctrl_c, t_job_control, t_proc_tools, t_mounts, t_segfault_contained,
-    t_memory_stress, t_fork_bomb_limited, t_block_device, t_init_respawn,
+    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_init_respawn,
 ]
 
 
@@ -242,10 +297,54 @@ def t_poweroff(args):
                 c._fill(0.5)
             except EOFError:
                 break
+        try:
+            c.proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            pass
         assert c.proc.poll() is not None, "QEMU still running after poweroff"
         assert b"power down" in c.buf or b"power-off" in c.buf, c.buf[-500:]
     finally:
         c.close()
+
+
+def t_persistence(args):
+    """Two boots on a private disk copy: data written to FAT in the first
+    boot survives a clean power-off; the second mount finds a clean volume."""
+    import shutil
+    disk = os.path.join(args.logdir, "persist-disk.img")
+    shutil.copyfile(os.path.join(args.out, "disk.img"), disk)
+    boot_args = argparse.Namespace(**vars(args))
+    boot_args.disk = disk
+    for boot in (1, 2):
+        c = Console(qemu_cmd(boot_args), os.path.join(args.logdir, "persist-%d.log" % boot))
+        c.args = boot_args
+        try:
+            c.expect(PROMPT, 90)
+            c.quiet()
+            wait_mount(c, "/mnt/fat")
+            if boot == 1:
+                out, rc = c.run("mkdir /mnt/fat/persist && seq 1 5000 > /mnt/fat/persist/numbers.txt && "
+                                "sha256sum /mnt/fat/persist/numbers.txt")
+                assert rc == 0, out
+                want = re.search(r"([0-9a-f]{64})", out).group(1)
+                c.send("poweroff\n")
+                deadline = time.time() + 30
+                while c.proc.poll() is None and time.time() < deadline:
+                    try:
+                        c._fill(0.5)
+                    except EOFError:
+                        break
+                try:
+                    c.proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    pass
+                assert c.proc.poll() is not None, "QEMU still running after poweroff"
+            else:
+                out, rc = c.run("sha256sum /mnt/fat/persist/numbers.txt; dmesg | grep -c 'not cleanly unmounted'")
+                assert want in out, out
+                assert out.strip().endswith("0"), "volume was not marked clean: " + out
+        finally:
+            c.close()
 
 
 def main():
@@ -308,6 +407,14 @@ def main():
         except (AssertionError, TimeoutError, EOFError) as e:
             failures.append("poweroff")
             print("FAIL poweroff %s" % e)
+
+    if (not args.pattern or "persist" in args.pattern) and args.machine == "virt":
+        try:
+            t_persistence(args)
+            print("PASS persistence")
+        except (AssertionError, TimeoutError, EOFError) as e:
+            failures.append("persistence")
+            print("FAIL persistence %s" % e)
 
     print("\n%d failure(s)%s" % (len(failures), (": " + ", ".join(failures)) if failures else ""))
     print("console log: %s" % log)

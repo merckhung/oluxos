@@ -4,9 +4,6 @@
 #define STUB(name) \
   long sys_##name(void); \
   long sys_##name(void) { return -ENOSYS; }
-STUB(olux_channel)
-STUB(olux_msg_send)
-STUB(olux_msg_recv)
 STUB(olux_sysinfo)
 STUB(olux_watchdog)
 

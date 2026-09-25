@@ -39,6 +39,8 @@
 #define EDEADLK 35
 #define ENAMETOOLONG 36
 #define ENOLCK 37
+#define ESTALE 116
+#define EPROTO 71
 #define ENOSYS 38
 #define ENOTEMPTY 39
 #define ELOOP 40

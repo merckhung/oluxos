@@ -114,19 +114,19 @@ $(O)/Image: $(O)/olux.elf
 USERSPACE_OUT := toolchains/userspace/out
 UCC           := $(USERSPACE_OUT)/bin/oluxos-cc
 
-$(UCC) $(USERSPACE_OUT)/bin/busybox: third_party/musl/musl-1.2.5.tar.gz \
+$(UCC) $(USERSPACE_OUT)/bin/busybox &: third_party/musl/musl-1.2.5.tar.gz \
 		third_party/busybox/busybox-1.36.1.tar.bz2 toolchains/userspace/build.sh \
 		toolchains/userspace/busybox.config
 	$(Q)OLUXOS_CROSS=$(CROSS) toolchains/userspace/build.sh all
 	@touch $(UCC) $(USERSPACE_OUT)/bin/busybox
 
-UCFLAGS := -O2 -g -Wall -Wextra -Werror -Wno-unused-parameter -Iuser/include \
+UCFLAGS := -O2 -g -Wall -Wextra -Werror -Wno-unused-parameter -Iuser/include -Iinclude/uapi \
 	-fstack-protector-strong -D_GNU_SOURCE
 USER_PROGS := $(notdir $(wildcard user/prog/*))
 USER_BINS  := $(addprefix $(O)/user/,$(USER_PROGS))
 USER_LIB   := $(wildcard user/lib/*.c)
 
-$(O)/user/%: user/prog/%/*.c $(USER_LIB) $(wildcard user/include/*.h) $(UCC)
+$(O)/user/%: user/prog/%/*.c $(USER_LIB) $(wildcard user/include/*.h include/uapi/olux/*.h) $(UCC)
 	@mkdir -p $(dir $@)
 	@$(if $(Q),echo "  UCC     $@")
 	$(Q)$(UCC) $(UCFLAGS) -o $@ $(filter %.c,$^) -lm

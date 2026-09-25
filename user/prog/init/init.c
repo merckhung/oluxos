@@ -2,6 +2,7 @@
  * OluxOS init (PID 1)
  *
  * - runs /etc/init.conf: sysinit, once, respawn, console and shutdown actions
+ *   (a respawn service exiting with status 78 is not restarted)
  * - supervises services, restarting them with exponential back-off
  * - reaps orphaned processes
  * - feeds the hardware watchdog (/dev/watchdog) so that a hung userspace
@@ -20,6 +21,7 @@
 #include <sys/ioctl.h>
 #include <sys/reboot.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -28,6 +30,8 @@
 #define MIN_BACKOFF_MS 500
 #define MAX_BACKOFF_MS 60000
 #define STABLE_MS 10000
+/* A service exiting with this status (EX_CONFIG) is never restarted. */
+#define EXIT_NOT_APPLICABLE 78
 #define WDT_PET_MS 5000
 
 enum action { A_SYSINIT, A_ONCE, A_RESPAWN, A_CONSOLE, A_SHUTDOWN };
@@ -91,11 +95,16 @@ static void parse_config(void) {
     *sp++ = '\0';
     while (*sp == ' ' || *sp == '\t') sp++;
     struct entry *e = &entries[nentries];
-    if (!strcmp(s, "sysinit")) e->action = A_SYSINIT;
-    else if (!strcmp(s, "once")) e->action = A_ONCE;
-    else if (!strcmp(s, "respawn")) e->action = A_RESPAWN;
-    else if (!strcmp(s, "console")) e->action = A_CONSOLE;
-    else if (!strcmp(s, "shutdown")) e->action = A_SHUTDOWN;
+    if (!strcmp(s, "sysinit"))
+      e->action = A_SYSINIT;
+    else if (!strcmp(s, "once"))
+      e->action = A_ONCE;
+    else if (!strcmp(s, "respawn"))
+      e->action = A_RESPAWN;
+    else if (!strcmp(s, "console"))
+      e->action = A_CONSOLE;
+    else if (!strcmp(s, "shutdown"))
+      e->action = A_SHUTDOWN;
     else {
       klog("unknown action '%s' in /etc/init.conf", s);
       continue;
@@ -195,9 +204,16 @@ static void reap(void) {
       if (e->pid != pid) continue;
       e->pid = 0;
       if (e->action != A_RESPAWN && e->action != A_CONSOLE) break;
+      if (WIFEXITED(st) && WEXITSTATUS(st) == EXIT_NOT_APPLICABLE) {
+        klog("'%s' (pid %d) is not applicable here (status %d); not restarting", e->cmd, pid, EXIT_NOT_APPLICABLE);
+        e->action = A_ONCE;
+        break;
+      }
       long long lived = now_ms() - e->started_ms;
-      if (lived >= STABLE_MS) e->backoff_ms = MIN_BACKOFF_MS;
-      else if (e->backoff_ms < MAX_BACKOFF_MS) e->backoff_ms *= 2;
+      if (lived >= STABLE_MS)
+        e->backoff_ms = MIN_BACKOFF_MS;
+      else if (e->backoff_ms < MAX_BACKOFF_MS)
+        e->backoff_ms *= 2;
       if (e->backoff_ms > MAX_BACKOFF_MS) e->backoff_ms = MAX_BACKOFF_MS;
       e->next_start_ms = now_ms() + (e->action == A_CONSOLE && lived >= STABLE_MS ? 0 : e->backoff_ms);
       e->restarts++;
@@ -246,7 +262,8 @@ int main(int argc, char **argv) {
   sa.sa_handler = on_signal;
   sigemptyset(&sa.sa_mask);
   static const int shutdown_sigs[] = {SIGTERM, SIGINT, SIGUSR1, SIGUSR2};
-  for (unsigned i = 0; i < sizeof(shutdown_sigs) / sizeof(shutdown_sigs[0]); i++) sigaction(shutdown_sigs[i], &sa, NULL);
+  for (unsigned i = 0; i < sizeof(shutdown_sigs) / sizeof(shutdown_sigs[0]); i++)
+    sigaction(shutdown_sigs[i], &sa, NULL);
   sa.sa_handler = SIG_DFL;
   sa.sa_flags = SA_NOCLDSTOP;
   sigaction(SIGCHLD, &sa, NULL);
@@ -283,8 +300,10 @@ int main(int argc, char **argv) {
     for (int i = 0; i < nentries; i++) {
       struct entry *e = &entries[i];
       if ((e->action == A_RESPAWN || e->action == A_CONSOLE) && e->pid == 0) {
-        if (e->next_start_ms <= now) start_entry(e);
-        else if (e->next_start_ms < wake) wake = e->next_start_ms;
+        if (e->next_start_ms <= now)
+          start_entry(e);
+        else if (e->next_start_ms < wake)
+          wake = e->next_start_ms;
       }
     }
     wdt_pet();
@@ -297,6 +316,8 @@ int main(int argc, char **argv) {
     siginfo_t si;
     sigprocmask(SIG_SETMASK, &empty, NULL);
     sigprocmask(SIG_BLOCK, &block, NULL);
-    sigtimedwait(&w, &si, &ts);
+    /* raw syscall: musl's sigtimedwait() retries on EINTR, which would hide
+     * a shutdown request whose handler just ran */
+    syscall(SYS_rt_sigtimedwait, &w, &si, &ts, _NSIG / 8);
   }
 }

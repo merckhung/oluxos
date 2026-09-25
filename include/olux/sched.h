@@ -74,6 +74,7 @@ struct thread {
 
   /* signals */
   sigset_t sig_blocked;
+  sigset_t sig_waiting; /* set being waited for in sigtimedwait() */
   sigset_t sig_pending;
   siginfo_t sig_info[NSIG];
   sigset_t saved_sigmask;

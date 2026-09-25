@@ -896,6 +896,8 @@ long sys_fdatasync(u64 fd) { return sys_fsync(fd); }
 long sys_fadvise64(u64 fd, u64 off, u64 len, u64 advice);
 long sys_fadvise64(u64 fd, u64 off, u64 len, u64 advice) { return 0; }
 
+int userfs_try_attach(const char *dir, const char *data);
+
 #define MS_RDONLY 1
 #define MS_NOSUID 2
 #define MS_NODEV 4
@@ -927,6 +929,9 @@ long sys_mount(u64 udev, u64 udir, u64 utype, u64 flags, u64 udata) {
     }
   } else if (!type) {
     r = -EINVAL;
+  } else if (!strcmp(type, "userfs") && data && strstr(data, "attach") &&
+             (r = userfs_try_attach(dir, data)) != 1) {
+    /* re-attached (or failed to re-attach) an existing userfs mount */
   } else {
     r = do_mount(dev, dir, type, sbf, data);
   }
