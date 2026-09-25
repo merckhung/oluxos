@@ -105,6 +105,8 @@ struct mutex {
   struct thread *owner;
   struct wait_queue wq;
 };
+#define MUTEX_INIT(name) {NULL, WAIT_QUEUE_INIT((name).wq)}
+#define DEFINE_MUTEX(name) struct mutex name = MUTEX_INIT(name)
 void mutex_init(struct mutex *m);
 void mutex_lock(struct mutex *m);
 int mutex_lock_interruptible(struct mutex *m);

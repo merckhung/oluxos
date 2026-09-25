@@ -11,6 +11,8 @@
 #define USB_TYPE_CLASS 0x20
 #define USB_RECIP_INTERFACE 0x01
 #define USB_RECIP_ENDPOINT 0x02
+#define USB_RECIP_OTHER 0x03
+#define USB_REQ_GET_STATUS 0x00
 #define USB_REQ_CLEAR_FEATURE 0x01
 #define USB_REQ_SET_FEATURE 0x03
 #define USB_REQ_GET_DESCRIPTOR 0x06
@@ -71,6 +73,13 @@ struct usb_hc_ops {
   int (*configure)(struct usb_device *d);
   /* Clear a halted endpoint (host side and device side). */
   int (*clear_halt)(struct usb_device *d, u8 ep);
+  /* Hubs: mark `hub` as a hub with `nports` downstream ports (ttt: think time
+   * of a high-speed hub's transaction translator), give a device just reset
+   * on a hub port an address (returns it with endpoint 0 working, or NULL),
+   * and remove a device (its class drivers are disconnected first). */
+  int (*hub_config)(struct usb_device *hub, int nports, int ttt);
+  struct usb_device *(*attach_child)(struct usb_device *hub, int port, int speed);
+  void (*detach)(struct usb_device *d);
 };
 
 struct usb_device {
@@ -85,6 +94,8 @@ struct usb_device {
   struct usb_interface intf[USB_MAX_INTERFACES];
   volatile bool gone; /* unplugged: transfers fail */
   int devnum;
+  struct usb_device *parent; /* hub, or NULL on a root port */
+  int depth;                 /* hubs above this device */
 };
 
 struct usb_driver {
@@ -101,6 +112,10 @@ struct usb_driver {
 /* Called by host controller drivers once endpoint 0 works. */
 int usb_new_device(struct usb_device *d);
 void usb_disconnect(struct usb_device *d);
+
+/* Serializes topology changes (root port and hub port connects/disconnects). */
+void usb_topology_lock(void);
+void usb_topology_unlock(void);
 
 int usb_control(struct usb_device *d, u8 reqtype, u8 req, u16 value, u16 index, void *data, u16 len);
 const char *usb_speed_name(int speed);

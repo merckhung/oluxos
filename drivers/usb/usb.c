@@ -6,9 +6,14 @@
 #include <olux/kernel.h>
 #include <olux/mm.h>
 #include <olux/usb.h>
+#include <olux/wait.h>
 
 extern const struct usb_driver __start_usb_drivers[], __stop_usb_drivers[];
 static int next_devnum = 1;
+static DEFINE_MUTEX(topology_lock);
+
+void usb_topology_lock(void) { mutex_lock(&topology_lock); }
+void usb_topology_unlock(void) { mutex_unlock(&topology_lock); }
 
 const char *usb_speed_name(int speed) {
   switch (speed) {
@@ -114,9 +119,14 @@ int usb_new_device(struct usb_device *d) {
   parse_config(d, cfg, r);
   d->config_value = cfg[5];
   kfree(cfg);
-  pr_info("usb %d: %04x:%04x %s %s (%s, port %d, %d interface%s)\n", d->devnum, d->vendor, d->product,
+  char where[24];
+  if (d->parent)
+    snprintf(where, sizeof(where), "hub %d port %d", d->parent->devnum, d->port);
+  else
+    snprintf(where, sizeof(where), "port %d", d->port);
+  pr_info("usb %d: %04x:%04x %s %s (%s, %s, %d interface%s)\n", d->devnum, d->vendor, d->product,
           d->manufacturer[0] ? d->manufacturer : "-", d->product_name[0] ? d->product_name : "-",
-          usb_speed_name(d->speed), d->port, d->nintf, d->nintf == 1 ? "" : "s");
+          usb_speed_name(d->speed), where, d->nintf, d->nintf == 1 ? "" : "s");
   r = usb_control(d, 0, USB_REQ_SET_CONFIGURATION, d->config_value, 0, NULL, 0);
   if (r < 0) return r;
   r = d->ops->configure(d);

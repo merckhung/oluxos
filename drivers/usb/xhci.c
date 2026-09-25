@@ -135,6 +135,8 @@ struct xdev {
   phys_addr_t bounce_pa;
   struct mutex lock; /* one synchronous transfer at a time */
   struct wait_queue wq;
+  u32 route;           /* route string: hub ports below the root port */
+  u8 tt_slot, tt_port; /* transaction translator of a low/full-speed device behind a high-speed hub */
 };
 
 struct xhci {
@@ -465,11 +467,7 @@ static int xhci_configure(struct usb_device *ud) {
   return command(x, bus(x, d->in_pa), 0, C_TYPE(TRB_CONFIGURE_EP) | (u32)d->slot << 24, NULL);
 }
 
-static const struct usb_hc_ops xhci_ops = {.control = xhci_control,
-                                           .bulk = xhci_bulk,
-                                           .intr_start = xhci_intr_start,
-                                           .configure = xhci_configure,
-                                           .clear_halt = xhci_clear_halt};
+static const struct usb_hc_ops xhci_ops;
 
 static void free_xdev(struct xdev *d) {
   for (int i = 0; i < 32; i++) {
@@ -496,29 +494,37 @@ static int port_reset(struct xhci *x, unsigned port) {
   return (rd(x->op, PORTSC(port)) & PS_PED) ? 0 : -EIO;
 }
 
-static void port_connect(struct xhci *x, unsigned port) {
-  if (x->ports[port]) return;
-  sleep_ns(100 * 1000000); /* debounce, power good */
-  u32 ps = rd(x->op, PORTSC(port));
-  if (!(ps & PS_CCS)) return;
-  if (!(ps & PS_PED) && port_reset(x, port)) {
-    pr_warn("xhci: port %u: reset failed\n", port);
-    return;
-  }
-  ps = rd(x->op, PORTSC(port));
-  int speed = (int)PS_SPEED(ps);
+/* Give a device on a root port (parent NULL) or behind a hub port an
+ * address with endpoint 0 configured. The caller then runs usb_new_device. */
+static struct xdev *attach(struct xhci *x, unsigned root_port, int speed, struct xdev *parent, int hub_port) {
   u32 slot;
   if (command(x, 0, 0, C_TYPE(TRB_ENABLE_SLOT), &slot) || !slot || slot > x->max_slots) {
-    pr_warn("xhci: port %u: no device slot\n", port);
-    return;
+    pr_warn("xhci: port %u: no device slot\n", root_port);
+    return NULL;
   }
   struct xdev *d = kzalloc(sizeof(*d), 0);
-  if (!d) return;
+  if (!d) goto fail_nodev;
   d->x = x;
   d->slot = (int)slot;
-  d->port = (int)port;
+  d->port = (int)root_port;
   mutex_init(&d->lock);
   wq_init(&d->wq);
+  if (parent) {
+    int depth = parent->udev.depth;
+    if (depth >= 5) goto fail; /* the route string has five tiers */
+    d->route = parent->route | (u32)MIN(hub_port, 15) << (4 * depth);
+    d->udev.parent = &parent->udev;
+    d->udev.depth = depth + 1;
+    if (speed == USB_SPEED_LOW || speed == USB_SPEED_FULL) {
+      if (parent->udev.speed == USB_SPEED_HIGH) {
+        d->tt_slot = (u8)parent->slot;
+        d->tt_port = (u8)hub_port;
+      } else {
+        d->tt_slot = parent->tt_slot;
+        d->tt_port = parent->tt_port;
+      }
+    }
+  }
   d->in_ctx = dma_page(x, &d->in_pa, 4096);
   d->out_ctx = dma_page(x, &d->out_pa, 4096);
   d->bounce = dma_page(x, &d->bounce_pa, BOUNCE);
@@ -529,8 +535,9 @@ static void port_connect(struct xhci *x, unsigned port) {
   memset(d->in_ctx, 0, 33 * x->ctxsz);
   u32 *icc = ctx(x, d->in_ctx, 0), *sc = ctx(x, d->in_ctx, 1), *ep0 = ctx(x, d->in_ctx, 2);
   icc[1] = 3; /* slot + EP0 */
-  sc[0] = 1u << 27 | (u32)speed << 20;
-  sc[1] = port << 16;
+  sc[0] = 1u << 27 | (u32)speed << 20 | d->route;
+  sc[1] = root_port << 16;
+  sc[2] = d->tt_slot | (u32)d->tt_port << 8;
   ep0[1] = 3u << 1 | 4u << 3 | (u32)mps0 << 16; /* CErr 3, control */
   u64 deq = bus(x, d->ep[1].ring.pa) | 1;
   ep0[2] = (u32)deq;
@@ -538,12 +545,14 @@ static void port_connect(struct xhci *x, unsigned port) {
   ep0[4] = 8;
   x->slots[slot] = d;
   if (command(x, bus(x, d->in_pa), 0, C_TYPE(TRB_ADDRESS_DEVICE) | slot << 24, NULL)) {
-    pr_warn("xhci: port %u: address device failed\n", port);
-    goto fail_slot;
+    pr_warn("xhci: port %u: address device failed\n", root_port);
+    x->slots[slot] = NULL;
+    x->dcbaa[slot] = 0;
+    goto fail;
   }
   d->udev.ops = &xhci_ops;
   d->udev.hcpriv = d;
-  d->udev.port = (int)port;
+  d->udev.port = parent ? hub_port : (int)root_port;
   d->udev.speed = speed;
   if (speed == USB_SPEED_FULL || speed == USB_SPEED_LOW) { /* learn bMaxPacketSize0 */
     u8 dd[8];
@@ -556,24 +565,19 @@ static void port_connect(struct xhci *x, unsigned port) {
       command(x, bus(x, d->in_pa), 0, C_TYPE(TRB_EVALUATE_CTX) | slot << 24, NULL);
     }
   }
-  x->ports[port] = d;
-  if (usb_new_device(&d->udev)) pr_warn("xhci: port %u: device setup failed\n", port);
-  return;
-fail_slot:
-  x->slots[slot] = NULL;
-  command(x, 0, 0, C_TYPE(TRB_DISABLE_SLOT) | slot << 24, NULL);
-  x->dcbaa[slot] = 0;
+  return d;
 fail:
   free_xdev(d);
+fail_nodev:
+  command(x, 0, 0, C_TYPE(TRB_DISABLE_SLOT) | slot << 24, NULL);
+  return NULL;
 }
 
-static void port_disconnect(struct xhci *x, unsigned port) {
-  struct xdev *d = x->ports[port];
-  if (!d) return;
-  x->ports[port] = NULL;
+static void detach(struct xdev *d) {
+  struct xhci *x = d->x;
   d->udev.gone = true;
   wake_up(&d->wq);
-  usb_disconnect(&d->udev);
+  usb_disconnect(&d->udev); /* a hub removes its children here */
   unsigned long f = spin_lock_irqsave(&x->lock);
   x->slots[d->slot] = NULL;
   spin_unlock_irqrestore(&x->lock, f);
@@ -581,6 +585,61 @@ static void port_disconnect(struct xhci *x, unsigned port) {
   x->dcbaa[d->slot] = 0;
   /* the device structure stays allocated: class drivers may still hold it */
 }
+
+static void port_connect(struct xhci *x, unsigned port) {
+  if (x->ports[port]) return;
+  sleep_ns(100 * 1000000); /* debounce, power good */
+  u32 ps = rd(x->op, PORTSC(port));
+  if (!(ps & PS_CCS)) return;
+  if (!(ps & PS_PED) && port_reset(x, port)) {
+    pr_warn("xhci: port %u: reset failed\n", port);
+    return;
+  }
+  ps = rd(x->op, PORTSC(port));
+  struct xdev *d = attach(x, port, (int)PS_SPEED(ps), NULL, 0);
+  if (!d) return;
+  x->ports[port] = d;
+  if (usb_new_device(&d->udev)) pr_warn("xhci: port %u: device setup failed\n", port);
+}
+
+static void port_disconnect(struct xhci *x, unsigned port) {
+  struct xdev *d = x->ports[port];
+  if (!d) return;
+  x->ports[port] = NULL;
+  detach(d);
+}
+
+/* ---------------- hubs ---------------- */
+
+static int xhci_hub_config(struct usb_device *ud, int nports, int ttt) {
+  struct xdev *d = ud->hcpriv;
+  struct xhci *x = d->x;
+  memset(d->in_ctx, 0, 33 * x->ctxsz);
+  u32 *icc = ctx(x, d->in_ctx, 0), *slot = ctx(x, d->in_ctx, 1);
+  memcpy(slot, ctx(x, d->out_ctx, 0), x->ctxsz);
+  icc[1] = 1; /* slot context only */
+  slot[0] |= 1u << 26;                                   /* Hub */
+  slot[1] = (slot[1] & 0x00ffffffu) | (u32)nports << 24; /* Number of Ports */
+  if (ud->speed == USB_SPEED_HIGH) slot[2] = (slot[2] & ~(3u << 16)) | (u32)(ttt & 3) << 16;
+  return command(x, bus(x, d->in_pa), 0, C_TYPE(TRB_CONFIGURE_EP) | (u32)d->slot << 24, NULL);
+}
+
+static struct usb_device *xhci_attach_child(struct usb_device *hub, int port, int speed) {
+  struct xdev *h = hub->hcpriv;
+  struct xdev *d = attach(h->x, (unsigned)h->port, speed, h, port);
+  return d ? &d->udev : NULL;
+}
+
+static void xhci_detach(struct usb_device *ud) { detach(ud->hcpriv); }
+
+static const struct usb_hc_ops xhci_ops = {.control = xhci_control,
+                                           .bulk = xhci_bulk,
+                                           .intr_start = xhci_intr_start,
+                                           .configure = xhci_configure,
+                                           .clear_halt = xhci_clear_halt,
+                                           .hub_config = xhci_hub_config,
+                                           .attach_child = xhci_attach_child,
+                                           .detach = xhci_detach};
 
 static int usbd(void *arg) {
   struct xhci *x = arg;
@@ -596,10 +655,12 @@ static int usbd(void *arg) {
       __atomic_fetch_and(&x->port_events[p / 32], ~(1u << (p % 32)), __ATOMIC_SEQ_CST);
       u32 ps = rd(x->op, PORTSC(p));
       wr(x->op, PORTSC(p), (ps & PS_PRESERVE) | (ps & PS_CHANGES)); /* acknowledge */
+      usb_topology_lock();
       if ((ps & PS_CCS) && !x->ports[p])
         port_connect(x, p);
       else if (!(ps & PS_CCS) && x->ports[p])
         port_disconnect(x, p);
+      usb_topology_unlock();
     }
   }
   return 0;

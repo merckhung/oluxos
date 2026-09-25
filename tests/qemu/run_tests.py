@@ -147,11 +147,13 @@ def qemu_cmd(args, extra_append=""):
         fwd = ",hostfwd=tcp:127.0.0.1:%d-:80,hostfwd=tcp:127.0.0.1:%d-:23,hostfwd=tcp:127.0.0.1:%d-:22" % (
             args.fwd_http, args.fwd_telnet, args.fwd_ssh)
     cmd += ["-device", "virtio-rng-device", "-netdev", "user,id=n0" + fwd, "-device", "virtio-net-device,netdev=n0"]
-    # USB: xHCI with a keyboard, a mouse and a thumb drive (a copy of the test disk)
+    # USB: xHCI with a keyboard and a mouse on root ports, and a hub with a
+    # thumb drive (a copy of the test disk) behind it
     if os.path.exists(disk) and getattr(args, "logdir", None):
-        cmd += ["-device", "qemu-xhci", "-device", "usb-kbd", "-device", "usb-mouse",
+        cmd += ["-device", "qemu-xhci,id=xhci", "-device", "usb-kbd,bus=xhci.0,port=1",
+                "-device", "usb-mouse,bus=xhci.0,port=2", "-device", "usb-hub,bus=xhci.0,port=3,id=usbhub",
                 "-drive", "if=none,id=usbdisk,file=%s,format=raw,snapshot=on" % os.path.join(args.out, "disk.img"),
-                "-device", "usb-storage,drive=usbdisk"]
+                "-device", "usb-storage,drive=usbdisk,bus=xhci.0,port=3.2"]
         args.monitor = os.path.join(args.logdir, "monitor-%d.sock" % os.getpid())
         cmd += ["-monitor", "unix:%s,server=on,wait=off" % args.monitor]
     return cmd
@@ -516,6 +518,13 @@ def t_usb(c):
                     "cp /tmp/u /mnt/usb/u.bin && sync && md5sum /tmp/u /mnt/usb/u.bin; kill $(pidof fatfsd | tr ' ' '\\n' | tail -1)")
     sums = re.findall(r"([0-9a-f]{32})", out)
     assert len(sums) == 4 and sums[0] == sums[1] and sums[2] == sums[3] and "Hello from FAT32" in out, out
+    # the drive sits behind a hub: unplugging the hub removes both
+    out, rc = c.run("dmesg | grep -E 'port USB 1.1 hub|HARDDRIVE.*hub'")
+    assert rc == 0 and "8-port" in out and "hub 3 port 2" in out, out
+    monitor(c.args, "device_del usbhub")
+    out, rc = c.run("for i in $(seq 1 30); do [ $(dmesg | grep -c 'disconnected') -ge 2 ] && break; sleep 0.1; done; "
+                    "dmesg | grep -E 'disconnected|removed'; dd if=/dev/sda of=/dev/null bs=512 skip=190000 count=1")
+    assert "usb 3: disconnected" in out and "usb 4: disconnected" in out and rc != 0, out
 
 
 def t_init_respawn(c):
