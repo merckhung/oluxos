@@ -41,6 +41,15 @@ static u64 va_alloc(u64 size, bool owns) {
   return cand;
 }
 
+static struct vm_area *va_lookup(u64 start) {
+  unsigned long f = spin_lock_irqsave(&vm_lock);
+  struct vm_area *a;
+  for (a = areas; a; a = a->next)
+    if (a->start == start) break;
+  spin_unlock_irqrestore(&vm_lock, f);
+  return a;
+}
+
 static struct vm_area *va_remove(u64 start) {
   unsigned long f = spin_lock_irqsave(&vm_lock);
   for (struct vm_area **pp = &areas; *pp; pp = &(*pp)->next) {
@@ -69,7 +78,7 @@ static void *vmap_pages(size_t size, u64 prot) {
         unmap_kernel_page(va + o);
         free_pages(phys_to_page(pa), 0);
       }
-      kfree(va_remove(base));
+      kfree(va_remove(base)); /* unmapped above, safe to release */
       return NULL;
     }
     map_kernel_page(va + off, page_to_phys(p), prot);
@@ -82,13 +91,16 @@ void *vmalloc(size_t size) { return vmap_pages(size, PROT_KERNEL_RW); }
 void vfree(void *ptr) {
   if (!ptr) return;
   u64 base = (u64)ptr - PAGE_SIZE;
-  struct vm_area *a = va_remove(base);
+  /* Unmap while the range is still reserved so that no other CPU can
+   * allocate (and map) it before we are done tearing it down. */
+  struct vm_area *a = va_lookup(base);
   if (!a) panic("vfree: bad pointer %p", ptr);
   for (u64 va = base + PAGE_SIZE; va < a->start + a->size; va += PAGE_SIZE) {
     phys_addr_t pa = kernel_va_to_phys(va);
     unmap_kernel_page(va);
     if (a->owns_pages && pa) free_pages(phys_to_page(pa), 0);
   }
+  va_remove(base);
   kfree(a);
 }
 

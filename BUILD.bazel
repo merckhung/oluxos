@@ -1,0 +1,81 @@
+# Bazel entry points. The build itself is driven by the top-level Makefile
+# (kernel, musl/BusyBox userspace from third_party/, initramfs); these rules
+# make it reachable as `bazel build //:image`, `bazel run //:qemu`,
+# `bazel test //:unit_tests //:qemu_tests`.
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+package(default_visibility = ["//visibility:public"])
+
+SRCS = glob(
+    [
+        "Makefile",
+        "arch/**",
+        "include/**",
+        "kernel/**",
+        "mm/**",
+        "fs/**",
+        "lib/**",
+        "net/**",
+        "drivers/**",
+        "user/**",
+        "rootfs/**",
+        "scripts/**",
+        "third_party/**",
+        "toolchains/userspace/**",
+    ],
+    exclude = ["toolchains/userspace/out/**"],
+)
+
+genrule(
+    name = "image",
+    srcs = SRCS,
+    outs = [
+        "Image",
+        "initramfs.cpio",
+        "olux.elf",
+    ],
+    cmd = """
+        ROOT=$$(dirname $$(readlink -f $(location Makefile)))
+        make -C $$ROOT O=$$PWD/$(RULEDIR)/build -j4 all >$(RULEDIR)/build.log 2>&1 || { tail -50 $(RULEDIR)/build.log; exit 1; }
+        cp $(RULEDIR)/build/Image $(RULEDIR)/build/initramfs.cpio $(RULEDIR)/build/olux.elf $(RULEDIR)/
+    """,
+    tags = ["no-sandbox", "local"],
+)
+
+genrule(
+    name = "rpi4_boot",
+    srcs = SRCS + [":Image", ":initramfs.cpio"],
+    outs = ["rpi4_boot.tar"],
+    cmd = """
+        ROOT=$$(dirname $$(readlink -f $(location Makefile)))
+        D=$$PWD/$(RULEDIR)/rpi4
+        mkdir -p $$D
+        cp $(location :Image) $(location :initramfs.cpio) $$D/
+        $$ROOT/scripts/mkrpi4.sh $$D $$D/boot >/dev/null
+        tar -C $$D/boot -cf $@ .
+    """,
+    tags = ["no-sandbox", "local"],
+)
+
+sh_binary(
+    name = "qemu",
+    srcs = ["scripts/bazel-run-qemu.sh"],
+    data = [":image"],
+)
+
+sh_test(
+    name = "unit_tests",
+    size = "medium",
+    srcs = ["scripts/bazel-unit-tests.sh"],
+    data = SRCS + glob(["tests/unit/**"]),
+    tags = ["local"],
+)
+
+sh_test(
+    name = "qemu_tests",
+    size = "large",
+    srcs = ["scripts/bazel-qemu-tests.sh"],
+    data = [":image"] + glob(["tests/qemu/**"]),
+    tags = ["local"],
+)

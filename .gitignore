@@ -14,3 +14,4 @@ toolchains/llvm/work/
 toolchains/llvm/llvm-install/
 bazel-*
 out/
+toolchains/rpi-firmware/
