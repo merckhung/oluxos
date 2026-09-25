@@ -25,6 +25,30 @@ static char cmdline[512];
 
 const char *kernel_cmdline(void) { return cmdline; }
 
+const char *cmdline_get(const char *key, char *buf, size_t size) {
+  size_t kl = strlen(key);
+  const char *found = NULL;
+  for (const char *s = cmdline; *s;) {
+    while (*s == ' ') s++;
+    if (!strncmp(s, key, kl) && s[kl] == '=') found = s + kl + 1; /* last one wins */
+    while (*s && *s != ' ') s++;
+  }
+  if (!found) return NULL;
+  size_t n = 0;
+  while (found[n] && found[n] != ' ' && n + 1 < size) n++;
+  memcpy(buf, found, n);
+  buf[n] = '\0';
+  return buf;
+}
+
+bool console_selected(const char *ttyname, bool is_stdout_path) {
+  char val[32];
+  if (!cmdline_get("console", val, sizeof(val))) return is_stdout_path;
+  char *comma = strchr(val, ',');
+  if (comma) *comma = '\0';
+  return !strcmp(val, ttyname);
+}
+
 void initrd_get(phys_addr_t *start, phys_addr_t *end);
 void initrd_get(phys_addr_t *start, phys_addr_t *end) {
   *start = initrd_start;

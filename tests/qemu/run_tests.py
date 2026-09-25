@@ -89,6 +89,14 @@ class Console:
 
 
 def qemu_cmd(args, extra_append=""):
+    if args.machine == "raspi4b":
+        # Raspberry Pi 4B emulation (QEMU >= 9.0): fixed 4x Cortex-A72, GIC-400,
+        # PL011 on the first serial port. The Pi DTB comes from `make rpi4`.
+        return [args.qemu, "-M", "raspi4b", "-kernel", os.path.join(args.out, "Image"),
+                "-initrd", os.path.join(args.out, "initramfs.cpio"),
+                "-dtb", args.dtb or os.path.join(args.out, "rpi4", "bcm2711-rpi-4-b.dtb"),
+                "-append", ("console=ttyAMA0 " + extra_append).strip(),
+                "-display", "none", "-serial", "stdio", "-no-reboot"]
     cmd = [args.qemu, "-M", "virt,gic-version=%s" % args.gic, "-cpu", args.cpu, "-smp", str(args.smp),
            "-m", args.mem, "-kernel", os.path.join(args.out, "Image"),
            "-initrd", os.path.join(args.out, "initramfs.cpio"),
@@ -234,18 +242,22 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="out")
     ap.add_argument("--qemu", default="qemu-system-aarch64")
+    ap.add_argument("--machine", default="virt", choices=["virt", "raspi4b"])
+    ap.add_argument("--dtb", default="")
     ap.add_argument("--cpu", default="cortex-a72")
     ap.add_argument("--smp", type=int, default=4)
     ap.add_argument("--gic", default="2")
     ap.add_argument("--mem", default="512M")
     ap.add_argument("-k", dest="pattern", default="")
     args = ap.parse_args()
+    if args.machine == "raspi4b":
+        args.smp = 4
     args.logdir = os.path.join(args.out, "test-logs")
     os.makedirs(args.logdir, exist_ok=True)
 
     selected = [t for t in TESTS if args.pattern in t.__name__]
     failures = []
-    log = os.path.join(args.logdir, "console-smp%d-gic%s.log" % (args.smp, args.gic))
+    log = os.path.join(args.logdir, "console-%s-smp%d-gic%s.log" % (args.machine, args.smp, args.gic))
     c = Console(qemu_cmd(args), log)
     c.args = args
     t0 = time.time()
@@ -279,7 +291,7 @@ def main():
     finally:
         c.close()
 
-    if not args.pattern or "poweroff" in args.pattern:
+    if (not args.pattern or "poweroff" in args.pattern) and args.machine == "virt":
         try:
             t_poweroff(args)
             print("PASS poweroff")

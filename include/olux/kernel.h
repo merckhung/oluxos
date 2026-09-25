@@ -74,6 +74,10 @@ void console_flush_panic(const char *s, size_t n);
 
 /* Kernel command line (from /chosen/bootargs). */
 const char *kernel_cmdline(void);
+/* Value of a key=value kernel parameter (copied into buf), or NULL. */
+const char *cmdline_get(const char *key, char *buf, size_t size);
+/* Console selection: console= on the command line overrides stdout-path. */
+bool console_selected(const char *ttyname, bool is_stdout_path);
 int kernel_init(void *arg);
 
 /* Time since boot. */

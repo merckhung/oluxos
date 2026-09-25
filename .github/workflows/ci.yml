@@ -36,6 +36,27 @@ jobs:
           name: console-logs-smp${{ matrix.smp }}-gic${{ matrix.gic }}
           path: out/test-logs/
 
+  raspberry-pi-4:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            qemu-system-arm python3 make bzip2
+      - name: Install QEMU 9.2 (raspi4b machine)
+        run: sudo scripts/ci/install-qemu9.sh
+      - name: Build kernel, userspace and Pi 4 boot files
+        run: make -j"$(nproc)" && make rpi4
+      - name: QEMU raspi4b integration tests
+        run: sudo python3 tests/qemu/run_tests.py --out out --machine raspi4b --qemu qemu9-aarch64
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rpi4-boot-files
+          path: out/rpi4/
+
   static-analysis:
     runs-on: ubuntu-24.04
     steps:

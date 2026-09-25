@@ -22,24 +22,6 @@ void watchdog_kick_start(void);
 
 static const char *init_candidates[] = {"/sbin/init", "/etc/init", "/bin/init", "/bin/sh", NULL};
 
-static const char *cmdline_param(const char *key, char *buf, size_t size) {
-  const char *cl = kernel_cmdline();
-  size_t kl = strlen(key);
-  for (const char *s = cl; s && *s;) {
-    while (*s == ' ') s++;
-    if (!strncmp(s, key, kl) && s[kl] == '=') {
-      const char *v = s + kl + 1;
-      size_t n = 0;
-      while (v[n] && v[n] != ' ') n++;
-      n = MIN(n, size - 1);
-      memcpy(buf, v, n);
-      buf[n] = '\0';
-      return buf;
-    }
-    while (*s && *s != ' ') s++;
-  }
-  return NULL;
-}
 
 static struct process *make_init_process(void) {
   struct thread *t = current;
@@ -124,7 +106,7 @@ int kernel_init(void *arg) {
   open_console();
 
   char buf[128];
-  const char *init = cmdline_param("init", buf, sizeof(buf));
+  const char *init = cmdline_get("init", buf, sizeof(buf));
   const char *envp[] = {"HOME=/", "TERM=vt100", "PATH=/sbin:/usr/sbin:/bin:/usr/bin", NULL};
   if (init) {
     const char *argv[] = {init, NULL};

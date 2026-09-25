@@ -102,10 +102,10 @@ phys_addr_t memblock_total(void) {
 
 void memblock_dump(void) {
   for (int i = 0; i < memory.n; i++)
-    pr_info("  memory:   [%#014llx-%#014llx] %llu MiB\n", (unsigned long long)memory.r[i].base,
+    pr_info("  memory:   [0x%012llx-0x%012llx] %llu MiB\n", (unsigned long long)memory.r[i].base,
             (unsigned long long)(memory.r[i].base + memory.r[i].size - 1),
             (unsigned long long)(memory.r[i].size >> 20));
   for (int i = 0; i < reserved.n; i++)
-    pr_info("  reserved: [%#014llx-%#014llx]\n", (unsigned long long)reserved.r[i].base,
+    pr_info("  reserved: [0x%012llx-0x%012llx]\n", (unsigned long long)reserved.r[i].base,
             (unsigned long long)(reserved.r[i].base + reserved.r[i].size - 1));
 }

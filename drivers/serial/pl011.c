@@ -139,7 +139,7 @@ static int pl011_probe(int node) {
   char name[16];
   snprintf(name, sizeof(name), "ttyAMA%d", nports++);
   p->tty = tty_register(name, &pl011_tty_ops, p);
-  if (is_stdout(node)) {
+  if (console_selected(name, is_stdout(node))) {
     p->con.name = "pl011";
     p->con.write = con_write;
     p->con.priv = p;
