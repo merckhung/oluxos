@@ -243,12 +243,13 @@ static int u_release(struct socket *s) {
         p->peer = NULL;
         uput(u);
       }
-      uput(p);
+      wake(p);
+      uput(p); /* may free p */
     } else {
       p->peer = NULL;
       p->peer_gone = true;
+      wake(p);
     }
-    wake(p);
     u->peer = NULL;
   }
   flush_rq(u);

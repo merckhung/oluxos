@@ -144,7 +144,8 @@ def qemu_cmd(args, extra_append=""):
                 "-device", "virtio-blk-device,drive=hd0"]
     fwd = ""
     if getattr(args, "fwd_http", 0):
-        fwd = ",hostfwd=tcp:127.0.0.1:%d-:80,hostfwd=tcp:127.0.0.1:%d-:23" % (args.fwd_http, args.fwd_telnet)
+        fwd = ",hostfwd=tcp:127.0.0.1:%d-:80,hostfwd=tcp:127.0.0.1:%d-:23,hostfwd=tcp:127.0.0.1:%d-:22" % (
+            args.fwd_http, args.fwd_telnet, args.fwd_ssh)
     cmd += ["-device", "virtio-rng-device", "-netdev", "user,id=n0" + fwd, "-device", "virtio-net-device,netdev=n0"]
     return cmd
 
@@ -400,6 +401,27 @@ def t_network(c):
         tel.close()
     assert b"TEL42NET" in data and b"/dev/pts/" in data, data
     c.run("killall httpd telnetd")
+    # SSH (Dropbear): key login with a pty, from inside the guest
+    out, rc = c.run("for i in $(seq 1 50); do netstat -tln | grep -q ':22 ' && break; sleep 0.1; done; "
+                    "dropbearkey -t ed25519 -f /tmp/id_test | grep ^ssh-ed25519 >> /root/.ssh/authorized_keys && "
+                    "ssh -y -t -i /tmp/id_test root@127.0.0.1 'tty; echo SSH-$((6*7))' && "
+                    "grep -c 'Pubkey auth succeeded' /var/log/messages", timeout=120)
+    assert rc == 0 and "SSH-42" in out and "/dev/pts/" in out, out
+    # ... and from the host when it has an OpenSSH client (CI runners do)
+    import shutil
+    import subprocess as sp
+    if shutil.which("ssh") and shutil.which("ssh-keygen"):
+        key = os.path.join(c.args.logdir, "id_host")
+        for f in (key, key + ".pub"):
+            if os.path.exists(f):
+                os.unlink(f)
+        sp.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", key], check=True)
+        pub = open(key + ".pub").read().strip()
+        c.run("echo '%s' >> /root/.ssh/authorized_keys" % pub)
+        r = sp.run(["ssh", "-i", key, "-p", str(c.args.fwd_ssh), "-o", "StrictHostKeyChecking=no",
+                    "-o", "UserKnownHostsFile=/dev/null", "-o", "BatchMode=yes", "root@127.0.0.1",
+                    "uname -sm; echo HOST-SSH-OK"], capture_output=True, text=True, timeout=60)
+        assert "HOST-SSH-OK" in r.stdout and "OluxOS" in r.stdout, r.stdout + r.stderr
 
 
 def t_init_respawn(c):
@@ -545,7 +567,7 @@ def main():
     if args.machine == "raspi4b":
         args.smp = 4
     args.logdir = os.path.join(args.out, "test-logs")
-    args.fwd_http, args.fwd_telnet = free_port(), free_port()
+    args.fwd_http, args.fwd_telnet, args.fwd_ssh = free_port(), free_port(), free_port()
     os.makedirs(args.logdir, exist_ok=True)
 
     selected = [t for t in TESTS if args.pattern in t.__name__]

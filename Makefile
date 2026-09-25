@@ -136,11 +136,12 @@ $(O)/Image: $(O)/olux.elf
 USERSPACE_OUT := toolchains/userspace/out
 UCC           := $(USERSPACE_OUT)/bin/oluxos-cc
 
-$(UCC) $(USERSPACE_OUT)/bin/busybox &: third_party/musl/musl-1.2.5.tar.gz \
-		third_party/busybox/busybox-1.36.1.tar.bz2 toolchains/userspace/build.sh \
+$(UCC) $(USERSPACE_OUT)/bin/busybox $(USERSPACE_OUT)/bin/dropbearmulti &: third_party/musl/musl-1.2.5.tar.gz \
+		third_party/busybox/busybox-1.36.1.tar.bz2 third_party/dropbear/dropbear-2024.86.tar.bz2 \
+		toolchains/userspace/build.sh \
 		toolchains/userspace/busybox.config $(wildcard toolchains/userspace/linux-headers/linux/*.h toolchains/userspace/linux-headers/linux/*/*.h)
 	$(Q)OLUXOS_CROSS=$(CROSS) toolchains/userspace/build.sh all
-	@touch $(UCC) $(USERSPACE_OUT)/bin/busybox
+	@touch $(UCC) $(USERSPACE_OUT)/bin/busybox $(USERSPACE_OUT)/bin/dropbearmulti
 
 UCFLAGS := -O2 -g -Wall -Wextra -Werror -Wno-unused-parameter -Iuser/include -Iinclude/uapi \
 	-fstack-protector-strong -D_GNU_SOURCE
@@ -155,11 +156,12 @@ $(O)/user/%: user/prog/%/*.c $(USER_LIB) $(wildcard user/include/*.h include/uap
 
 initramfs: $(O)/initramfs.cpio
 
-$(O)/initramfs.cpio: $(USER_BINS) $(USERSPACE_OUT)/bin/busybox scripts/mkinitramfs.py \
+$(O)/initramfs.cpio: $(USER_BINS) $(USERSPACE_OUT)/bin/busybox $(USERSPACE_OUT)/bin/dropbearmulti scripts/mkinitramfs.py \
 		$(shell find rootfs -type f 2>/dev/null)
 	@$(if $(Q),echo "  CPIO    $@")
 	$(Q)$(PYTHON) scripts/mkinitramfs.py -o $@ --busybox $(USERSPACE_OUT)/bin/busybox \
-		--skel rootfs $(foreach b,$(USER_BINS),--bin $(b))
+		--skel rootfs $(foreach b,$(USER_BINS),--bin $(b)) \
+		--extra $(USERSPACE_OUT)/bin/dropbearmulti:/usr/sbin/dropbearmulti
 
 # ---------------------------------------------------------------------------
 # Disk images, boards, run targets

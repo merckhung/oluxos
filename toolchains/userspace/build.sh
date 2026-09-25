@@ -6,6 +6,7 @@
 #   1. musl libc (static)           -> $OUT/sysroot/{include,lib}
 #   2. a compiler wrapper            -> $OUT/bin/oluxos-cc
 #   3. BusyBox (static, musl-linked) -> $OUT/bin/busybox
+#   4. Dropbear SSH (static)         -> $OUT/bin/dropbearmulti
 #
 # The only host requirement is an AArch64 GCC cross compiler + binutils:
 #   * Debian/Ubuntu:  apt install gcc-aarch64-linux-gnu      (prefix aarch64-linux-gnu-)
@@ -14,7 +15,7 @@
 #
 # Usage:
 #   toolchains/userspace/build.sh [--out DIR] [--cross PREFIX] [--jobs N]
-#                                 [musl|busybox|all]
+#                                 [musl|busybox|dropbear|all]
 #
 # Environment overrides: OLUXOS_CROSS (compiler prefix), OUT, JOBS.
 ###############################################################################
@@ -33,6 +34,10 @@ BUSYBOX_SHA256=b8cc24c9574d809e7279c3be349795c5d5ceb6fdf19ca709f80cde50e47de314
 BUSYBOX_CONFIG="$REPO_ROOT/toolchains/userspace/busybox.config"
 BUSYBOX_PATCHES="$REPO_ROOT/toolchains/userspace/patches/busybox"
 
+DROPBEAR_VERSION=2024.86
+DROPBEAR_TARBALL="$REPO_ROOT/third_party/dropbear/dropbear-${DROPBEAR_VERSION}.tar.bz2"
+DROPBEAR_SHA256=f933205a1e98b98810fcc5116cf97bdb6065c28bad526ff42f7eaf1bd2943ea6
+
 OUT="${OUT:-$REPO_ROOT/toolchains/userspace/out}"
 JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
 CROSS="${OLUXOS_CROSS:-}"
@@ -43,7 +48,7 @@ while [ $# -gt 0 ]; do
     --out) OUT="$2"; shift 2 ;;
     --cross) CROSS="$2"; shift 2 ;;
     --jobs) JOBS="$2"; shift 2 ;;
-    musl|busybox|all) TARGET="$1"; shift ;;
+    musl|busybox|dropbear|all) TARGET="$1"; shift ;;
     -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -172,8 +177,42 @@ build_busybox() {
   log "busybox: $OUT/bin/busybox ($(wc -c <"$OUT/bin/busybox") bytes)"
 }
 
+build_dropbear() {
+  [ -f "$SYSROOT/lib/libc.a" ] || build_musl
+  install_linux_headers
+  write_wrapper
+  verify "$DROPBEAR_TARBALL" "$DROPBEAR_SHA256"
+  log "building dropbear $DROPBEAR_VERSION"
+  local src="$WORK/dropbear-$DROPBEAR_VERSION"
+  rm -rf "$src"
+  tar -xjf "$DROPBEAR_TARBALL" -C "$WORK"
+  cat >"$src/localoptions.h" <<'OPTS'
+/* OluxOS: key-based and password logins, no X11 or agent forwarding. */
+#define DROPBEAR_X11FWD 0
+#define DROPBEAR_SVR_AGENTFWD 0
+#define DROPBEAR_CLI_AGENTFWD 0
+#define DEFAULT_PATH "/usr/bin:/bin"
+#define DEFAULT_ROOT_PATH "/usr/sbin:/usr/bin:/sbin:/bin"
+OPTS
+  (
+    cd "$src"
+    CC="$OUT/bin/oluxos-cc" AR="${CROSS}ar" RANLIB="${CROSS}ranlib" \
+      ./configure --host=aarch64-linux-musl --disable-zlib --enable-static --disable-lastlog \
+      --disable-utmp --disable-utmpx --disable-wtmp --disable-wtmpx --disable-pututline \
+      --disable-pututxline --disable-harden >"$WORK/dropbear-configure.log" 2>&1 \
+      || { tail -30 "$WORK/dropbear-configure.log" >&2; die "dropbear configure failed"; }
+    make -j"$JOBS" PROGRAMS="dropbear dropbearkey dbclient scp" MULTI=1 STATIC=1 \
+      >"$WORK/dropbear-build.log" 2>&1 \
+      || { tail -40 "$WORK/dropbear-build.log" >&2; die "dropbear build failed"; }
+  )
+  "${CROSS}strip" -o "$OUT/bin/dropbearmulti" "$src/dropbearmulti"
+  log "dropbear: $OUT/bin/dropbearmulti ($(wc -c <"$OUT/bin/dropbearmulti") bytes)"
+}
+
 case "$TARGET" in
   musl) build_musl; write_wrapper ;;
-  busybox|all) build_musl; build_busybox ;;
+  busybox) build_musl; build_busybox ;;
+  dropbear) build_musl; build_dropbear ;;
+  all) build_musl; build_busybox; build_dropbear ;;
 esac
 log "done (sysroot: $SYSROOT)"

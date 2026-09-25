@@ -157,7 +157,8 @@ int permission(struct inode *inode, int mask) {
     return 0;
   }
   int bits;
-  if (p->cred.euid == inode->uid) bits = (m >> 6) & 7;
+  if (p->cred.euid == inode->uid)
+    bits = (m >> 6) & 7;
   else {
     bool in_group = p->cred.egid == inode->gid;
     for (int i = 0; i < p->cred.ngroups && !in_group; i++) in_group = p->cred.groups[i] == inode->gid;
@@ -329,9 +330,7 @@ int path_lookupat(int dirfd, const char *name, unsigned flags, struct path *out)
   return 0;
 }
 
-int kern_path(const char *name, unsigned flags, struct path *out) {
-  return path_lookupat(AT_FDCWD, name, flags, out);
-}
+int kern_path(const char *name, unsigned flags, struct path *out) { return path_lookupat(AT_FDCWD, name, flags, out); }
 
 int path_parentat(int dirfd, const char *name, struct path *parent, char *last) {
   if (!*name) return -ENOENT;
@@ -399,14 +398,16 @@ int vfs_mknod(int dirfd, const char *name, mode_t mode, dev_t dev) {
   int r = path_parentat(dirfd, name, &parent, last);
   if (r) return r;
   struct dentry *d;
-  if (!strcmp(last, ".")) r = -EEXIST;
+  if (!strcmp(last, "."))
+    r = -EEXIST;
   else if (lookup_last(&parent, last, &d) == 0) {
     d_put(d);
     r = -EEXIST;
   } else if (!(r = may_create(&parent))) {
     struct inode *dir = parent.dentry->inode;
     struct inode *ni = NULL;
-    if (!dir->i_op || !dir->i_op->create) r = -EPERM;
+    if (!dir->i_op || !dir->i_op->create)
+      r = -EPERM;
     else {
       mode_t um = current->proc ? current->proc->umask : 022;
       r = dir->i_op->create(dir, last, (mode & S_IFMT) | (mode & 07777 & ~um), dev, &ni);
@@ -423,14 +424,16 @@ int vfs_mkdir(int dirfd, const char *name, mode_t mode) {
   int r = path_parentat(dirfd, name, &parent, last);
   if (r) return r;
   struct dentry *d;
-  if (!strcmp(last, ".")) r = -EEXIST;
+  if (!strcmp(last, "."))
+    r = -EEXIST;
   else if (lookup_last(&parent, last, &d) == 0) {
     d_put(d);
     r = -EEXIST;
   } else if (!(r = may_create(&parent))) {
     struct inode *dir = parent.dentry->inode;
     struct inode *ni = NULL;
-    if (!dir->i_op || !dir->i_op->mkdir) r = -EPERM;
+    if (!dir->i_op || !dir->i_op->mkdir)
+      r = -EPERM;
     else {
       mode_t um = current->proc ? current->proc->umask : 022;
       r = dir->i_op->mkdir(dir, last, S_IFDIR | (mode & 07777 & ~um), &ni);
@@ -446,8 +449,7 @@ static int may_delete(struct path *parent, struct inode *victim) {
   if (r) return r;
   struct inode *dir = parent->dentry->inode;
   struct process *p = current->proc;
-  if ((dir->mode & S_ISVTX) && p && p->cred.euid != 0 && p->cred.euid != victim->uid &&
-      p->cred.euid != dir->uid)
+  if ((dir->mode & S_ISVTX) && p && p->cred.euid != 0 && p->cred.euid != victim->uid && p->cred.euid != dir->uid)
     return -EPERM;
   return 0;
 }
@@ -460,13 +462,17 @@ int vfs_unlink(int dirfd, const char *name) {
   int r = path_parentat(dirfd, name, &parent, last);
   if (r) return r;
   struct dentry *d = NULL;
-  if (!strcmp(last, ".")) r = -EISDIR;
+  if (!strcmp(last, "."))
+    r = -EISDIR;
   else if (!(r = lookup_last(&parent, last, &d))) {
     struct inode *dir = parent.dentry->inode;
-    if (S_ISDIR(d->inode->mode)) r = -EISDIR;
+    if (S_ISDIR(d->inode->mode))
+      r = -EISDIR;
     else if (!(r = may_delete(&parent, d->inode))) {
-      if (!dir->i_op || !dir->i_op->unlink) r = -EPERM;
-      else if (!(r = dir->i_op->unlink(dir, last, d->inode))) d_drop(d);
+      if (!dir->i_op || !dir->i_op->unlink)
+        r = -EPERM;
+      else if (!(r = dir->i_op->unlink(dir, last, d->inode)))
+        d_drop(d);
     }
     d_put(d);
   }
@@ -480,14 +486,19 @@ int vfs_rmdir(int dirfd, const char *name) {
   int r = path_parentat(dirfd, name, &parent, last);
   if (r) return r;
   struct dentry *d = NULL;
-  if (!strcmp(last, ".")) r = -EINVAL;
+  if (!strcmp(last, "."))
+    r = -EINVAL;
   else if (!(r = lookup_last(&parent, last, &d))) {
     struct inode *dir = parent.dentry->inode;
-    if (!S_ISDIR(d->inode->mode)) r = -ENOTDIR;
-    else if (is_mountpoint_busy(d)) r = -EBUSY;
+    if (!S_ISDIR(d->inode->mode))
+      r = -ENOTDIR;
+    else if (is_mountpoint_busy(d))
+      r = -EBUSY;
     else if (!(r = may_delete(&parent, d->inode))) {
-      if (!dir->i_op || !dir->i_op->rmdir) r = -EPERM;
-      else if (!(r = dir->i_op->rmdir(dir, last, d->inode))) d_drop(d);
+      if (!dir->i_op || !dir->i_op->rmdir)
+        r = -EPERM;
+      else if (!(r = dir->i_op->rmdir(dir, last, d->inode)))
+        d_drop(d);
     }
     d_put(d);
   }
@@ -512,19 +523,27 @@ int vfs_rename(int olddirfd, const char *old, int newdirfd, const char *newn) {
     return r;
   }
   struct dentry *od = NULL, *nd = NULL;
-  if (!strcmp(olast, ".") || !strcmp(nlast, ".")) r = -EBUSY;
-  else if (op.mnt != np.mnt) r = -EXDEV;
+  if (!strcmp(olast, ".") || !strcmp(nlast, "."))
+    r = -EBUSY;
+  else if (op.mnt != np.mnt)
+    r = -EXDEV;
   else if ((r = lookup_last(&op, olast, &od))) {
   } else if ((r = may_delete(&op, od->inode)) || (r = may_create(&np))) {
   } else {
     lookup_last(&np, nlast, &nd); /* may not exist */
     struct inode *odir = op.dentry->inode, *ndir = np.dentry->inode;
-    if (nd && nd == od) r = 0;
-    else if (S_ISDIR(od->inode->mode) && is_ancestor(od, np.dentry)) r = -EINVAL;
-    else if (nd && S_ISDIR(od->inode->mode) && !S_ISDIR(nd->inode->mode)) r = -ENOTDIR;
-    else if (nd && !S_ISDIR(od->inode->mode) && S_ISDIR(nd->inode->mode)) r = -EISDIR;
-    else if (nd && is_mountpoint_busy(nd)) r = -EBUSY;
-    else if (!odir->i_op || !odir->i_op->rename) r = -EPERM;
+    if (nd && nd == od)
+      r = 0;
+    else if (S_ISDIR(od->inode->mode) && is_ancestor(od, np.dentry))
+      r = -EINVAL;
+    else if (nd && S_ISDIR(od->inode->mode) && !S_ISDIR(nd->inode->mode))
+      r = -ENOTDIR;
+    else if (nd && !S_ISDIR(od->inode->mode) && S_ISDIR(nd->inode->mode))
+      r = -EISDIR;
+    else if (nd && is_mountpoint_busy(nd))
+      r = -EBUSY;
+    else if (!odir->i_op || !odir->i_op->rename)
+      r = -EPERM;
     else {
       r = odir->i_op->rename(odir, olast, ndir, nlast, od->inode, nd ? nd->inode : NULL);
       if (!r) {
@@ -563,8 +582,10 @@ int vfs_link(int olddirfd, const char *old, int newdirfd, const char *newn, int 
     return r;
   }
   struct dentry *d;
-  if (S_ISDIR(target.dentry->inode->mode)) r = -EPERM;
-  else if (target.mnt != parent.mnt) r = -EXDEV;
+  if (S_ISDIR(target.dentry->inode->mode))
+    r = -EPERM;
+  else if (target.mnt != parent.mnt)
+    r = -EXDEV;
   else if (lookup_last(&parent, last, &d) == 0) {
     d_put(d);
     r = -EEXIST;
@@ -583,7 +604,8 @@ int vfs_symlink(const char *tgt, int dirfd, const char *name) {
   int r = path_parentat(dirfd, name, &parent, last);
   if (r) return r;
   struct dentry *d;
-  if (!strcmp(last, ".")) r = -EEXIST;
+  if (!strcmp(last, "."))
+    r = -EEXIST;
   else if (lookup_last(&parent, last, &d) == 0) {
     d_put(d);
     r = -EEXIST;
@@ -631,7 +653,7 @@ struct file *open_path(struct path *p, int flags, int *err) {
   inode_get(inode);
   f->path = *p;
   path_get(&f->path);
-  f->flags = flags & ~(O_CREAT | O_EXCL | O_NOCTTY | O_TRUNC | O_CLOEXEC);
+  f->flags = flags & ~(O_CREAT | O_EXCL | O_TRUNC | O_CLOEXEC); /* O_NOCTTY: until ->open ran */
   int acc = flags & O_ACCMODE;
   f->mode = (acc == O_RDONLY || acc == O_RDWR ? FMODE_READ : 0) | (acc == O_WRONLY || acc == O_RDWR ? FMODE_WRITE : 0);
   if (flags & O_PATH) f->mode = 0;
@@ -677,6 +699,7 @@ struct file *open_path(struct path *p, int flags, int *err) {
       }
     }
   }
+  f->flags &= ~O_NOCTTY;
   return f;
 }
 
@@ -701,9 +724,8 @@ struct file *vfs_open(int dirfd, const char *name, int flags, mode_t mode, int *
         struct inode *dir = parent.dentry->inode;
         struct inode *ni = NULL;
         mode_t um = current->proc ? current->proc->umask : 022;
-        r = dir->i_op && dir->i_op->create
-                ? dir->i_op->create(dir, last, S_IFREG | (mode & 07777 & ~um), 0, &ni)
-                : -EPERM;
+        r = dir->i_op && dir->i_op->create ? dir->i_op->create(dir, last, S_IFREG | (mode & 07777 & ~um), 0, &ni)
+                                           : -EPERM;
         if (!r) {
           inode_put(ni);
           r = lookup_last(&parent, last, &d);
@@ -763,13 +785,16 @@ struct file *vfs_open(int dirfd, const char *name, int flags, mode_t mode, int *
 
   struct inode *inode = p.dentry->inode;
   int acc = flags & O_ACCMODE;
-  if ((flags & O_DIRECTORY) && !S_ISDIR(inode->mode)) r = -ENOTDIR;
-  else if (S_ISDIR(inode->mode) && (acc != O_RDONLY || (flags & O_TRUNC))) r = -EISDIR;
+  if ((flags & O_DIRECTORY) && !S_ISDIR(inode->mode))
+    r = -ENOTDIR;
+  else if (S_ISDIR(inode->mode) && (acc != O_RDONLY || (flags & O_TRUNC)))
+    r = -EISDIR;
   else if (!(flags & O_PATH) && !created) {
     int mask = (acc == O_RDONLY ? 4 : acc == O_WRONLY ? 2 : 6);
     if ((mask & 2) && (p.mnt->sb->flags & SB_RDONLY) && (S_ISREG(inode->mode) || S_ISDIR(inode->mode)))
       r = -EROFS;
-    else r = permission(inode, mask);
+    else
+      r = permission(inode, mask);
   }
   if (r) {
     path_put(&p);
@@ -908,8 +933,7 @@ int do_umount(const char *dir, int flags) {
   /* busy if anything besides the mount itself references the root */
   if (atomic_read(&m->sb->root->refcount) > 1 && !(flags & 2 /* MNT_DETACH */)) return -EBUSY;
   struct mount *c;
-  list_for_each_entry(c, &mounts, link)
-    if (c->parent == m) return -EBUSY;
+  list_for_each_entry(c, &mounts, link) if (c->parent == m) return -EBUSY;
   if (m->sb->s_op && m->sb->s_op->sync) m->sb->s_op->sync(m->sb);
   m->mountpoint->mounted = NULL;
   d_put(m->mountpoint);
@@ -925,8 +949,7 @@ int do_umount(const char *dir, int flags) {
 void bcache_sync_all(void);
 void vfs_sync_all(void) {
   struct mount *m;
-  list_for_each_entry(m, &mounts, link)
-    if (m->sb->s_op && m->sb->s_op->sync) m->sb->s_op->sync(m->sb);
+  list_for_each_entry(m, &mounts, link) if (m->sb->s_op && m->sb->s_op->sync) m->sb->s_op->sync(m->sb);
   bcache_sync_all();
 }
 

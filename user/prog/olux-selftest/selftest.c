@@ -842,8 +842,14 @@ static int t_unix_dgram_abstract(void) {
   CHECK(recv(r, buf, sizeof(buf), 0) == 3 && !memcmp(buf, "one", 3)); /* boundaries kept */
   CHECK(recv(r, buf, 2, MSG_TRUNC) == 6);                             /* truncated record */
   CHECK(recv(r, buf, sizeof(buf), MSG_DONTWAIT) == -1 && errno == EAGAIN);
+  /* a connected sender outliving its receiver (e.g. a client of /dev/log) */
+  int c = socket(AF_UNIX, SOCK_DGRAM, 0);
+  CHECK(c >= 0 && connect(c, (struct sockaddr *)&a, alen) == 0);
+  CHECK(send(c, "hi", 2, 0) == 2);
   close(r);
   CHECK(sendto(w, "x", 1, 0, (struct sockaddr *)&a, alen) == -1 && errno == ECONNREFUSED);
+  CHECK(send(c, "x", 1, 0) == -1 && errno == ECONNREFUSED);
+  close(c);
   close(w);
   return 0;
 }
