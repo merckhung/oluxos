@@ -11,6 +11,7 @@
 #include <setjmp.h>
 #include <signal.h>
 #include <stdatomic.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,11 +21,13 @@
 #include <sys/mman.h>
 #include <sys/random.h>
 #include <sys/resource.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <sys/un.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -749,6 +752,175 @@ static int t_spidev(void) {
   return 0;
 }
 
+/* ---------------- AF_UNIX ---------------- */
+
+static int t_unix_stream_pair(void) {
+  int sv[2];
+  CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+  CHECK(write(sv[0], "hello", 5) == 5);
+  char buf[16] = {0};
+  CHECK(read(sv[1], buf, sizeof(buf)) == 5 && !memcmp(buf, "hello", 5));
+  /* large transfer across the buffer limit, from a child */
+  pid_t p = fork();
+  CHECK(p >= 0);
+  if (p == 0) {
+    static char big[1 << 20];
+    for (size_t i = 0; i < sizeof(big); i++) big[i] = (char)(i * 7);
+    _exit(write(sv[0], big, sizeof(big)) == sizeof(big) ? 0 : 1);
+  }
+  size_t got = 0;
+  unsigned sum = 0;
+  while (got < (1 << 20)) {
+    char tmp[4096];
+    ssize_t n = read(sv[1], tmp, sizeof(tmp));
+    CHECK(n > 0);
+    for (ssize_t i = 0; i < n; i++) CHECK(tmp[i] == (char)((got + i) * 7));
+    got += n;
+    sum += n;
+  }
+  int st;
+  CHECK(waitpid(p, &st, 0) == p && WIFEXITED(st) && WEXITSTATUS(st) == 0);
+  close(sv[0]);
+  CHECK(read(sv[1], buf, 1) == 0); /* EOF after the peer closes */
+  CHECK(send(sv[1], "x", 1, MSG_NOSIGNAL) == -1 && errno == EPIPE);
+  close(sv[1]);
+  return 0;
+}
+
+static int t_unix_listen_accept(void) {
+  const char *path = "/tmp/selftest.sock";
+  unlink(path);
+  int l = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+  CHECK(l >= 0);
+  struct sockaddr_un a = {.sun_family = AF_UNIX};
+  strcpy(a.sun_path, path);
+  CHECK(bind(l, (struct sockaddr *)&a, sizeof(a)) == 0);
+  struct stat st;
+  CHECK(stat(path, &st) == 0 && S_ISSOCK(st.st_mode));
+  CHECK(bind(socket(AF_UNIX, SOCK_STREAM, 0), (struct sockaddr *)&a, sizeof(a)) == -1 && errno == EADDRINUSE);
+  CHECK(listen(l, 4) == 0);
+  pid_t p = fork();
+  CHECK(p >= 0);
+  if (p == 0) {
+    int c = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (connect(c, (struct sockaddr *)&a, sizeof(a))) _exit(1);
+    char b[8];
+    if (read(c, b, 4) != 4 || memcmp(b, "ping", 4)) _exit(2);
+    _exit(write(c, "pong", 4) == 4 ? 0 : 3);
+  }
+  struct pollfd pfd = {l, POLLIN, 0};
+  CHECK(poll(&pfd, 1, 5000) == 1 && (pfd.revents & POLLIN));
+  int c = accept4(l, NULL, NULL, SOCK_CLOEXEC);
+  CHECK(c >= 0);
+  struct ucred cr;
+  socklen_t cl = sizeof(cr);
+  CHECK(getsockopt(c, SOL_SOCKET, SO_PEERCRED, &cr, &cl) == 0 && cr.pid == p && cr.uid == getuid());
+  struct sockaddr_un name;
+  socklen_t nl = sizeof(name);
+  CHECK(getsockname(c, (struct sockaddr *)&name, &nl) == 0 && !strcmp(name.sun_path, path));
+  CHECK(write(c, "ping", 4) == 4);
+  char b[8];
+  CHECK(read(c, b, 4) == 4 && !memcmp(b, "pong", 4));
+  int status;
+  CHECK(waitpid(p, &status, 0) == p && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+  close(c);
+  close(l);
+  unlink(path);
+  return 0;
+}
+
+static int t_unix_dgram_abstract(void) {
+  int r = socket(AF_UNIX, SOCK_DGRAM, 0), w = socket(AF_UNIX, SOCK_DGRAM, 0);
+  CHECK(r >= 0 && w >= 0);
+  struct sockaddr_un a = {.sun_family = AF_UNIX};
+  memcpy(a.sun_path, "\0selftest-dgram", 15);
+  socklen_t alen = (socklen_t)(offsetof(struct sockaddr_un, sun_path) + 15);
+  CHECK(bind(r, (struct sockaddr *)&a, alen) == 0);
+  CHECK(sendto(w, "one", 3, 0, (struct sockaddr *)&a, alen) == 3);
+  CHECK(sendto(w, "second", 6, 0, (struct sockaddr *)&a, alen) == 6);
+  char buf[8];
+  CHECK(recv(r, buf, sizeof(buf), 0) == 3 && !memcmp(buf, "one", 3)); /* boundaries kept */
+  CHECK(recv(r, buf, 2, MSG_TRUNC) == 6);                             /* truncated record */
+  CHECK(recv(r, buf, sizeof(buf), MSG_DONTWAIT) == -1 && errno == EAGAIN);
+  close(r);
+  CHECK(sendto(w, "x", 1, 0, (struct sockaddr *)&a, alen) == -1 && errno == ECONNREFUSED);
+  close(w);
+  return 0;
+}
+
+static int t_unix_seqpacket(void) {
+  int sv[2];
+  CHECK(socketpair(AF_UNIX, SOCK_SEQPACKET, 0, sv) == 0);
+  CHECK(write(sv[0], "abc", 3) == 3 && write(sv[0], "defgh", 5) == 5);
+  char buf[16];
+  CHECK(read(sv[1], buf, sizeof(buf)) == 3 && read(sv[1], buf, sizeof(buf)) == 5);
+  close(sv[0]);
+  close(sv[1]);
+  return 0;
+}
+
+static int t_unix_pass_fd(void) {
+  int sv[2];
+  CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+  int pfd[2];
+  CHECK(pipe(pfd) == 0);
+  char data = 'F';
+  struct iovec iov = {&data, 1};
+  union {
+    struct cmsghdr h;
+    char buf[CMSG_SPACE(sizeof(int))];
+  } ctl;
+  memset(&ctl, 0, sizeof(ctl));
+  struct msghdr m = {.msg_iov = &iov, .msg_iovlen = 1, .msg_control = ctl.buf, .msg_controllen = sizeof(ctl.buf)};
+  struct cmsghdr *c = CMSG_FIRSTHDR(&m);
+  c->cmsg_level = SOL_SOCKET;
+  c->cmsg_type = SCM_RIGHTS;
+  c->cmsg_len = CMSG_LEN(sizeof(int));
+  memcpy(CMSG_DATA(c), &pfd[1], sizeof(int));
+  CHECK(sendmsg(sv[0], &m, 0) == 1);
+  close(pfd[1]); /* the in-flight reference keeps the write end alive */
+  memset(&ctl, 0, sizeof(ctl));
+  data = 0;
+  struct msghdr r = {.msg_iov = &iov, .msg_iovlen = 1, .msg_control = ctl.buf, .msg_controllen = sizeof(ctl.buf)};
+  CHECK(recvmsg(sv[1], &r, MSG_CMSG_CLOEXEC) == 1 && data == 'F');
+  c = CMSG_FIRSTHDR(&r);
+  CHECK(c && c->cmsg_level == SOL_SOCKET && c->cmsg_type == SCM_RIGHTS);
+  int got;
+  memcpy(&got, CMSG_DATA(c), sizeof(int));
+  CHECK(fcntl(got, F_GETFD) == FD_CLOEXEC);
+  CHECK(write(got, "via-fd", 6) == 6);
+  close(got);
+  char buf[8];
+  CHECK(read(pfd[0], buf, sizeof(buf)) == 6 && !memcmp(buf, "via-fd", 6));
+  CHECK(read(pfd[0], buf, 1) == 0); /* all write ends closed */
+  close(pfd[0]);
+  close(sv[0]);
+  close(sv[1]);
+  return 0;
+}
+
+static int t_unix_nonblock_poll(void) {
+  int sv[2];
+  CHECK(socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, sv) == 0);
+  char buf[4096] = {0};
+  CHECK(read(sv[1], buf, 1) == -1 && errno == EAGAIN);
+  struct pollfd p[2] = {{sv[0], POLLOUT, 0}, {sv[1], POLLIN, 0}};
+  CHECK(poll(p, 2, 0) == 1 && (p[0].revents & POLLOUT) && !p[1].revents);
+  ssize_t total = 0, n;
+  while ((n = write(sv[0], buf, sizeof(buf))) > 0) total += n;
+  CHECK(n == -1 && errno == EAGAIN && total > 0);
+  p[0].revents = p[1].revents = 0;
+  CHECK(poll(p, 2, 0) == 1 && !p[0].revents && (p[1].revents & POLLIN));
+  int avail;
+  CHECK(ioctl(sv[1], FIONREAD, &avail) == 0 && avail == total);
+  shutdown(sv[0], SHUT_WR);
+  while ((n = read(sv[1], buf, sizeof(buf))) > 0) total -= n;
+  CHECK(n == 0 && total == 0);
+  close(sv[0]);
+  close(sv[1]);
+  return 0;
+}
+
 struct test {
   const char *name;
   int (*fn)(void);
@@ -797,6 +969,12 @@ static const struct test tests[] = {
     {"uname_rlimit", t_uname_rlimit},
     {"process_groups", t_process_groups},
     {"many_processes", t_many_processes},
+    {"unix_stream_pair", t_unix_stream_pair},
+    {"unix_listen_accept", t_unix_listen_accept},
+    {"unix_dgram_abstract", t_unix_dgram_abstract},
+    {"unix_seqpacket", t_unix_seqpacket},
+    {"unix_pass_fd", t_unix_pass_fd},
+    {"unix_nonblock_poll", t_unix_nonblock_poll},
     {"framebuffer", t_framebuffer},
     {"spidev", t_spidev},
 };

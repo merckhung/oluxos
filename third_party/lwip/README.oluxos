@@ -1,0 +1,8 @@
+lwIP 2.2.0 (https://savannah.nongnu.org/projects/lwip/), BSD 3-clause
+licence (see COPYING). Upstream tag STABLE-2_2_0_RELEASE, commit 0a0452b2c39bdd91e252aef045c115f88f6ca773.
+
+Only src/ is vendored, without the applications (src/apps) and PPP
+(src/netif/ppp). OluxOS runs lwIP inside the kernel with NO_SYS=1: the
+port (net/lwip/) serialises all lwIP calls on one lock and drives its
+timers from a kernel thread; the BSD socket layer (net/inet.c) sits on the
+raw TCP/UDP/raw-IP APIs. Local changes: none.

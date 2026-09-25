@@ -81,6 +81,7 @@
 
 /* ---- poll ---- */
 #define POLLIN 0x001
+#define POLLRDHUP 0x2000
 #define POLLPRI 0x002
 #define POLLOUT 0x004
 #define POLLERR 0x008
