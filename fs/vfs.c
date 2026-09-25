@@ -651,6 +651,14 @@ struct file *open_path(struct path *p, int flags, int *err) {
       }
       f->f_op = cd->fops;
       f->priv = cd->priv;
+    } else if (S_ISBLK(inode->mode)) {
+      extern const struct file_operations blkdev_fops;
+      if (p->mnt->sb->flags & SB_NODEV) {
+        file_put(f);
+        *err = -EACCES;
+        return NULL;
+      }
+      f->f_op = &blkdev_fops;
     } else if (S_ISFIFO(inode->mode)) {
       int r = fifo_open(inode, f);
       if (r) {
@@ -914,10 +922,12 @@ int do_umount(const char *dir, int flags) {
   return 0;
 }
 
+void bcache_sync_all(void);
 void vfs_sync_all(void) {
   struct mount *m;
   list_for_each_entry(m, &mounts, link)
     if (m->sb->s_op && m->sb->s_op->sync) m->sb->s_op->sync(m->sb);
+  bcache_sync_all();
 }
 
 int mounts_show(char *buf, size_t size) {

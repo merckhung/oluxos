@@ -204,6 +204,16 @@ def t_fork_bomb_limited(c):
     assert b - a < 2048, "leaked %d kB" % (b - a)
 
 
+def t_block_device(c):
+    if c.args.machine != "virt":
+        return
+    out, rc = c.run("ls /dev/vda1 /dev/vda2 && dd if=/dev/urandom of=/tmp/r bs=4096 count=16 2>/dev/null && "
+                    "dd if=/tmp/r of=/dev/vda bs=4096 seek=20000 2>/dev/null && sync && "
+                    "echo 3 > /dev/null && dd if=/dev/vda bs=4096 skip=20000 count=16 2>/dev/null | md5sum && md5sum < /tmp/r")
+    sums = re.findall(r"([0-9a-f]{32})", out)
+    assert rc == 0 and len(sums) == 2 and sums[0] == sums[1], out
+
+
 def t_init_respawn(c):
     c.send("exit\n")
     c.expect(PROMPT, 20)
@@ -216,7 +226,7 @@ def t_init_respawn(c):
 TESTS = [
     t_boot_banner, t_smp, t_selftest, t_pipeline_and_redirect, t_shell_scripting, t_file_utilities,
     t_background_jobs, t_ctrl_c, t_job_control, t_proc_tools, t_mounts, t_segfault_contained,
-    t_memory_stress, t_fork_bomb_limited, t_init_respawn,
+    t_memory_stress, t_fork_bomb_limited, t_block_device, t_init_respawn,
 ]
 
 
