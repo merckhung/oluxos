@@ -15,3 +15,4 @@ toolchains/llvm/llvm-install/
 bazel-*
 out/
 toolchains/rpi-firmware/
+__pycache__/
