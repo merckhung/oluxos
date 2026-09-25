@@ -115,6 +115,13 @@ void netdev_set_link(struct net_device *d, bool up) {
 
 static void net_stack_init(void);
 
+void netdev_link_changed_locked(struct net_device *d) {
+  if (d->link_up)
+    netif_set_link_up(d->netif);
+  else
+    netif_set_link_down(d->netif);
+}
+
 int netdev_register(struct net_device *d) {
   net_stack_init(); /* NICs may probe before the initcalls run */
   struct netif *nif = kzalloc(sizeof(*nif), 0);

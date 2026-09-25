@@ -42,6 +42,8 @@ void netdev_schedule(struct net_device *d);
 /* From ops->poll: hand one received frame to the stack. */
 void netdev_rx(struct net_device *d, const void *frame, size_t len);
 void netdev_set_link(struct net_device *d, bool up);
+/* From ops->poll (stack lock held): d->link_up changed. */
+void netdev_link_changed_locked(struct net_device *d);
 
 /* The single lock around the TCP/IP stack. net_unlock() also delivers
  * packets looped back while it was held. */
