@@ -718,6 +718,7 @@ long sys_reboot(u64 m1, u64 m2, u64 cmd, u64 arg) {
     case LINUX_REBOOT_CMD_POWER_OFF:
       pr_notice("reboot: power down\n");
       vfs_sync_all();
+      pr_notice("reboot: filesystems synced\n");
       machine_poweroff();
     case LINUX_REBOOT_CMD_CAD_ON:
     case LINUX_REBOOT_CMD_CAD_OFF:

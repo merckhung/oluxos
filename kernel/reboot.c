@@ -26,6 +26,7 @@ void machine_restart(void) {
 
 void machine_poweroff(void) {
   stop_others();
+  pr_notice("reboot: CPUs stopped, powering off via %s\n", nops ? ops[nops - 1]->name : "none");
   for (int i = nops - 1; i >= 0; i--)
     if (ops[i]->poweroff) ops[i]->poweroff();
   pr_emerg("reboot: power-off not supported; halting\n");

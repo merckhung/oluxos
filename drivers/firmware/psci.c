@@ -6,6 +6,7 @@
 #include <olux/reboot.h>
 
 #define PSCI_0_2_FN_PSCI_VERSION 0x84000000
+#define PSCI_0_2_FN_CPU_OFF 0x84000002
 #define PSCI_0_2_FN64_CPU_ON 0xc4000003
 #define PSCI_0_2_FN_SYSTEM_OFF 0x84000008
 #define PSCI_0_2_FN_SYSTEM_RESET 0x84000009
@@ -27,6 +28,10 @@ static long psci_call(u64 fn, u64 a0, u64 a1, u64 a2) {
 }
 
 bool psci_available(void) { return available; }
+
+void psci_cpu_off(void) {
+  if (available) psci_call(PSCI_0_2_FN_CPU_OFF, 0, 0, 0);
+}
 
 int psci_cpu_on(u64 mpidr, phys_addr_t entry) {
   if (!available) return -ENODEV;

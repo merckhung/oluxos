@@ -5,5 +5,6 @@
 
 int psci_cpu_on(u64 mpidr, phys_addr_t entry);
 bool psci_available(void);
+void psci_cpu_off(void); /* does not return on success */
 
 #endif

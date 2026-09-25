@@ -42,6 +42,9 @@ void smp_send_stop(void) {
   if (!c || !c->send_sgi) return;
   for (int i = 0; i < nr_cpus_possible; i++)
     if (i != smp_processor_id() && cpus[i].online) c->send_sgi(IRQ_SGI_STOP, i);
+  /* wait (bounded) until the other CPUs have parked themselves */
+  u64 deadline = ktime_ns() + 200 * NSEC_PER_MSEC;
+  while (nr_cpus_online > 1 && ktime_ns() < deadline) __asm__ volatile("yield");
 }
 
 void smp_handle_sgi(int sgi) {
@@ -53,8 +56,11 @@ void smp_handle_sgi(int sgi) {
       if (call_fn) call_fn(call_arg);
       break;
     case IRQ_SGI_STOP:
-      this_cpu()->online = false;
       local_irq_disable();
+      smp_wmb();
+      this_cpu()->online = false;
+      __atomic_sub_fetch(&nr_cpus_online, 1, __ATOMIC_SEQ_CST);
+      psci_cpu_off(); /* power the core down if firmware allows */
       for (;;) wfi();
   }
 }
