@@ -9,6 +9,7 @@
 #define NR_CPUS 8
 
 struct thread;
+struct pt_regs;
 
 /* Per-CPU state, pointed to by TPIDR_EL1. */
 struct cpu {
@@ -29,6 +30,7 @@ struct cpu {
   u64 timer_period;
   /* in-IRQ nesting */
   int irq_depth;
+  struct pt_regs *irq_regs; /* frame interrupted by the current IRQ */
 };
 
 extern struct cpu cpus[NR_CPUS];

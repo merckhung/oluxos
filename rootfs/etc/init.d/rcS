@@ -1,0 +1,8 @@
+#!/bin/sh
+# System start-up script (run once by /sbin/init).
+[ -r /etc/hostname ] && hostname -F /etc/hostname
+mkdir -p /var/log /var/run /data
+for s in /etc/init.d/S[0-9]*; do
+  [ -x "$s" ] && "$s" start
+done
+exit 0

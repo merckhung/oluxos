@@ -156,9 +156,10 @@ build_busybox() {
               HOSTCC="${HOSTCC:-cc}" KBUILD_BUILD_TIMESTAMP="@$SOURCE_DATE_EPOCH"
               KBUILD_BUILD_USER=oluxos KBUILD_BUILD_HOST=oluxos)
     { yes '' || true; } | make "${mk[@]}" oldconfig >/dev/null
-    make "${mk[@]}" -j"$JOBS" busybox >"$WORK/busybox-build.log" 2>&1 \
+    make "${mk[@]}" -j"$JOBS" busybox busybox.links >"$WORK/busybox-build.log" 2>&1 \
       || { tail -40 "$WORK/busybox-build.log" >&2; die "busybox build failed"; }
   )
+  cp "$src/busybox.links" "$OUT/bin/busybox.links"
   cp "$src/busybox_unstripped" "$OUT/bin/busybox.debug"
   "${CROSS}strip" -o "$OUT/bin/busybox" "$src/busybox_unstripped"
   log "busybox: $OUT/bin/busybox ($(wc -c <"$OUT/bin/busybox") bytes)"

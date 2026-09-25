@@ -219,8 +219,18 @@ void cond_resched(void) {
 }
 
 /* Called from the timer interrupt on every CPU. */
+u64 load_avg[3];
+
+/* Exponentially-damped load average, updated every 5 seconds (<<16 fixed point). */
+static void calc_load(void) {
+  static const u64 exp[3] = {60410, 64453, 65173}; /* e^(-5/60), e^(-5/300), e^(-5/900) */
+  u64 n = nr_running_total() << 16;
+  for (int i = 0; i < 3; i++) load_avg[i] = (load_avg[i] * exp[i] + n * (65536 - exp[i])) >> 16;
+}
+
 void scheduler_tick(void) {
   struct cpu *rq = this_cpu();
+  if (rq->id == 0 && rq->ticks % (5 * HZ) == 0) calc_load();
   struct thread *t = rq->curr;
   rq->ticks++;
   if (t == rq->idle) {
@@ -228,7 +238,8 @@ void scheduler_tick(void) {
     if (rq->nr_running) rq->need_resched = true;
     return;
   }
-  t->stime += TICK_NSEC; /* refined into utime by the entry code */
+  if (rq->irq_regs && user_mode(rq->irq_regs)) t->utime += TICK_NSEC;
+  else t->stime += TICK_NSEC;
   if (t->policy != SCHED_FIFO && --t->timeslice <= 0) {
     t->timeslice = 0;
     spin_lock(&rq->rq_lock);

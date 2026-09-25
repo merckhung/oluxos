@@ -55,6 +55,7 @@ void irq_handler(struct pt_regs *regs);
 void irq_handler(struct pt_regs *regs) {
   struct cpu *c = this_cpu();
   c->irq_depth++;
+  c->irq_regs = regs;
   for (;;) {
     int irq = chip->ack();
     if (irq < 0) break;
