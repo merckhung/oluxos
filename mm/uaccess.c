@@ -5,6 +5,7 @@
 extern const struct exception_table_entry __start_ex_table[], __stop_ex_table[];
 
 static const struct exception_table_entry *search_ex(u64 pc) {
+  // cppcheck-suppress comparePointers ; linker-section bounds
   for (const struct exception_table_entry *e = __start_ex_table; e < __stop_ex_table; e++)
     if (e->insn == pc) return e;
   return NULL;

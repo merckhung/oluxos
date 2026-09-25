@@ -70,7 +70,7 @@
 #define DATA_TIMEOUT_NS (2000 * NSEC_PER_MSEC)
 
 struct sdhci {
-  void *base;
+  u8 *base;
   int node;
   bool arasan; /* BCM2835 Arasan: slow register writes at low clock */
   u32 base_clock;

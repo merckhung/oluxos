@@ -36,7 +36,7 @@ long schedule_timeout(long ns); /* returns remaining ns (>0) if woken early */
 #define wait_event_interruptible(wq, cond)                 \
   ({                                                       \
     int __ret = 0;                                         \
-    struct waiter __w;                                     \
+    struct waiter __w = {0};                                   \
     for (;;) {                                             \
       prepare_to_wait(&(wq), &__w, TASK_INTERRUPTIBLE);    \
       if (cond) break;                                     \
@@ -52,7 +52,7 @@ long schedule_timeout(long ns); /* returns remaining ns (>0) if woken early */
 
 #define wait_event(wq, cond)                               \
   do {                                                     \
-    struct waiter __w;                                     \
+    struct waiter __w = {0};                                   \
     for (;;) {                                             \
       prepare_to_wait(&(wq), &__w, TASK_UNINTERRUPTIBLE);  \
       if (cond) break;                                     \
@@ -67,7 +67,7 @@ long schedule_timeout(long ns); /* returns remaining ns (>0) if woken early */
   ({                                                                \
     long __left = (timeout_ns);                                     \
     long __r;                                                       \
-    struct waiter __w;                                              \
+    struct waiter __w = {0};                                            \
     for (;;) {                                                      \
       prepare_to_wait(&(wq), &__w, TASK_INTERRUPTIBLE);             \
       if (cond) {                                                   \

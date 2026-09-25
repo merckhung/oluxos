@@ -39,7 +39,7 @@ else
   Q := @
 endif
 
-VERSION  := 0.2.0
+VERSION  := 0.3.0
 GITREV   := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 
 # ---------------------------------------------------------------------------

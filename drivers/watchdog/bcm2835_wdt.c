@@ -21,7 +21,7 @@
 #define PM_RSTS_PARTITION_HALT 0x00000555u /* partition 63 */
 #define TICKS_PER_SEC 65536u
 
-static void *pm;
+static u8 *pm;
 
 static int wdt_start(struct watchdog_device *wd, unsigned timeout) {
   writel(PM_PASSWORD | ((timeout * TICKS_PER_SEC) & PM_WDOG_TIME_MASK), pm + PM_WDOG);

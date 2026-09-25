@@ -396,6 +396,8 @@ void do_signal(struct pt_regs *regs) {
     if (p->exiting) do_exit(0);
     if (p->group_stop) {
       t->state = TASK_STOPPED;
+      /* re-check after publishing the state: SIGCONT may have cleared it */
+      // cppcheck-suppress identicalInnerCondition
       if (p->group_stop) schedule();
       t->state = TASK_RUNNING;
       continue;

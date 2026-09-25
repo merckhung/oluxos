@@ -76,7 +76,7 @@ void wait_for_completion(struct completion *c) { wait_event(c->wq, try_consume(c
 
 long wait_for_completion_timeout(struct completion *c, long ns) {
   long r = 0;
-  struct waiter w;
+  struct waiter w = {0}; /* prepare_to_wait() checks w.wq */
   u64 deadline = ktime_ns() + ns;
   for (;;) {
     prepare_to_wait(&c->wq, &w, TASK_UNINTERRUPTIBLE);

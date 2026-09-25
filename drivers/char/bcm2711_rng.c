@@ -25,7 +25,7 @@
 
 #define RESEED_NS (60ULL * NSEC_PER_SEC)
 
-static void *base;
+static u8 *base;
 static bool legacy;
 static struct ktimer reseed_timer;
 

@@ -28,4 +28,4 @@ if grep -q ' /data ' /proc/mounts && mkdir -p /data/ssh 2>/dev/null; then
     cp $key /data/ssh/ && sync
   fi
 fi
-exec /usr/sbin/dropbear -F -R -p 22
+exec /usr/sbin/dropbear -F -R -s -p 22 # -s: keys only, no passwords

@@ -242,6 +242,7 @@ int pci_host_scan(struct pci_host *h) {
   /* bind drivers to the new devices */
   for (struct list_head *e = before->next; e != &pci_devices; e = e->next) {
     struct pci_dev *d = list_entry(e, struct pci_dev, link);
+    // cppcheck-suppress comparePointers ; linker-section bounds
     for (const struct pci_driver *drv = __start_pci_drivers; drv < __stop_pci_drivers; drv++) {
       bool idm =
           (drv->vendor == PCI_ANY || drv->vendor == d->vendor) && (drv->device == PCI_ANY || drv->device == d->device);

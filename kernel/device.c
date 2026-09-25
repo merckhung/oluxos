@@ -17,6 +17,7 @@ bool dt_node_claimed(int node) {
 }
 
 static const struct dt_driver *match(int node, enum driver_level level) {
+  // cppcheck-suppress comparePointers ; linker-section bounds
   for (const struct dt_driver *d = __start_drivers; d < __stop_drivers; d++) {
     if (d->level != level) continue;
     for (const char *const *c = d->compatible; *c; c++)

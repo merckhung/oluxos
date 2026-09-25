@@ -35,7 +35,7 @@
 #define IOCTL_MBOX_PROPERTY 0xC0086400u /* _IOWR(100, 0, char *) */
 
 static struct {
-  void *base;
+  u8 *base;
   int node;
   u32 *buf;
   phys_addr_t buf_pa;

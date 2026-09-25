@@ -78,7 +78,7 @@ struct i2c_smbus_ioctl_data {
 };
 
 struct bsc {
-  void *base;
+  u8 *base;
   struct mutex lock;
   u32 bus_hz;
   int id;

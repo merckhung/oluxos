@@ -175,7 +175,7 @@ static unsigned evdev_poll(struct file *f, struct poll_table *pt) {
 static long put_bits(u64 arg, const void *bits, size_t have, size_t len) {
   u8 tmp[(KEY_MAX + 64) / 8] = {0};
   size_t n = MIN(have, len);
-  memcpy(tmp, bits, n);
+  if (bits && n) memcpy(tmp, bits, n);
   if (copy_to_user(arg, tmp, MIN(len, sizeof(tmp)))) return -EFAULT;
   return (long)MIN(len, sizeof(tmp));
 }

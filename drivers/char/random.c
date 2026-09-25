@@ -47,7 +47,7 @@ void add_entropy(const void *buf, size_t n, unsigned bits) {
   const u8 *p = buf;
   u32 block[16];
   for (size_t off = 0; off < n || off == 0; off += 32) {
-    for (size_t i = 0; i < 32 && off + i < n; i++) ((u8 *)key)[i] ^= p[off + i];
+    for (size_t i = 0; p && i < 32 && off + i < n; i++) ((u8 *)key)[i] ^= p[off + i];
     chacha20_block(key, counter++, 0x6d697865, block);
     memcpy(key, block, sizeof(key));
     if (n == 0) break;

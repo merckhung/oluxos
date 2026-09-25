@@ -29,8 +29,10 @@ class Console:
         self.echo = True
 
     def quiet(self):
-        """Disable terminal echo so command output is not mixed with input."""
-        self.run("stty -echo")
+        """Disable terminal echo so command output is not mixed with input,
+        and keep asynchronous info-level kernel messages (USB, mounts) off the
+        console; notices, warnings and panics still show."""
+        self.run("stty -echo; dmesg -n 5")
         self.echo = False
 
     def _fill(self, timeout):
@@ -158,7 +160,9 @@ def qemu_cmd(args, extra_append=""):
                 "-device", "usb-mouse,bus=xhci.0,port=2", "-device", "usb-hub,bus=xhci.0,port=3,id=usbhub",
                 "-drive", "if=none,id=usbdisk,file=%s,format=raw,snapshot=on" % os.path.join(args.out, "disk.img"),
                 "-device", "usb-storage,drive=usbdisk,bus=xhci.0,port=3.2"]
-        args.monitor = os.path.join(args.logdir, "monitor-%d.sock" % os.getpid())
+        # (not in logdir: CI uploads that directory, and zip cannot hold sockets)
+        import tempfile
+        args.monitor = os.path.join(tempfile.gettempdir(), "olux-monitor-%d.sock" % os.getpid())
         cmd += ["-monitor", "unix:%s,server=on,wait=off" % args.monitor]
     return cmd
 
@@ -180,7 +184,8 @@ def t_selftest(c):
 
 def t_smp(c):
     out, rc = c.run("nproc")
-    assert rc == 0 and int(out.strip().splitlines()[-1]) == c.args.smp, out
+    nums = [l.strip() for l in out.splitlines() if l.strip().isdigit()]
+    assert rc == 0 and nums and int(nums[-1]) == c.args.smp, out
 
 
 def t_pipeline_and_redirect(c):

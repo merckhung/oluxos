@@ -215,7 +215,7 @@ static struct chan_msg *chan_recv(struct file *f, size_t maxlen, long timeout_ns
       if (r == -ERESTARTSYS) return ERR_PTR(-ERESTARTSYS);
       if (r == 0 && deadline) return ERR_PTR(-ETIMEDOUT);
     } else {
-      struct waiter w;
+      struct waiter w = {0};
       prepare_to_wait(&c->wq[me], &w, TASK_UNINTERRUPTIBLE);
       if (!c->nq[me] && !c->closed[!me]) {
         if (deadline) {

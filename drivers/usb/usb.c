@@ -136,6 +136,7 @@ int usb_new_device(struct usb_device *d) {
   }
   for (int i = 0; i < d->nintf; i++) {
     struct usb_interface *intf = &d->intf[i];
+    // cppcheck-suppress comparePointers ; linker-section bounds
     for (const struct usb_driver *drv = __start_usb_drivers; drv < __stop_usb_drivers; drv++) {
       if ((drv->cls != USB_ANY && drv->cls != intf->cls) || (drv->subcls != USB_ANY && drv->subcls != intf->subcls) ||
           (drv->proto != USB_ANY && drv->proto != intf->proto))

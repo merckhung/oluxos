@@ -91,7 +91,7 @@ static void wake(struct usock *u) {
 static struct usock *find_bound(const u8 *addr, u32 len, struct inode *ino) {
   struct usock *u;
   list_for_each_entry(u, &bound, bound_link) {
-    if (ino ? u->inode == ino : (!u->inode && u->addrlen == len && !memcmp(u->addr, addr, len))) return u;
+    if (ino ? u->inode == ino : (addr && !u->inode && u->addrlen == len && !memcmp(u->addr, addr, len))) return u;
   }
   return NULL;
 }
@@ -462,6 +462,7 @@ static ssize_t send_dgram(struct socket *s, struct kmsg *m, int flags) {
       r = lookup(m->name, m->namelen, &t);
     else if (!t)
       r = -ENOTCONN;
+    if (!r && !t) r = -ENOTCONN; /* (lookup() sets t on success) */
     if (!r && (t->state == U_CLOSED || t->shut_rd)) r = -ECONNREFUSED;
     if (!r && t->sock->type != SOCK_DGRAM) r = -EPROTOTYPE;
     if (r) {

@@ -3,6 +3,62 @@
 **Scope:** ARM64 on Raspberry Pi 4B (BCM2711) and QEMU `virt` / `raspi4b`.
 **Baseline:** branch head `1b94da1` (2026-09). The code was reviewed statically. No AArch64 cross toolchain or QEMU was available during review, so nothing was built or booted.
 
+> Sections 1–7 below are the original assessment of that baseline and the
+> plan made from it. **Section 0 records what has since been implemented**
+> (version 0.3.0), how it deviates from the plan, and what is still open.
+
+---
+
+## 0. Implementation status (0.3.0, 2026-09-25)
+
+The prototype was replaced by a new AArch64 kernel with a Linux-compatible
+ABI. Everything below is verified by the automated QEMU suites:
+
+- `virt`: 1 and 4 CPUs, GICv2 and GICv3;
+- `raspi4b`;
+- about 30 scenarios plus 51 in-guest kernel self-tests on each machine;
+- a soak test.
+
+**No part has been run on a physical Raspberry Pi 4 yet.** Every exit
+criterion that says "on a Pi 4" is therefore still open. The first task is a
+hardware bring-up pass with the checklist in
+[PORTING.md](PORTING.md#hardware-bring-up-checklist).
+
+| Phase | Status | Delivered | Open |
+|-------|--------|-----------|------|
+| 0 Build, test, scope | **Done** (with deviations) | Other architectures moved to `legacy/`. Userspace (musl, BusyBox, Dropbear) and disk images are built from pinned sources. Cross-toolchain build script. `-Wall -Wextra -Werror`. CI runs the build, unit tests with ASan and UBSan, a DTB fuzzer, the QEMU suites on `virt` and `raspi4b`, cppcheck and clang-format | Bazel wraps Make rather than using per-subsystem `cc_*` rules with a registered toolchain. **No LICENSE: the owner must choose one.** No CONTRIBUTING.md |
+| 1 Correctness and safety | **Done** | Per-thread FP/SIMD and TLS state. Preemption. IRQ-safe locking. `LDTR`/`STTR` user access with an exception table. Faults signal the process, and a kernel fault panics with a symbolised backtrace and reboots. Correct page tables and TLB maintenance. Extensions moved to numbers ≥ 1000. Position-independent image (fixes the Pi `kernel_address` problem) | Real-hardware boot not yet verified |
+| 2 Kernel architecture | **Done** | TTBR1 higher-half kernel with ASIDs. Device-tree discovery. Buddy allocator with DMA zones, slab allocator. VMAs, COW, `mmap`. Separate processes and threads, futexes. O(1) priority scheduler with an RT class. SMP via PSCI and the spin table. GICv2/v3. Clocks, NTP discipline, RTC. printk, panic, WARN | A **big kernel lock** serialises system calls: splitting it is the main scalability item. No 24-hour stress run on record, but the soak test exists (`make soak`) |
+| 3 IPC and security model | **Partial, by design** | Channels with kernel-attested sender identity and descriptor passing (capabilities as descriptors). FAT and ext4 servers in userspace, supervised, restartable, and re-attaching to their mounts. `AT_RANDOM` and the CRNG seeded from hardware RNGs. W^X. uid/gid enforcement | **Deviation:** drivers and the network stack live in the kernel, and there is no userspace MMIO or IRQ delivery and no manifest-based capability grants. See the rationale in [ARCHITECTURE.md](ARCHITECTURE.md#design-decisions). Services still run as root |
+| 4 POSIX and userland | **Done** | VFS, tmpfs, devtmpfs, procfs, TTY and PTY with job control, signals, pipes, `poll`, `eventfd`, `memfd`. Upstream musl, with BusyBox and Dropbear unmodified | LTP or libc-test conformance runs; the in-tree self-tests cover the core semantics instead |
+| 5 Storage | **Mostly done** | Block layer with a write-back cache, MBR and GPT. virtio-blk, EMMC2 SD (PIO), USB mass storage. FAT12/16/32 read-write with LFN and repair after an unclean shutdown; ext2/3/4 read-only. Persistence across power-off is tested | **Deviation:** the data partition is FAT with repair, not littlefs or a journal, so a power cut can lose the last writes but not the volume. No randomised power-cut test campaign yet. No SD DMA (ADMA2) or high-speed modes |
+| 6 Drivers and networking | **Mostly done** | Pi mailbox, GPIO (with edge waits), PL011 baud setup, watchdog and reset reason, I2C, SPI, framebuffer, RNG200, GENET v5, PCIe (brcmstb) + xHCI + hubs + HID + mass storage, thermal. QEMU: virtio-blk/net/rng, PL031, PSCI, ECAM PCI. lwIP TCP/IP (IPv4/IPv6, DHCP, DNS), BSD sockets, SSH, NTP, syslog, telnet and HTTP | **GENET, RNG200 and PCIe/VL805 are untested** (QEMU does not model them). No PWM, DMA engine, virtio-console or virtio-gpu. **Deviation:** lwIP runs in the kernel, not as a server |
+| 7 Robustness and lifecycle | **Mostly done** | Watchdog fed by init. pstore crash log that survives reset, with the reset reason. A/B updates via `tryboot` with Ed25519-signed bundles and automatic fallback. `/proc/sysrq-trigger` (including thread backtraces). `olux-latency`. Soak test. Thermal governor. WFI idle. Stack protector in the kernel and userland. Threat model ([SECURITY.md](SECURITY.md)) | 7-day soak on a Pi 4. Scheduler and IRQ trace buffer. GDB stub (QEMU `-s` via `make debug` only). cpufreq beyond thermal capping. KASLR. PAC/BTI (not on Cortex-A72). FORTIFY (musl has none). Secure boot |
+| 8 Docs and release | **Partly done** | Architecture, driver guide with test status, syscall ABI, porting, operations and security docs. Semantic versioning with a changelog. SBOM ([THIRD_PARTY.md](../THIRD_PARTY.md)). CI artifacts for the SD image | Signed release artifacts and a release process. A hardware-in-the-loop rig |
+
+Bugs found and fixed along the way that are worth remembering:
+- Races in the userfs mount handshake and in signals (ignored-but-blocked
+  signals were dropped).
+- `O_NOCTTY` was handled too early, which broke SSH PTYs.
+- An AF_UNIX use-after-free.
+- A `nanosleep` overflow that could make a thread sleep for about 146
+  years; found by the latency test and diagnosed with sysrq-t.
+- TCP connections were reset on close under memory pressure.
+- Stack waiters could be used uninitialised (found by cppcheck).
+
+### Next steps, in priority order
+
+1. **Hardware bring-up on a Pi 4.** Serial boot, SD card, GENET, PCIe and
+   the VL805 with USB, RNG200, watchdog reset, the pstore survival rate,
+   `tryboot` A/B.
+2. **Choose and add a LICENSE.** It blocks any redistribution.
+3. Run services under dedicated uids and enforce `RLIMIT_NPROC` and memory
+   limits.
+4. Split the big kernel lock (VFS and sockets first).
+5. A power-cut campaign on the FAT data partition; consider littlefs or a
+   journal for `/data`.
+6. A hardware-in-the-loop CI rig and signed release artifacts.
+
 ---
 
 ## 1. Executive summary

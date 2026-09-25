@@ -16,6 +16,7 @@ void poll_wait(struct file *f, struct wait_queue *wq, struct poll_table *pt) {
   }
   struct poll_entry *e = &pt->entries[pt->n++];
   e->wq = wq;
+  e->w = (struct waiter){0}; /* prepare_to_wait() must not see a stale waiter */
   prepare_to_wait(wq, &e->w, TASK_INTERRUPTIBLE);
 }
 

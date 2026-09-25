@@ -58,7 +58,7 @@ struct spi_ioc_transfer {
 };
 
 struct spi_bus {
-  void *base;
+  u8 *base;
   struct mutex lock;
   u32 core_hz;
   int id;

@@ -37,7 +37,7 @@ struct gpio_file {
 };
 
 static struct {
-  void *base;
+  u8 *base;
   unsigned npins;
   bool is2711;
   spinlock_t lock;
