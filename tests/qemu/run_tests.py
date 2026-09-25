@@ -701,18 +701,28 @@ def t_ab_update(args):
     confirms it as the default in autoboot.txt."""
     import shutil
     import tarfile
-    img = os.path.join(args.logdir, "ab-sdcard.img")
+    import tempfile
+    # scratch files (keys, bundles, a card image) stay out of the uploaded logs
+    tmp = tempfile.mkdtemp(prefix="olux-ab-")
+    try:
+        _ab_update(args, tmp, shutil, tarfile)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _ab_update(args, tmp, shutil, tarfile):
+    img = os.path.join(tmp, "ab-sdcard.img")
     shutil.copyfile(os.path.join(args.out, "sdcard.img"), img)
     key = os.path.join(args.out, "keys", "update-dev.pem")
-    good = os.path.join(args.logdir, "update.tar")
+    good = os.path.join(tmp, "update.tar")
     subprocess.run(["scripts/mkupdate.sh", os.path.join(args.out, "rpi4"), key, good, "ab-test-2"], check=True,
                    stderr=subprocess.DEVNULL)
-    other_key = os.path.join(args.logdir, "other.pem")
+    other_key = os.path.join(tmp, "other.pem")
     subprocess.run(["openssl", "genpkey", "-algorithm", "ed25519", "-out", other_key], check=True)
-    badsig = os.path.join(args.logdir, "badsig.tar")
+    badsig = os.path.join(tmp, "badsig.tar")
     subprocess.run(["scripts/mkupdate.sh", os.path.join(args.out, "rpi4"), other_key, badsig, "evil"], check=True,
                    stderr=subprocess.DEVNULL)
-    tampered = os.path.join(args.logdir, "tampered.tar")
+    tampered = os.path.join(tmp, "tampered.tar")
     with tarfile.open(good) as src, tarfile.open(tampered, "w") as dst:
         for m in src.getmembers():
             data = src.extractfile(m).read() if m.isfile() else None
@@ -725,7 +735,7 @@ def t_ab_update(args):
     for f in (good, badsig, tampered):
         subprocess.run(["mcopy", "-i", "%s@@%d" % (img, off), f, "::/"], check=True, env=env)
     # an SSH key dropped on the boot partition, as a user would
-    keyfile = os.path.join(args.logdir, "authorized_keys")
+    keyfile = os.path.join(tmp, "authorized_keys")
     with open(keyfile, "w") as f:
         f.write("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOluxosTestKeyOnly0000000000000000000000 test@host\n")
     subprocess.run(["mcopy", "-i", "%s@@%d" % (img, mbr_partition_offset(img, 2)), keyfile, "::/"], check=True,
