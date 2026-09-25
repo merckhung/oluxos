@@ -30,6 +30,14 @@ SECTIONS
     KEEP(*(.drivers))
     __stop_drivers = .;
     . = ALIGN(8);
+    __start_pci_drivers = .;
+    KEEP(*(.pci_drivers))
+    __stop_pci_drivers = .;
+    . = ALIGN(8);
+    __start_usb_drivers = .;
+    KEEP(*(.usb_drivers))
+    __stop_usb_drivers = .;
+    . = ALIGN(8);
     __start_initcalls = .;
     KEEP(*(SORT(.initcall.*)))
     __stop_initcalls = .;

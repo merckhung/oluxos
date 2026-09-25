@@ -8,8 +8,8 @@
 #define FDT_END 9
 
 struct fdt_header {
-  u32 magic, totalsize, off_dt_struct, off_dt_strings, off_mem_rsvmap, version,
-      last_comp_version, boot_cpuid_phys, size_dt_strings, size_dt_struct;
+  u32 magic, totalsize, off_dt_struct, off_dt_strings, off_mem_rsvmap, version, last_comp_version, boot_cpuid_phys,
+      size_dt_strings, size_dt_struct;
 };
 
 static const u8 *blob;
@@ -110,9 +110,12 @@ static int skip_node(int node) {
   int depth = 0, off = node;
   while (off >= 0) {
     int n = next_token(off, &tag);
-    if (tag == FDT_BEGIN_NODE) depth++;
-    else if (tag == FDT_END_NODE && --depth == 0) return n;
-    else if (tag == FDT_END) return -1;
+    if (tag == FDT_BEGIN_NODE)
+      depth++;
+    else if (tag == FDT_END_NODE && --depth == 0)
+      return n;
+    else if (tag == FDT_END)
+      return -1;
     off = n;
   }
   return -1;
@@ -168,8 +171,7 @@ const void *fdt_getprop(int node, const char *name, int *lenp) {
     if (tag == FDT_PROP) {
       u32 len = rd32(dt_struct + off + 4);
       u32 nameoff = rd32(dt_struct + off + 8);
-      if (nameoff < strings_size &&
-          !strncmp(dt_strings + nameoff, name, strings_size - nameoff) &&
+      if (nameoff < strings_size && !strncmp(dt_strings + nameoff, name, strings_size - nameoff) &&
           strlen(name) < strings_size - nameoff) {
         if (lenp) *lenp = len;
         return dt_struct + off + 12;
@@ -234,8 +236,7 @@ int fdt_node_by_phandle(u32 ph) {
     int n = next_token(off, &tag);
     if (tag == FDT_BEGIN_NODE) {
       u32 v;
-      if ((fdt_getprop_u32(off, "phandle", &v) || fdt_getprop_u32(off, "linux,phandle", &v)) && v == ph)
-        return off;
+      if ((fdt_getprop_u32(off, "phandle", &v) || fdt_getprop_u32(off, "linux,phandle", &v)) && v == ph) return off;
     }
     if (tag == FDT_END) break;
     off = n;
@@ -258,8 +259,7 @@ int fdt_path_offset(const char *path) {
     int child;
     for (child = fdt_first_child(node); child >= 0; child = fdt_next_sibling(child)) {
       const char *nm = fdt_node_name(child);
-      if (!strncmp(nm, path, len) && (nm[len] == '\0' || (nm[len] == '@' && !memchr(path, '@', len))))
-        break;
+      if (!strncmp(nm, path, len) && (nm[len] == '\0' || (nm[len] == '@' && !memchr(path, '@', len)))) break;
     }
     node = child;
     path += len;
@@ -343,7 +343,7 @@ static int irq_parent(int node) {
 }
 
 /* Converts a GIC 3-cell specifier (type, number, flags) into an INTID. */
-static int gic_spec_to_irq(const u32 *spec, int cells, u32 *irq, u32 *flags) {
+int fdt_gic_spec_to_irq(const u32 *spec, u32 cells, u32 *irq, u32 *flags) {
   if (cells < 3) return -EINVAL;
   u32 type = rd32(&spec[0]), num = rd32(&spec[1]);
   *irq = type == 1 ? num + 16 : num + 32;
@@ -360,7 +360,7 @@ int fdt_get_irq(int node, int idx, u32 *irq, u32 *flags) {
       int ctrl = fdt_node_by_phandle(rd32(&ext[pos]));
       u32 cells = 3;
       if (ctrl < 0 || !fdt_getprop_u32(ctrl, "#interrupt-cells", &cells)) return -EINVAL;
-      if (i == idx) return gic_spec_to_irq(&ext[pos + 1], cells, irq, flags);
+      if (i == idx) return fdt_gic_spec_to_irq(&ext[pos + 1], cells, irq, flags);
       pos += 1 + cells;
       i++;
     }
@@ -372,7 +372,7 @@ int fdt_get_irq(int node, int idx, u32 *irq, u32 *flags) {
   u32 cells = 3;
   if (ctrl < 0 || !fdt_getprop_u32(ctrl, "#interrupt-cells", &cells) || cells == 0) return -EINVAL;
   if ((idx + 1) * (int)cells * 4 > len) return -ENOENT;
-  return gic_spec_to_irq(ints + idx * cells, cells, irq, flags);
+  return fdt_gic_spec_to_irq(ints + idx * cells, cells, irq, flags);
 }
 
 bool fdt_mem_rsv(int idx, u64 *addr, u64 *size) {

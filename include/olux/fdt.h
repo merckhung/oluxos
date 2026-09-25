@@ -40,6 +40,8 @@ static inline u32 fdt32(u32 v) { return __builtin_bswap32(v); }
 
 /* Interrupt specifier for the idx'th interrupt of node, as a GIC INTID. */
 int fdt_get_irq(int node, int idx, u32 *irq, u32 *flags);
+/* An interrupt specifier of the GIC (cells as in the DT) to a Linux-style irq number. */
+int fdt_gic_spec_to_irq(const u32 *spec, u32 cells, u32 *irq, u32 *flags);
 
 /* Iterate /memreserve/ entries. Returns false at the end. */
 bool fdt_mem_rsv(int idx, u64 *addr, u64 *size);

@@ -147,6 +147,13 @@ def qemu_cmd(args, extra_append=""):
         fwd = ",hostfwd=tcp:127.0.0.1:%d-:80,hostfwd=tcp:127.0.0.1:%d-:23,hostfwd=tcp:127.0.0.1:%d-:22" % (
             args.fwd_http, args.fwd_telnet, args.fwd_ssh)
     cmd += ["-device", "virtio-rng-device", "-netdev", "user,id=n0" + fwd, "-device", "virtio-net-device,netdev=n0"]
+    # USB: xHCI with a keyboard, a mouse and a thumb drive (a copy of the test disk)
+    if os.path.exists(disk) and getattr(args, "logdir", None):
+        cmd += ["-device", "qemu-xhci", "-device", "usb-kbd", "-device", "usb-mouse",
+                "-drive", "if=none,id=usbdisk,file=%s,format=raw,snapshot=on" % os.path.join(args.out, "disk.img"),
+                "-device", "usb-storage,drive=usbdisk"]
+        args.monitor = os.path.join(args.logdir, "monitor-%d.sock" % os.getpid())
+        cmd += ["-monitor", "unix:%s,server=on,wait=off" % args.monitor]
     return cmd
 
 
@@ -463,6 +470,54 @@ def t_ntp(c):
     assert rc == 0 and "status" in out, out
 
 
+def monitor(args, *commands):
+    """Send commands to the QEMU monitor."""
+    import socket
+    m = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    m.connect(args.monitor)
+    m.settimeout(2)
+    try:
+        m.recv(4096)  # banner
+        for cmd in commands:
+            m.sendall((cmd + "\n").encode())
+            time.sleep(0.05)
+            try:
+                m.recv(4096)
+            except socket.timeout:
+                pass
+    finally:
+        m.close()
+
+
+def t_usb(c):
+    """xHCI: keyboard typing into the console, mouse events on evdev, and a
+    USB thumb drive as /dev/sda with partitions and a FAT filesystem."""
+    if c.args.machine != "virt" or not getattr(c.args, "monitor", None):
+        return
+    out, rc = c.run("ls /dev/input/event0 /dev/input/event1 /dev/sda1 && dmesg | grep -E 'input:|sda:'")
+    assert rc == 0 and "USB Keyboard" in out and "USB mass storage" in out, out
+    # keyboard: type a command at the shell prompt
+    keys = ["e", "c", "h", "o", "spc", "k", "b", "d", "minus", "shift-k", "shift-b", "shift-d", "ret"]
+    monitor(c.args, *("sendkey " + k for k in keys))
+    c.expect(rb"kbd-KBD", 20)
+    c.expect(PROMPT, 10)
+    # mouse: relative motion arrives as evdev events
+    c.send("dd if=/dev/input/event1 bs=24 count=3 2>/dev/null | wc -c > /tmp/ev &\n")
+    c.expect(PROMPT, 10)
+    time.sleep(0.5)
+    monitor(c.args, "mouse_move 10 20", "mouse_move 5 5")
+    out, rc = c.run("sleep 1; cat /tmp/ev")
+    assert "72" in out, "mouse events: " + out
+    # storage: raw contents match the image; FAT on the first partition
+    out, rc = c.run("dd if=/dev/sda2 bs=65536 count=64 2>/dev/null | md5sum; dd if=/dev/vda2 bs=65536 count=64 2>/dev/null"
+                    " | md5sum; mkdir -p /mnt/usb && (fatfsd /dev/sda1 /mnt/usb &) && "
+                    "for i in $(seq 1 50); do grep -q /mnt/usb /proc/mounts && break; sleep 0.1; done; "
+                    "cat /mnt/usb/hello.txt && dd if=/dev/urandom of=/tmp/u bs=1024 count=1024 2>/dev/null && "
+                    "cp /tmp/u /mnt/usb/u.bin && sync && md5sum /tmp/u /mnt/usb/u.bin; kill $(pidof fatfsd | tr ' ' '\\n' | tail -1)")
+    sums = re.findall(r"([0-9a-f]{32})", out)
+    assert len(sums) == 4 and sums[0] == sums[1] and sums[2] == sums[3] and "Hello from FAT32" in out, out
+
+
 def t_init_respawn(c):
     c.send("exit\n")
     c.expect(PROMPT, 20)
@@ -475,7 +530,7 @@ def t_init_respawn(c):
 TESTS = [
     t_boot_banner, t_smp, t_selftest, t_pipeline_and_redirect, t_shell_scripting, t_file_utilities,
     t_background_jobs, t_ctrl_c, t_job_control, t_proc_tools, t_mounts, t_segfault_contained,
-    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_network, t_ntp, t_rpi_platform, t_init_respawn,
+    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_network, t_ntp, t_usb, t_rpi_platform, t_init_respawn,
 ]
 
 
