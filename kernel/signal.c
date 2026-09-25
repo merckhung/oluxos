@@ -408,12 +408,12 @@ void do_signal(struct pt_regs *regs) {
     if (ka->handler == SIG_DFL) {
       int act = default_action(sig);
       if (act == SIG_ACT_IGN || act == SIG_ACT_CONT) continue;
+      if (p == init_process && sig != SIGKILL) continue; /* init can be neither stopped nor killed */
       if (act == SIG_ACT_STOP) {
         if (sig != SIGSTOP && is_orphaned_pgrp(p->pgid)) continue;
         process_stop_all(p, sig);
         continue;
       }
-      if (p == init_process && sig != SIGKILL) continue; /* init is protected */
       /* terminate the whole process */
       do_group_exit(sig | (act == SIG_ACT_CORE ? 0 : 0));
     }

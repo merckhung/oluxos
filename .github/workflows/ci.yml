@@ -23,7 +23,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
             qemu-system-arm qemu-user python3 make bzip2 mtools dosfstools e2fsprogs
       - name: Build kernel, userspace and images
-        run: make -j"$(nproc)"
+        run: make -j"$(nproc)" all out/disk.img
       - name: Host unit tests (ASan/UBSan, DTB fuzzing)
         if: matrix.smp == 4 && matrix.gic == 2
         run: make unit-test
@@ -44,11 +44,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
-            qemu-system-arm python3 make bzip2
+            qemu-system-arm python3 make bzip2 mtools dosfstools e2fsprogs
       - name: Install QEMU 9.2 (raspi4b machine)
         run: sudo scripts/ci/install-qemu9.sh
       - name: Build kernel, userspace and Pi 4 boot files
-        run: make -j"$(nproc)" && make rpi4
+        run: make -j"$(nproc)" && make out/disk.img rpi4
       - name: QEMU raspi4b integration tests
         run: sudo python3 tests/qemu/run_tests.py --out out --machine raspi4b --qemu qemu9-aarch64
       - uses: actions/upload-artifact@v4

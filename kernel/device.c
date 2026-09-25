@@ -52,6 +52,28 @@ void do_initcalls(void) {
   }
 }
 
+/* Bus address a device behind `node` must use for CPU physical address
+ * `pa`, from the first matching "dma-ranges" entry of its ancestors. */
+u64 dt_dma_addr(int node, phys_addr_t pa) {
+  for (int bus = fdt_parent(node); bus >= 0; bus = fdt_parent(bus)) {
+    int len;
+    const u32 *r = fdt_getprop(bus, "dma-ranges", &len);
+    if (!r) continue;
+    int parent = fdt_parent(bus);
+    int ca = fdt_address_cells(fdt_first_child(bus) >= 0 ? fdt_first_child(bus) : node);
+    int pac = parent >= 0 ? fdt_address_cells(bus) : 2;
+    int sc = fdt_size_cells(fdt_first_child(bus) >= 0 ? fdt_first_child(bus) : node);
+    int stride = (ca + pac + sc) * 4;
+    for (int off = 0; stride && off + stride <= len; off += stride) {
+      const u32 *e = r + off / 4;
+      u64 child = fdt_read_cells(e, ca), cpu = fdt_read_cells(e + ca, pac), size = fdt_read_cells(e + ca + pac, sc);
+      if (pa >= cpu && pa - cpu < size) return child + (pa - cpu);
+    }
+    return pa;
+  }
+  return pa;
+}
+
 void *dt_ioremap(int node, int idx, u64 *size_out) {
   u64 addr, size;
   if (fdt_get_reg(node, idx, &addr, &size)) return NULL;

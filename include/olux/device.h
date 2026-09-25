@@ -85,6 +85,9 @@ static inline void writeq(u64 v, volatile void *a) {
   *(volatile u64 *)a = v;
 }
 
+/* Bus address for DMA by the device at `node` to CPU physical `pa`. */
+u64 dt_dma_addr(int node, phys_addr_t pa);
+
 /* Map the idx'th reg of a DT node. */
 void *dt_ioremap(int node, int idx, u64 *size_out);
 

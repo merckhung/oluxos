@@ -1,0 +1,5 @@
+Linux-ABI kernel headers for userspace programs built against OluxOS.
+
+OluxOS implements the Linux AArch64 system call and ioctl ABI, but musl
+ships no kernel headers. These files, written for OluxOS, declare the
+subset of that ABI OluxOS supports; build.sh copies them into the sysroot.

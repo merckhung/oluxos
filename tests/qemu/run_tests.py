@@ -88,15 +88,33 @@ class Console:
         self.log.close()
 
 
+def sd_image(args):
+    """The test disk padded to a power-of-two size, as QEMU's SD card needs."""
+    disk = os.path.join(args.out, "disk.img")
+    if not os.path.exists(disk):
+        return None
+    sd = os.path.join(args.logdir, "sd.img")
+    if not os.path.exists(sd) or os.path.getmtime(sd) < os.path.getmtime(disk):
+        size = 1 << max(os.path.getsize(disk) - 1, 1).bit_length()
+        with open(disk, "rb") as src, open(sd, "wb") as dst:
+            dst.write(src.read())
+            dst.truncate(size)
+    return sd
+
+
 def qemu_cmd(args, extra_append=""):
     if args.machine == "raspi4b":
         # Raspberry Pi 4B emulation (QEMU >= 9.0): fixed 4x Cortex-A72, GIC-400,
         # PL011 on the first serial port. The Pi DTB comes from `make rpi4`.
-        return [args.qemu, "-M", "raspi4b", "-kernel", os.path.join(args.out, "Image"),
-                "-initrd", os.path.join(args.out, "initramfs.cpio"),
-                "-dtb", args.dtb or os.path.join(args.out, "rpi4", "bcm2711-rpi-4-b.dtb"),
-                "-append", ("console=ttyAMA0 " + extra_append).strip(),
-                "-display", "none", "-serial", "stdio", "-no-reboot"]
+        cmd = [args.qemu, "-M", "raspi4b", "-kernel", os.path.join(args.out, "Image"),
+               "-initrd", os.path.join(args.out, "initramfs.cpio"),
+               "-dtb", args.dtb or os.path.join(args.out, "rpi4", "bcm2711-rpi-4-b.dtb"),
+               "-append", ("console=ttyAMA0 " + extra_append).strip(),
+               "-display", "none", "-serial", "stdio", "-no-reboot"]
+        sd = sd_image(args)
+        if sd:
+            cmd += ["-drive", "if=sd,file=%s,format=raw,snapshot=on" % sd]
+        return cmd
     cmd = [args.qemu, "-M", "virt,gic-version=%s" % args.gic, "-cpu", args.cpu, "-smp", str(args.smp),
            "-m", args.mem, "-kernel", os.path.join(args.out, "Image"),
            "-initrd", os.path.join(args.out, "initramfs.cpio"),
@@ -221,32 +239,33 @@ def wait_mount(c, path):
     assert rc == 0, "%s not mounted: %s" % (path, out)
 
 
+def fat_dir(c):
+    return "/mnt/fat" if c.args.machine == "virt" else "/boot"
+
+
 def t_fatfs(c):
-    if c.args.machine != "virt":
-        return
-    wait_mount(c, "/mnt/fat")
-    out, rc = c.run("cat /mnt/fat/hello.txt '/mnt/fat/docs/nested/A Long File Name.txt' && cmp /mnt/fat/busybox /bin/busybox")
+    F = fat_dir(c)
+    wait_mount(c, F)
+    out, rc = c.run("cat %s/hello.txt '%s/docs/nested/A Long File Name.txt' && cmp %s/busybox /bin/busybox" % (F, F, F))
     assert rc == 0 and out.count("Hello from FAT32") == 2, out
-    out, rc = c.run("cd /mnt/fat && mkdir -p 'Dir One/sub' && echo payload > 'Dir One/sub/Mixed Case Name.TXT' && "
+    out, rc = c.run("cd " + F + " && mkdir -p 'Dir One/sub' && echo payload > 'Dir One/sub/Mixed Case Name.TXT' && "
                     "mv 'Dir One/sub/Mixed Case Name.TXT' 'Dir One/renamed.txt' && mv 'Dir One' dir2 && "
                     "cat dir2/renamed.txt && ls dir2 && rmdir dir2/sub && rm dir2/renamed.txt && rmdir dir2 && "
                     "! ls dir2 2>/dev/null; cd /")
     assert rc == 0 and "payload" in out and "renamed.txt" in out, out
-    out, rc = c.run("dd if=/dev/urandom of=/tmp/big bs=4096 count=700 2>/dev/null && cp /tmp/big /mnt/fat/big.bin && "
-                    "sha256sum /tmp/big /mnt/fat/big.bin && rm /mnt/fat/big.bin /tmp/big")
+    out, rc = c.run("dd if=/dev/urandom of=/tmp/big bs=4096 count=700 2>/dev/null && cp /tmp/big {0}/big.bin && "
+                    "sha256sum /tmp/big {0}/big.bin && rm {0}/big.bin /tmp/big".format(F))
     sums = re.findall(r"([0-9a-f]{64})", out)
     assert rc == 0 and len(sums) == 2 and sums[0] == sums[1], out
-    out, rc = c.run("f=/mnt/fat/sparse; echo hi > $f && truncate -s 70000 $f && stat -c %s $f && "
+    out, rc = c.run("f=" + F + "/sparse; echo hi > $f && truncate -s 70000 $f && stat -c %s $f && "
                     "tail -c 5 $f | tr '\\0' Z && echo && truncate -s 2 $f && cat $f && rm $f")
     assert rc == 0 and "70000" in out and "ZZZZZ" in out and out.strip().endswith("hi"), out
-    out, rc = c.run("for i in $(seq 1 200); do echo $i > /mnt/fat/docs/file_number_$i.txt; done; "
-                    "ls /mnt/fat/docs | wc -l; cat /mnt/fat/docs/file_number_177.txt; rm /mnt/fat/docs/file_number_*")
+    out, rc = c.run("for i in $(seq 1 200); do echo $i > {0}/docs/file_number_$i.txt; done; "
+                    "ls {0}/docs | wc -l; cat {0}/docs/file_number_177.txt; rm {0}/docs/file_number_*".format(F))
     assert rc == 0 and "201" in out and "177" in out, out
 
 
 def t_ext4fs(c):
-    if c.args.machine != "virt":
-        return
     wait_mount(c, "/mnt/ext")
     out, rc = c.run("cd /mnt/ext && sha256sum -c data/blob.sha256 && cat link-to-hello etc/app.conf; cd /")
     assert rc == 0 and "blob.bin: OK" in out and "Hello from ext4" in out and "config=1" in out, out
@@ -257,16 +276,29 @@ def t_ext4fs(c):
 def t_fs_server_restart(c):
     """Killing a filesystem server must not affect the kernel: I/O fails
     with EIO, init restarts the server, it re-attaches and I/O resumes."""
-    if c.args.machine != "virt":
-        return
-    wait_mount(c, "/mnt/fat")
-    c.run("echo survives > /mnt/fat/keep.txt")
-    out, rc = c.run("kill -9 $(pidof fatfsd); sleep 0.2; cat /mnt/fat/keep.txt")
+    F = fat_dir(c)
+    wait_mount(c, F)
+    c.run("echo survives > %s/keep.txt" % F)
+    out, rc = c.run("kill -9 $(pidof fatfsd); sleep 0.2; cat %s/keep.txt" % F)
     assert rc != 0 and "I/O error" in out, out
-    out, rc = c.run("for i in $(seq 1 50); do cat /mnt/fat/keep.txt 2>/dev/null && break; sleep 0.2; done")
+    out, rc = c.run("for i in $(seq 1 50); do cat %s/keep.txt 2>/dev/null && break; sleep 0.2; done" % F)
     assert rc == 0 and "survives" in out, out
-    out, rc = c.run("dmesg | grep -c 're-attached /dev/vda1'; rm /mnt/fat/keep.txt")
+    out, rc = c.run("dmesg | grep -c 're-attached'; rm %s/keep.txt" % F)
     assert rc == 0, out
+
+
+def t_rpi_platform(c):
+    if c.args.machine != "raspi4b":
+        return
+    out, rc = c.run("rpi-info && rpi-info temp && rpi-info clock arm")
+    assert rc == 0 and "revision:" in out and "temp=" in out and "frequency(3)=" in out, out
+    out, rc = c.run("gpio set 21 1 && gpio get 21 && gpio set 21 0 && gpio get 21 && gpio func 21 alt3 && "
+                    "gpio info | grep 'GPIO21 '")
+    assert rc == 0 and out.split()[:2] == ["1", "0"] and "alt3" in out, out
+    out, rc = c.run("gpio wait 20 rising 200")
+    assert rc == 1 and "timed out" in out, out
+    out, rc = c.run("dmesg | grep -E 'mmc: .* card|last reset' && ls /dev/watchdog /dev/mmcblk0p1")
+    assert rc == 0 and "card" in out, out
 
 
 def t_init_respawn(c):
@@ -281,7 +313,7 @@ def t_init_respawn(c):
 TESTS = [
     t_boot_banner, t_smp, t_selftest, t_pipeline_and_redirect, t_shell_scripting, t_file_utilities,
     t_background_jobs, t_ctrl_c, t_job_control, t_proc_tools, t_mounts, t_segfault_contained,
-    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_init_respawn,
+    t_memory_stress, t_fork_bomb_limited, t_block_device, t_fatfs, t_ext4fs, t_fs_server_restart, t_rpi_platform, t_init_respawn,
 ]
 
 
@@ -303,6 +335,37 @@ def t_poweroff(args):
             pass
         assert c.proc.poll() is not None, "QEMU still running after poweroff"
         assert b"power down" in c.buf or b"power-off" in c.buf, c.buf[-500:]
+    finally:
+        c.close()
+
+
+def wait_exit(c, seconds):
+    deadline = time.time() + seconds
+    while c.proc.poll() is None and time.time() < deadline:
+        try:
+            c._fill(0.5)
+        except EOFError:
+            break
+    try:
+        c.proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        pass
+    return c.proc.poll() is not None
+
+
+def t_watchdog(args):
+    """Separate boot without init's supervision: a watchdog daemon that dies
+    without the magic close must get the machine reset."""
+    c = Console(qemu_cmd(args, "init.watchdog=0"), os.path.join(args.logdir, "watchdog.log"))
+    try:
+        c.expect(PROMPT, 90)
+        c.quiet()
+        out, rc = c.run("watchdog -T 3 -t 1 /dev/watchdog && sleep 2 && kill -9 $(pidof watchdog); echo killed")
+        assert "killed" in out, out
+        t0 = time.time()
+        assert wait_exit(c, 20), "no reset after the watchdog expired"
+        assert b"no keepalive" in c.buf, c.buf[-500:]
+        assert time.time() - t0 < 15, "reset took %.1fs" % (time.time() - t0)
     finally:
         c.close()
 
@@ -400,13 +463,21 @@ def main():
     finally:
         c.close()
 
-    if (not args.pattern or "poweroff" in args.pattern) and args.machine == "virt":
+    if not args.pattern or "poweroff" in args.pattern:
         try:
             t_poweroff(args)
             print("PASS poweroff")
         except (AssertionError, TimeoutError, EOFError) as e:
             failures.append("poweroff")
             print("FAIL poweroff %s" % e)
+
+    if not args.pattern or "watchdog" in args.pattern:
+        try:
+            t_watchdog(args)
+            print("PASS watchdog")
+        except (AssertionError, TimeoutError, EOFError) as e:
+            failures.append("watchdog")
+            print("FAIL watchdog %s" % e)
 
     if (not args.pattern or "persist" in args.pattern) and args.machine == "virt":
         try:

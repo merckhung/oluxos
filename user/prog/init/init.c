@@ -174,9 +174,22 @@ static void on_signal(int sig) {
   }
 }
 
+/* Supervise the system with /dev/watchdog unless the kernel command line
+ * says init.watchdog=0 (e.g. to hand the watchdog to another daemon). */
 static void wdt_open(void) {
+  char cmdline[1024] = "";
+  int fd = open("/proc/cmdline", O_RDONLY | O_CLOEXEC);
+  if (fd >= 0) {
+    ssize_t n = read(fd, cmdline, sizeof(cmdline) - 1);
+    cmdline[n > 0 ? n : 0] = 0;
+    close(fd);
+  }
+  if (strstr(cmdline, "init.watchdog=0")) {
+    klog("watchdog supervision disabled on the command line");
+    return;
+  }
   wdt_fd = open("/dev/watchdog", O_WRONLY | O_CLOEXEC);
-  if (wdt_fd >= 0) klog("hardware watchdog armed");
+  if (wdt_fd >= 0) klog("watchdog armed");
 }
 
 static void wdt_pet(void) {

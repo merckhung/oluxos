@@ -134,8 +134,14 @@ EOF
   done
 }
 
+# Linux-ABI headers (musl has none); refreshed on every build.
+install_linux_headers() {
+  cp -r "$REPO_ROOT/toolchains/userspace/linux-headers/linux" "$SYSROOT/include/"
+}
+
 build_busybox() {
   [ -f "$SYSROOT/lib/libc.a" ] || build_musl
+  install_linux_headers
   write_wrapper
   verify "$BUSYBOX_TARBALL" "$BUSYBOX_SHA256"
   log "building busybox $BUSYBOX_VERSION"
