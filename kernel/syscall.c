@@ -53,8 +53,9 @@ static const syscall_fn_t table[NR_SYSCALLS] = {SYSCALLS(ENTRY)};
 static const char *const names[NR_SYSCALLS] = {SYSCALLS(NAME)};
 
 /* OluxOS extensions */
-#define OLUX_SYSCALLS(X) X(0, olux_channel) X(1, olux_msg_send) X(2, olux_msg_recv) X(3, olux_sysinfo) \
-  X(4, olux_watchdog)
+/* 1003/1004 (olux_sysinfo, olux_watchdog) are retired: sysinfo(2), /proc
+ * and /dev/watchdog cover them. They stay reserved and return -ENOSYS. */
+#define OLUX_SYSCALLS(X) X(0, olux_channel) X(1, olux_msg_send) X(2, olux_msg_recv)
 #define ODECL(n, name) S(name);
 OLUX_SYSCALLS(ODECL)
 #define OENTRY(n, name) [n] = (syscall_fn_t)(void *)__sys_##name,

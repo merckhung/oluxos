@@ -5,6 +5,7 @@
 #   make test            host unit tests + QEMU integration tests
 #   make rpi4            SD-card boot directory for Raspberry Pi 4B
 #   make sdcard          bootable SD card image (out/sdcard.img) for Raspberry Pi 4B
+#   make update          signed A/B update bundle (out/update.tar)
 #
 # Variables: CROSS (compiler prefix), O (output dir), V=1 (verbose),
 #            DEBUG=1 (-O0 + extra checks), SMP (cpus for `make run`).
@@ -156,12 +157,27 @@ $(O)/user/%: user/prog/%/*.c $(USER_LIB) $(wildcard user/include/*.h include/uap
 
 initramfs: $(O)/initramfs.cpio
 
+# Update signing key (Ed25519, PEM). Its public half goes into the image as
+# /etc/olux/update.pub. Without UPDATE_KEY a development key is generated in
+# $(O)/keys; products must use their own key, kept offline.
+UPDATE_KEY ?= $(O)/keys/update-dev.pem
+
+$(O)/keys/update-dev.pem:
+	@mkdir -p $(dir $@)
+	@echo "  KEYGEN  $@ (development update key; set UPDATE_KEY for products)"
+	$(Q)openssl genpkey -algorithm ed25519 -out $@
+
+$(O)/keys/update.pub: $(UPDATE_KEY)
+	@mkdir -p $(dir $@)
+	$(Q)openssl pkey -in $< -pubout -out $@
+
 $(O)/initramfs.cpio: $(USER_BINS) $(USERSPACE_OUT)/bin/busybox $(USERSPACE_OUT)/bin/dropbearmulti scripts/mkinitramfs.py \
-		$(shell find rootfs -type f 2>/dev/null)
+		$(O)/keys/update.pub $(shell find rootfs -type f 2>/dev/null)
 	@$(if $(Q),echo "  CPIO    $@")
 	$(Q)$(PYTHON) scripts/mkinitramfs.py -o $@ --busybox $(USERSPACE_OUT)/bin/busybox \
 		--skel rootfs $(foreach b,$(USER_BINS),--bin $(b)) \
-		--extra $(USERSPACE_OUT)/bin/dropbearmulti:/usr/sbin/dropbearmulti
+		--extra $(USERSPACE_OUT)/bin/dropbearmulti:/usr/sbin/dropbearmulti \
+		--extra $(O)/keys/update.pub:/etc/olux/update.pub
 
 # ---------------------------------------------------------------------------
 # Disk images, boards, run targets
@@ -193,6 +209,10 @@ rpi4: all
 sdcard: rpi4
 	$(Q)scripts/mksdcard.sh $(O)/rpi4 $(O)/sdcard.img
 
+# Signed A/B update bundle for `olux-update install` (see docs)
+update: rpi4
+	$(Q)scripts/mkupdate.sh $(O)/rpi4 $(UPDATE_KEY) $(O)/update.tar
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -210,6 +230,6 @@ clean:
 distclean: clean
 	rm -rf $(USERSPACE_OUT) toolchains/cross/build
 
-.PHONY: all kernel initramfs run debug rpi4 sdcard test unit-test qemu-test clean distclean
+.PHONY: all kernel initramfs run debug rpi4 sdcard update test unit-test qemu-test clean distclean
 
 -include $(KDEPS)

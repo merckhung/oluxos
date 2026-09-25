@@ -4,6 +4,8 @@
  *   rpi-info temp       SoC temperature (e.g. "temp=48.2'C")
  *   rpi-info throttled  under-voltage / throttling flags (hex)
  *   rpi-info clock NAME current rate of arm|core|uart|emmc|emmc2
+ *   rpi-info tryboot    boot the tryboot partition (autoboot.txt) once, at the
+ *                       next reboot (the A/B update trial boot)
  */
 #include <fcntl.h>
 #include <stdint.h>
@@ -54,6 +56,14 @@ int main(int argc, char **argv) {
     return 1;
   }
   if (argc > 1 && !strcmp(argv[1], "temp")) return temp() ? 1 : 0;
+  if (argc > 1 && !strcmp(argv[1], "tryboot")) {
+    uint32_t v[1] = {1}; /* SET_REBOOT_FLAGS: tryboot */
+    if (prop(0x00038064, v, 1, 1) < 0) {
+      fprintf(stderr, "rpi-info: the firmware refused the tryboot flag\n");
+      return 1;
+    }
+    return 0;
+  }
   if (argc > 1 && !strcmp(argv[1], "throttled")) {
     uint32_t v[1] = {0};
     if (prop(0x00030046, v, 0, 1) < 0) return 1;

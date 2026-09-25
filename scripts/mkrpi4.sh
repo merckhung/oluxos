@@ -10,6 +10,7 @@
 #   initramfs.cpio   root filesystem
 #   config.txt       firmware configuration
 #   cmdline.txt      kernel command line (exposed via /chosen/bootargs)
+#   VERSION          image version (git describe)
 #   start4.elf, fixup4.dat, bcm2711-rpi-4-b.dtb, overlays/*.dtbo
 #                    Raspberry Pi firmware (fetched from the pinned release,
 #                    SHA-256 verified; redistributable per its own licence)
@@ -57,6 +58,8 @@ dtparam=spi=on
 EOF
 
 echo "console=ttyAMA0,115200 loglevel=6" >"$OUTDIR/cmdline.txt"
+# image version, shown by `olux-update status`
+git -C "$(dirname "$0")/.." describe --always --dirty 2>/dev/null >"$OUTDIR/VERSION" || echo unknown >"$OUTDIR/VERSION"
 
 if [ "$FIRMWARE" = 1 ]; then
   mkdir -p "$CACHE/overlays" "$OUTDIR/overlays"

@@ -26,8 +26,8 @@
 #define SYS_olux_channel 1000
 #define SYS_olux_msg_send 1001
 #define SYS_olux_msg_recv 1002
-#define SYS_olux_sysinfo 1003
-#define SYS_olux_watchdog 1004
+/* 1003, 1004: reserved (formerly olux_sysinfo / olux_watchdog; use
+ * sysinfo(2), /proc and /dev/watchdog) */
 
 struct olux_msg_info {
   uint32_t len;        /* message length */

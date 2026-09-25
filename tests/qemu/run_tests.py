@@ -8,6 +8,7 @@ standard library so it runs anywhere QEMU does.
   tests/qemu/run_tests.py --out out [--smp 4] [--gic 2] [-k pattern]
 """
 import argparse
+import io
 import os
 import re
 import select
@@ -131,7 +132,8 @@ def qemu_cmd(args, extra_append=""):
                "-display", "none", "-serial", "stdio", "-no-reboot"]
         sd = sd_image(args)
         if sd:
-            cmd += ["-drive", "if=sd,file=%s,format=raw,snapshot=on" % sd]
+            snap = "" if getattr(args, "sd_persist", False) else ",snapshot=on"
+            cmd += ["-drive", "if=sd,file=%s,format=raw%s" % (sd, snap)]
         return cmd
     cmd = [args.qemu, "-M", "virt,gic-version=%s" % args.gic, "-cpu", args.cpu, "-smp", str(args.smp),
            "-m", args.mem, "-kernel", os.path.join(args.out, "Image"),
@@ -639,12 +641,13 @@ def t_crash_recovery(args):
 
 
 def t_sdcard(args):
-    """Separate raspi4b boot from the `make sdcard` image: boot partition at
+    """Separate raspi4b boot from the `make sdcard` image: boot slot A at
     /boot, writable data partition at /data."""
     img = os.path.join(args.out, "sdcard.img")
     boot_args = argparse.Namespace(**vars(args))
     boot_args.sd = img
-    c = Console(qemu_cmd(boot_args), os.path.join(args.logdir, "sdcard.log"))
+    # the firmware would pass slot A's cmdline.txt
+    c = Console(qemu_cmd(boot_args, "olux.slot=a"), os.path.join(args.logdir, "sdcard.log"))
     c.args = boot_args
     try:
         c.expect(PROMPT, 90)
@@ -655,6 +658,84 @@ def t_sdcard(args):
         assert rc == 0 and "kernel8.img" in out and "start4.elf" in out and "ok" in out, out
     finally:
         c.close()
+
+
+def mbr_partition_offset(img, n):
+    import struct
+    with open(img, "rb") as f:
+        mbr = f.read(512)
+    return struct.unpack_from("<I", mbr, 446 + 16 * (n - 1) + 8)[0] * 512
+
+
+def power_off(c):
+    c.send("poweroff\n")
+    deadline = time.time() + 30
+    while c.proc.poll() is None and time.time() < deadline:
+        try:
+            c._fill(0.5)
+        except EOFError:
+            break
+    c.proc.wait(timeout=10)
+
+
+def t_ab_update(args):
+    """A/B update on the raspi4b SD card: a signed bundle goes into the
+    inactive slot (bad signatures and tampered files are refused); the
+    next boot from that slot (as the firmware's tryboot would pick it)
+    confirms it as the default in autoboot.txt."""
+    import shutil
+    import tarfile
+    img = os.path.join(args.logdir, "ab-sdcard.img")
+    shutil.copyfile(os.path.join(args.out, "sdcard.img"), img)
+    key = os.path.join(args.out, "keys", "update-dev.pem")
+    good = os.path.join(args.logdir, "update.tar")
+    subprocess.run(["scripts/mkupdate.sh", os.path.join(args.out, "rpi4"), key, good, "ab-test-2"], check=True,
+                   stderr=subprocess.DEVNULL)
+    other_key = os.path.join(args.logdir, "other.pem")
+    subprocess.run(["openssl", "genpkey", "-algorithm", "ed25519", "-out", other_key], check=True)
+    badsig = os.path.join(args.logdir, "badsig.tar")
+    subprocess.run(["scripts/mkupdate.sh", os.path.join(args.out, "rpi4"), other_key, badsig, "evil"], check=True,
+                   stderr=subprocess.DEVNULL)
+    tampered = os.path.join(args.logdir, "tampered.tar")
+    with tarfile.open(good) as src, tarfile.open(tampered, "w") as dst:
+        for m in src.getmembers():
+            data = src.extractfile(m).read() if m.isfile() else None
+            if m.name == "files/config.txt":
+                data += b"# tampered\n"
+                m.size = len(data)
+            dst.addfile(m, io.BytesIO(data) if data is not None else None)
+    off = mbr_partition_offset(img, 4)
+    env = dict(os.environ, MTOOLS_SKIP_CHECK="1")
+    for f in (good, badsig, tampered):
+        subprocess.run(["mcopy", "-i", "%s@@%d" % (img, off), f, "::/"], check=True, env=env)
+    boot_args = argparse.Namespace(**vars(args))
+    boot_args.sd = img
+    boot_args.sd_persist = True
+    for slot in ("a", "b"):
+        c = Console(qemu_cmd(boot_args, "olux.slot=" + slot), os.path.join(args.logdir, "ab-%s.log" % slot))
+        c.args = boot_args
+        try:
+            c.expect(PROMPT, 90)
+            c.quiet()
+            wait_mount(c, "/boot")
+            wait_mount(c, "/data")
+            out, rc = c.run("cat /boot/cmdline.txt")
+            assert "olux.slot=" + slot in out, out
+            if slot == "a":
+                out, rc = c.run("olux-update install /data/badsig.tar")
+                assert rc != 0 and "bad signature" in out, out
+                out, rc = c.run("olux-update install /data/tampered.tar")
+                assert rc != 0 and "do not match" in out, out
+                out, rc = c.run("olux-update install /data/update.tar && olux-update status")
+                assert rc == 0 and "into slot b" in out and "other slot:   b (ab-test-2)" in out, out
+                assert "default slot: a" in out, out
+            else:
+                out, rc = c.run("cat /boot/VERSION; olux-update confirm --now && olux-update status")
+                assert rc == 0 and "ab-test-2" in out and "slot b is now the default" in out, out
+                assert "default slot: b" in out, out
+            power_off(c)
+        finally:
+            c.close()
 
 
 def t_persistence(args):
@@ -783,6 +864,14 @@ def main():
         except (AssertionError, TimeoutError, EOFError) as e:
             failures.append("sdcard")
             print("FAIL sdcard %s" % e)
+
+    if (not args.pattern or "ab_update" in args.pattern) and args.machine == "raspi4b" and os.path.exists(sdcard):
+        try:
+            t_ab_update(args)
+            print("PASS ab_update")
+        except (AssertionError, TimeoutError, EOFError, subprocess.CalledProcessError) as e:
+            failures.append("ab_update")
+            print("FAIL ab_update %s" % e)
 
     if (not args.pattern or "persist" in args.pattern) and args.machine == "virt":
         try:

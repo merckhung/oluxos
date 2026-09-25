@@ -1,0 +1,123 @@
+#!/bin/sh
+# olux-update - A/B updates of the Raspberry Pi 4 boot slots.
+#
+#   olux-update status              running slot, default slot, versions
+#   olux-update install BUNDLE      verify a signed bundle (see
+#                                   scripts/mkupdate.sh) and write it to
+#                                   the slot that is not running
+#   olux-update try                 reboot once into the other slot
+#                                   (firmware tryboot); a crash or hang
+#                                   there falls back to the current slot
+#   olux-update confirm [--now]     after a trial boot has stayed up for
+#                                   CONFIRM_DELAY seconds, make the running
+#                                   slot the default (init runs this)
+#   olux-update rollback            make the other slot the default again
+#
+# Needs the A/B SD card layout of scripts/mksdcard.sh (olux.slot=a|b on the
+# kernel command line) and the public key in /etc/olux/update.pub.
+DEV=/dev/mmcblk0
+KEY=/etc/olux/update.pub
+RUN=/run/olux
+AUTO=$RUN/auto.$$ # per process: `confirm` may run at the same time
+SLOT=$RUN/slot.$$
+CONFIRM_DELAY=60
+[ -f /etc/olux/update.conf ] && . /etc/olux/update.conf
+
+die() { echo "olux-update: $*" >&2; exit 1; }
+running() { sed -n 's/.*olux\.slot=\([ab]\).*/\1/p' /proc/cmdline; }
+other() { [ "$1" = a ] && echo b || echo a; }
+part() { [ "$1" = a ] && echo 2 || echo 3; }
+
+mounted() { grep -q " $1 " /proc/mounts; }
+mount_fat() { # partition number, directory
+  mkdir -p "$2"
+  mounted "$2" && return 0
+  /sbin/fatfsd $DEV"p$1" "$2" &
+  for i in $(seq 1 100); do mounted "$2" && return 0; sleep 0.1; done
+  die "cannot mount ${DEV}p$1"
+}
+unmount() { sync; mounted "$1" && umount "$1"; rmdir "$1" 2>/dev/null; }
+
+# the slot autoboot.txt boots by default
+default_slot() {
+  mount_fat 1 $AUTO
+  p=$(sed -n 's/^boot_partition=\([23]\).*/\1/p' $AUTO/autoboot.txt | head -n 1)
+  unmount $AUTO
+  [ "$p" = 3 ] && echo b || echo a
+}
+
+set_default() { # slot
+  d=$(part "$1")
+  mount_fat 1 $AUTO
+  printf '[all]\ntryboot_a_b=1\nboot_partition=%s\n[tryboot]\nboot_partition=%s\n' "$d" "$(part "$(other "$1")")" \
+    >$AUTO/autoboot.txt.new && mv $AUTO/autoboot.txt.new $AUTO/autoboot.txt
+  unmount $AUTO
+  echo "olux-update: slot $1 is now the default"
+}
+
+slot_version() { # slot
+  if [ "$1" = "$(running)" ]; then cat /boot/VERSION 2>/dev/null || echo unknown; return; fi
+  mount_fat "$(part "$1")" $SLOT
+  cat $SLOT/VERSION 2>/dev/null || echo unknown
+  unmount $SLOT
+}
+
+cur=$(running)
+[ -n "$cur" ] || { [ "$1" = confirm ] && exit 0; die "not an A/B system (no olux.slot= on the kernel command line)"; }
+mkdir -p $RUN
+
+case "$1" in
+  status)
+    def=$(default_slot)
+    echo "running slot: $cur ($(slot_version "$cur"))"
+    echo "default slot: $def"
+    echo "other slot:   $(other "$cur") ($(slot_version "$(other "$cur")"))"
+    ;;
+  install)
+    [ -f "$2" ] || die "usage: olux-update install BUNDLE"
+    [ -f $KEY ] || die "no update key $KEY"
+    tmp=/tmp/olux-update.$$
+    rm -rf $tmp && mkdir -p $tmp || die "cannot create $tmp"
+    trap 'rm -rf $tmp' EXIT
+    tar -xf "$2" -C $tmp manifest manifest.sig || die "$2: not an update bundle"
+    olux-verify $KEY $tmp/manifest $tmp/manifest.sig >/dev/null || die "$2: bad signature; not installed"
+    tar -xf "$2" -C $tmp files || die "$2: damaged bundle"
+    (cd $tmp/files && sha256sum -c -s ../manifest) || die "$2: files do not match the signed manifest"
+    grep -q ' VERSION$' $tmp/manifest || die "$2: no VERSION"
+    tgt=$(other "$cur")
+    mount_fat "$(part "$tgt")" $SLOT
+    rm -rf $SLOT/* 2>/dev/null
+    # only files named in the signed manifest are installed
+    while read -r sum path; do
+      case "$path" in /* | *..*) die "bad path $path" ;; esac
+      mkdir -p "$SLOT/$(dirname "$path")"
+      cp "$tmp/files/$path" "$SLOT/$path" || die "write failed: $path"
+    done <$tmp/manifest
+    sync
+    (cd $SLOT && sha256sum -c -s $tmp/manifest) || die "slot $tgt does not read back correctly"
+    line=$(sed 's/ *olux\.slot=[ab]//' $tmp/files/cmdline.txt 2>/dev/null | tr -d '\n')
+    printf '%s olux.slot=%s\n' "$line" "$tgt" >$SLOT/cmdline.txt
+    unmount $SLOT
+    echo "olux-update: installed $(cat $tmp/files/VERSION) into slot $tgt; 'olux-update try' boots it once"
+    ;;
+  try)
+    rpi-info tryboot || die "the firmware did not accept the tryboot flag"
+    echo "olux-update: rebooting into slot $(other "$cur") (once)"
+    reboot
+    ;;
+  confirm)
+    def=$(default_slot)
+    [ "$cur" = "$def" ] && exit 0
+    [ "$2" = --now ] || sleep "$CONFIRM_DELAY"
+    echo "olux-update: trial boot of slot $cur succeeded"
+    set_default "$cur"
+    logger -t olux-update "slot $cur confirmed as the default" 2>/dev/null
+    ;;
+  rollback)
+    set_default "$(other "$cur")"
+    ;;
+  *)
+    sed -n '2,20s/^# \{0,1\}//p' "$0" >&2
+    exit 2
+    ;;
+esac
