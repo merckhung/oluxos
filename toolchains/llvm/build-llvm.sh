@@ -5,14 +5,11 @@
 # Builds:
 #   1. LLVM/Clang 22.1.7 with OluxOS target patch
 #      → produces oluxos-clang (native aarch64-unknown-oluxos support)
-#   2. Busybox 1.36.1 cross-compiled for aarch64 OluxOS
-#      → static ELF64 binary at $OUT_DIR/busybox
+#
+# BusyBox and musl are built by toolchains/userspace/build.sh.
 #
 # Usage:
-#   ./build.sh              # build everything
-#   ./build.sh llvm         # build LLVM/Clang only
-#   ./build.sh busybox      # build busybox only (uses system cross-compiler)
-#   ./build.sh busybox-llvm # build busybox with custom LLVM clang
+#   ./build-llvm.sh
 #
 # Prerequisites (Ubuntu/Debian):
 #   sudo apt install build-essential cmake ninja-build python3 wget bzip2
@@ -30,9 +27,6 @@ LLVM_VERSION="22.1.7"
 LLVM_SRC_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz"
 LLVM_PATCH="$SCRIPT_DIR/llvm-project-oluxos.patch"
 
-BUSYBOX_VERSION="1.36.1"
-BUSYBOX_URL="https://busybox.net/downloads/busybox-${BUSYBOX_VERSION}.tar.bz2"
-BUSYBOX_CFG="$SCRIPT_DIR/BUSYBOX.cfg"
 
 # Number of parallel jobs (auto-detect)
 JOBS="$(nproc)"
@@ -137,111 +131,6 @@ build_llvm() {
     echo "$LLVM_INSTALL" > "$WORK_DIR/.llvm_install_path"
 }
 
-# ── Busybox build ────────────────────────────────────────────────────────────
-build_busybox() {
-    local USE_LLVM="${1:-no}"
-    info "=== Building Busybox ${BUSYBOX_VERSION} for aarch64 OluxOS ==="
-
-    local BUSYBOX_SRC="$WORK_DIR/busybox-${BUSYBOX_VERSION}"
-    local CROSS_PREFIX="aarch64-linux-gnu-"
-    local CC_CMD="aarch64-linux-gnu-gcc"
-    local CXX_CMD="aarch64-linux-gnu-g++"
-
-    # If using custom LLVM clang
-    if [ "$USE_LLVM" = "yes" ]; then
-        local LLVM_INSTALL=""
-        if [ -f "$WORK_DIR/.llvm_install_path" ]; then
-            LLVM_INSTALL="$(cat "$WORK_DIR/.llvm_install_path")"
-        elif [ -d "$OUT_DIR/llvm-install" ]; then
-            LLVM_INSTALL="$OUT_DIR/llvm-install"
-        else
-            fail "LLVM install not found. Run './build.sh llvm' first."
-        fi
-
-        CLANG="$LLVM_INSTALL/bin/clang"
-        if [ ! -x "$CLANG" ]; then
-            fail "Custom clang not found at $CLANG"
-        fi
-        CROSS_PREFIX=""
-        CC_CMD="$CLANG --target=aarch64-unknown-oluxos"
-        info "Using custom LLVM clang: $CLANG"
-    fi
-
-    # Step 1: Download source
-    if [ -d "$BUSYBOX_SRC" ]; then
-        info "Busybox source already present: $BUSYBOX_SRC"
-    else
-        info "Downloading Busybox ${BUSYBOX_VERSION}..."
-        mkdir -p "$WORK_DIR"
-        local TAR_FILE="$WORK_DIR/busybox-${BUSYBOX_VERSION}.tar.bz2"
-        if [ ! -f "$TAR_FILE" ]; then
-            wget -q --show-progress -O "$TAR_FILE" "$BUSYBOX_URL" || fail "Failed to download busybox source"
-        fi
-        info "Extracting..."
-        tar xjf "$TAR_FILE" -C "$WORK_DIR"
-        ok "Busybox source extracted"
-    fi
-
-    # Step 2: Configure
-    if [ ! -f "$BUSYBOX_SRC/.config" ] || [ "$BUSYBOX_CFG" -nt "$BUSYBOX_SRC/.config" ]; then
-        info "Configuring busybox..."
-        cp "$BUSYBOX_CFG" "$BUSYBOX_SRC/.config"
-
-        # Adjust cross-compiler prefix based on mode
-        if [ "$USE_LLVM" = "yes" ]; then
-            # For LLVM clang we use EXTRA_CFLAGS to inject target, no prefix
-            sed -i 's|^CONFIG_CROSS_COMPILER_PREFIX=".*"|CONFIG_CROSS_COMPILER_PREFIX=""|' "$BUSYBOX_SRC/.config"
-            sed -i 's|^CONFIG_EXTRA_CFLAGS=".*"|CONFIG_EXTRA_CFLAGS="--target=aarch64-unknown-oluxos -static"|' "$BUSYBOX_SRC/.config"
-        else
-            sed -i 's|^CONFIG_CROSS_COMPILER_PREFIX=".*"|CONFIG_CROSS_COMPILER_PREFIX="aarch64-linux-gnu-"|' "$BUSYBOX_SRC/.config"
-            sed -i 's|^CONFIG_EXTRA_CFLAGS=".*"|CONFIG_EXTRA_CFLAGS="-static"|' "$BUSYBOX_SRC/.config"
-        fi
-        sed -i 's|^# CONFIG_STATIC_LIBGCC is not set$|CONFIG_STATIC_LIBGCC=y|' "$BUSYBOX_SRC/.config"
-
-        (cd "$BUSYBOX_SRC" && make silentoldconfig) || fail "Busybox config failed"
-        ok "Busybox configured"
-    fi
-
-    # Step 3: Build
-    info "Building busybox (JOBS=$JOBS)..."
-    (
-        cd "$BUSYBOX_SRC"
-        export CROSS_COMPILE="$CROSS_PREFIX"
-        if [ "$USE_LLVM" = "yes" ]; then
-            export CC="$CC_CMD"
-            export CXX="$CXX_CMD"
-        fi
-        make -j"$JOBS" clean 2>/dev/null || true
-        make -j"$JOBS" || fail "Busybox build failed"
-    )
-    ok "Busybox built successfully"
-
-    # Step 4: Install
-    info "Installing busybox to $OUT_DIR ..."
-    cp "$BUSYBOX_SRC/busybox" "$OUT_DIR/busybox"
-    chmod +x "$OUT_DIR/busybox"
-
-    # Step 5: Verify
-    info "Verifying binary..."
-    local ARCH_CHECK
-    ARCH_CHECK="$(aarch64-linux-gnu-readelf -h "$OUT_DIR/busybox" 2>/dev/null | grep Machine || true)"
-    if echo "$ARCH_CHECK" | grep -qi "aarch64"; then
-        ok "Binary is AArch64 ✓"
-    else
-        fail "Binary is NOT AArch64: $ARCH_CHECK"
-    fi
-
-    local STATIC_CHECK
-    STATIC_CHECK="$(aarch64-linux-gnu-readelf -d "$OUT_DIR/busybox" 2>&1 || true)"
-    if echo "$STATIC_CHECK" | grep -q "no dynamic section"; then
-        ok "Binary is statically linked ✓"
-    else
-        warn "Binary may have dynamic dependencies"
-    fi
-
-    ok "Busybox installed: $OUT_DIR/busybox ($(du -h "$OUT_DIR/busybox" | cut -f1))"
-}
-
 # ── Main ─────────────────────────────────────────────────────────────────────
 main() {
     local TARGET="${1:-all}"
@@ -249,29 +138,14 @@ main() {
     echo ""
     echo "╔══════════════════════════════════════════════════════════╗"
     echo "║       OluxOS Toolchain Builder                          ║"
-    echo "║  LLVM ${LLVM_VERSION} + Busybox ${BUSYBOX_VERSION}       ║"
+    echo "║  LLVM ${LLVM_VERSION}                     ║"
     echo "╚══════════════════════════════════════════════════════════╝"
     echo ""
 
     check_deps
     mkdir -p "$WORK_DIR" "$OUT_DIR"
 
-    case "$TARGET" in
-        llvm)
-            build_llvm
-            ;;
-        busybox)
-            build_busybox no
-            ;;
-        busybox-llvm)
-            build_llvm
-            build_busybox yes
-            ;;
-        all|*)
-            build_llvm
-            build_busybox no
-            ;;
-    esac
+    build_llvm
 
     echo ""
     ok "═══════════════════════════════════════════════════════════"
@@ -279,7 +153,6 @@ main() {
     ok "═══════════════════════════════════════════════════════════"
     echo ""
     info "Artifacts:"
-    info "  Busybox:       $OUT_DIR/busybox"
     info "  LLVM install:  $OUT_DIR/llvm-install/"
     info "  Work dir:      $WORK_DIR/"
     echo ""

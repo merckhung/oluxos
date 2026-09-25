@@ -443,9 +443,9 @@ sh_binary(
     srcs = ["scripts/run_qemu_arm64.sh"],
     data = [
         ":arm64_kernel_elf",
-        "testdata/fat.img",
+        ":rootfs_img",
     ],
-    args = ["$(location :arm64_kernel_elf)"],
+    args = ["$(location :arm64_kernel_elf)", "$(location :rootfs_img)"],
 )
 
 genrule(
@@ -553,14 +553,15 @@ genrule(
     name = "rpi4_boot_zip",
     srcs = [
         ":rpi4_kernel_img",
-        "testdata/fat.img",
+        ":rootfs_img",
     ],
     outs = ["rpi4_boot.zip"],
     cmd = """
         mkdir -p $(@D)/rpi4_boot_dir
         cp $(location :rpi4_kernel_img) $(@D)/rpi4_boot_dir/kernel8.img
-        cp $(location testdata/fat.img) $(@D)/rpi4_boot_dir/fat.img
+        cp $(location :rootfs_img) $(@D)/rpi4_boot_dir/fat.img
         echo "arm_64bit=1" > $(@D)/rpi4_boot_dir/config.txt
+        echo "kernel_address=0x40080000" >> $(@D)/rpi4_boot_dir/config.txt
         echo "enable_uart=1" >> $(@D)/rpi4_boot_dir/config.txt
         echo "dtoverlay=disable-bt" >> $(@D)/rpi4_boot_dir/config.txt
         echo "kernel=kernel8.img" >> $(@D)/rpi4_boot_dir/config.txt
@@ -576,9 +577,9 @@ sh_binary(
     srcs = ["scripts/run_qemu_rpi4.sh"],
     data = [
         ":rpi4_kernel_elf",
-        "testdata/fat.img",
+        ":rootfs_img",
     ],
-    args = ["$(location :rpi4_kernel_elf)"],
+    args = ["$(location :rpi4_kernel_elf)", "$(location :rootfs_img)"],
 )
 
 
@@ -845,3 +846,42 @@ sh_binary(
     args = ["$(location :riscv32_kernel_elf)"],
 )
 
+
+# ---------------------------------------------------------------------------
+# Self-contained userspace: musl + BusyBox built from vendored sources.
+# ---------------------------------------------------------------------------
+
+filegroup(
+    name = "userspace_toolchain_srcs",
+    srcs = [
+        "third_party/busybox/busybox-1.36.1.tar.bz2",
+        "third_party/musl/musl-1.2.5.tar.gz",
+        "toolchains/userspace/build.sh",
+        "toolchains/userspace/busybox.config",
+    ] + glob(["toolchains/userspace/patches/**"]),
+)
+
+genrule(
+    name = "busybox_elf",
+    srcs = [":userspace_toolchain_srcs"],
+    outs = ["busybox"],
+    cmd = """
+        W=$$(mktemp -d)
+        OUT=$$W toolchains/userspace/build.sh busybox >$$W/log 2>&1 || { cat $$W/log; exit 1; }
+        cp $$W/bin/busybox $@
+        rm -rf $$W
+    """,
+)
+
+# Root filesystem image (FAT32) loaded by firmware/QEMU at 0x48000000.
+genrule(
+    name = "rootfs_img",
+    srcs = [
+        ":busybox_elf",
+        ":user_loader_elf",
+        ":user_testposix_elf",
+        "scripts/mkrootfs.sh",
+    ],
+    outs = ["rootfs.img"],
+    cmd = "scripts/mkrootfs.sh $@ $(location :busybox_elf) $(location :user_loader_elf) $(location :user_testposix_elf)",
+)

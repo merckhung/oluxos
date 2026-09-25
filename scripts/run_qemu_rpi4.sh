@@ -26,4 +26,4 @@ fi
 qemu-system-aarch64 -M raspi4b -cpu cortex-a72 -m 2G -kernel "$KERNEL_PATH" \
     $GRAPHIC_OPT \
     $SERIAL_OPT \
-    -device loader,file=testdata/fat.img,addr=0x48000000,force-raw=on
+    -device loader,file="${2:-bazel-bin/rootfs.img}",addr=0x48000000,force-raw=on

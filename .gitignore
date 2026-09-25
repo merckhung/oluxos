@@ -5,3 +5,11 @@ hello.txt
 qemu_serial.log
 test_qemu.log
 fb.ppm
+# Toolchain build outputs
+toolchains/userspace/out/
+toolchains/cross/install/
+toolchains/cross/build/
+toolchains/cross/sources/
+toolchains/llvm/work/
+toolchains/llvm/llvm-install/
+bazel-*
