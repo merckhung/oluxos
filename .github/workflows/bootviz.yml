@@ -1,0 +1,41 @@
+name: bootviz
+
+# The boot-process visualiser (tools/bootviz): builds Skia from source, so it
+# only runs when that directory changes.
+on:
+  push:
+    paths: ["tools/bootviz/**", ".github/workflows/bootviz.yml"]
+  pull_request:
+    paths: ["tools/bootviz/**", ".github/workflows/bootviz.yml"]
+  workflow_dispatch:
+
+jobs:
+  build-test-screenshots:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: tools/bootviz
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Vulkan (lavapipe), GLFW, glslang, fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers \
+            libglfw3-dev glslang-tools fonts-dejavu-core
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bootviz-bazel-${{ hashFiles('tools/bootviz/MODULE.bazel', 'tools/bootviz/third_party/skia/*') }}
+          restore-keys: bootviz-bazel-
+      - name: Build
+        run: bazel build //:bootviz
+      - name: Tests
+        run: bazel test //tests/...
+      - name: Headless screenshots (lavapipe)
+        run: |
+          mkdir -p shots
+          ./bazel-bin/src/app/bootviz --screenshots=$PWD/shots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bootviz-screenshots
+          path: tools/bootviz/shots/

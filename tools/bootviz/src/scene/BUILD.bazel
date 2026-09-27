@@ -1,0 +1,25 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "boot_script",
+    srcs = ["boot_script.cc"],
+    hdrs = ["boot_script.h"],
+)
+
+cc_library(
+    name = "scene",
+    srcs = [
+        "scene.cc",
+        "text.cc",
+    ],
+    hdrs = [
+        "scene.h",
+        "text.h",
+    ],
+    deps = [
+        ":boot_script",
+        "@skia",
+    ],
+)

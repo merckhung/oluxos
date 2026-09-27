@@ -1,0 +1,37 @@
+"""bootviz: an animated 2D explanation of how OluxOS boots on a Raspberry Pi 4.
+
+Skia draws the scene on the CPU; Vulkan renders an animated backdrop and
+composites the Skia layer, then presents it (window) or reads it back
+(headless screenshots). Bzlmod only; the build layout follows
+github.com/merckhung/twn_election.
+"""
+
+module(
+    name = "oluxos_bootviz",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "rules_cc", version = "0.2.25")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "vulkan_headers", version = "1.4.349")
+bazel_dep(name = "stb", version = "0.0.0-20251026-f1c79c0")
+bazel_dep(name = "freetype", version = "2.14.1.bcr.1")
+
+# Skia is not in the BCR: fetch it at a pinned commit and build it with our
+# overlay (CPU raster backend + FreeType fonts). Regenerate
+# third_party/skia/skia_srcs.bzl with tools/gen_skia_srcs.py after bumping.
+git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+git_repository(
+    name = "skia",
+    build_file = "//third_party/skia:skia.BUILD",
+    commit = "f8a15f6c43d41442518ae634fecbb9fc816aa8c1",  # milestone 156
+    patch_cmds = ["find . -mindepth 2 \\( -name BUILD.bazel -o -name BUILD \\) -delete"],
+    remote = "https://github.com/google/skia.git",
+)
+
+shader_tools = use_extension("//bazel:shader_tools.bzl", "shader_tools")
+use_repo(shader_tools, "shader_compiler")
+
+system_libs = use_extension("//bazel:system_libs.bzl", "system_libs")
+use_repo(system_libs, "system_glfw")

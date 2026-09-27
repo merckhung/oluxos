@@ -1,0 +1,14 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+cc_test(
+    name = "boot_script_test",
+    srcs = ["boot_script_test.cc"],
+    deps = ["//src/scene:boot_script"],
+)
+
+cc_test(
+    name = "scene_raster_test",
+    srcs = ["scene_raster_test.cc"],
+    tags = ["local"],  # reads the host's fonts
+    deps = ["//src/scene"],
+)

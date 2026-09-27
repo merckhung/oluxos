@@ -1,0 +1,24 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "app_lib",
+    srcs = [
+        "app.cc",
+        "stb_impl.cc",
+    ],
+    hdrs = ["app.h"],
+    deps = [
+        "//src/render",
+        "//src/scene",
+        "@stb//:stb_image_write",
+        "@system_glfw//:glfw",
+    ],
+)
+
+cc_binary(
+    name = "bootviz",
+    srcs = ["main.cc"],
+    deps = [":app_lib"],
+)

@@ -45,6 +45,8 @@ Documentation:
 - [Third-party components](THIRD_PARTY.md)
 - [Changelog](CHANGELOG.md)
 - [Production-readiness plan and status](docs/PRODUCTION_READINESS_PLAN.md)
+- [bootviz](tools/bootviz/README.md): an animated explanation of how OluxOS boots on a
+  Raspberry Pi 4 (C++, Skia, Vulkan)
 
 ## Building
 
