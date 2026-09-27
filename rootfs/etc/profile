@@ -1,0 +1,7 @@
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin
+export HOME=${HOME:-/root}
+export TERM=${TERM:-vt100}
+export PS1='\u@\h:\w\$ '
+umask 022
+[ -f /etc/motd ] && [ -z "$MOTD_SHOWN" ] && { cat /etc/motd; export MOTD_SHOWN=1; }
+alias ll='ls -l'

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Bring up networking: every Ethernet interface asks for a DHCP lease in the
+# background (see /sbin/netcfg; the kernel keeps renewing it).
+case "$1" in
+  start)
+    for ifc in $(sed -n 's/^ *\(eth[0-9]*\):.*/\1/p' /proc/net/dev); do
+      netcfg "$ifc" dhcp -b -t 30 >/dev/null 2>&1
+    done
+    ;;
+  stop)
+    for ifc in $(sed -n 's/^ *\(eth[0-9]*\):.*/\1/p' /proc/net/dev); do
+      netcfg "$ifc" down
+    done
+    ;;
+esac
+exit 0

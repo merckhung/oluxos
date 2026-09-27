@@ -1,0 +1,14 @@
+#!/bin/sh
+# mount-sd boot|data - serve an SD card partition with fatfsd (run by init).
+# A/B cards (olux.slot=a|b on the command line): /boot is the running slot
+# (p2 or p3), /data is p4. Other cards: /boot is p1, /data is p2.
+slot=$(sed -n 's/.*olux\.slot=\([ab]\).*/\1/p' /proc/cmdline)
+case "$1:$slot" in
+  boot:a) p=2 ;;
+  boot:b) p=3 ;;
+  boot:) p=1 ;;
+  data:?) p=4 ;;
+  data:) p=2 ;;
+  *) echo "usage: mount-sd boot|data" >&2; exit 78 ;;
+esac
+exec /sbin/fatfsd /dev/mmcblk0p$p /$1

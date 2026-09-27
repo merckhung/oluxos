@@ -1,121 +1,137 @@
 # OluxOS
 
-OluxOS is a minimalist, multi-architecture operating system structured around a **microkernel design**. Originally created as a simple monolithic IA32 kernel, it has been modernized into a platform featuring synchronous IPC, userspace driver/FS servers, a software-based OpenGL ES 1.1 graphics stack, a GUI window manager, and support for running a Linux-compatible **BusyBox** shell.
+OluxOS is a small, preemptive, SMP operating system kernel for 64-bit ARM,
+targeting the **Raspberry Pi 4 Model B** and **QEMU `virt`**. It implements the
+Linux AArch64 system-call ABI, so unmodified static musl programs (BusyBox
+included) run on it. All hardware is discovered from the device tree.
 
----
+```
+$ make && make run
+[    0.000000] OluxOS 0.3.0 AArch64
+[    0.131254] GICv2: 288 interrupts
+[    0.135890] smp: 4 CPU(s) online
+...
+root@oluxos:~# uname -a
+OluxOS oluxos 0.3.0 #1 SMP aarch64
+```
 
-## 1. Architectural Highlights
+## Features
 
-*   **Microkernel Core**: The kernel minimizes supervisor-mode operations, providing thread scheduling, virtual memory management, and synchronous IPC (`SYS_SEND`/`SYS_RECV`).
-*   **Userspace Drivers & Services**:
-    *   **UART Driver (TID 1)**: Interacts with the serial console hardware via mapped MMIO.
-    *   **Ramdisk Driver (TID 2)**: Exposes raw disk sectors to the filesystem server.
-    *   **FS Server (TID 3)**: Auto-detects and mounts **FAT32** or **EXT4** (read-only) filesystems, managing open file tables and directory lookups.
-*   **POSIX Compatibility Library (`ulib`)**: Implements standard headers (`<unistd.h>`, `<stdio.h>`, `<dirent.h>`, `<string.h>`) so that applications can interact with servers using familiar APIs like `open()`, `read()`, `write()`, `opendir()`, `fork()`, and `exec()`.
-*   **Software-Based OpenGL ES 1.1 Rasterizer & GUI**: 
-    *   A custom fixed-point (`GLfixed`) software-rendering library (`gles.c`) drawing points, lines, flat/Gouraud shaded triangles without hardware acceleration.
-    *   A Window Manager (`gui.c`) supporting Z-ordered overlapping windows, title bars, buttons, scrollbars, and an interactive mouse cursor.
-*   **Linux/BusyBox Shell Integration**: Boots directly into `/sh` (BusyBox) on the filesystem image using a custom ELF loader.
+| Area | What exists |
+|------|-------------|
+| Boot | Linux arm64 Image protocol (QEMU `-kernel`, Pi firmware `kernel8.img`), position-independent start-up, EL3/EL2→EL1 |
+| Memory | Higher-half kernel, linear map of all RAM (incl. >4 GiB), W^X, buddy allocator with DMA zones, slab `kmalloc`, guarded `vmalloc` stacks |
+| Processes | Preemptive O(1) priority scheduler (FIFO/RR/OTHER), SMP with IPIs, per-thread FP/SIMD + TLS state, `fork` with copy-on-write, POSIX threads, futexes |
+| Protection | Per-process ASIDs, unprivileged (`LDTR/STTR`) user copies, faults kill the process not the system, ASLR, stack guard pages, stack protector |
+| Signals | POSIX signals with Linux-compatible frames, job control, `sigaltstack`, restartable syscalls, timers |
+| Files | VFS with mounts and symlinks, tmpfs, devtmpfs, procfs, pipes/FIFOs, `poll`/`select`, eventfd, memfd |
+| Storage | Block layer with buffer cache and MBR/GPT partitions; virtio-blk, SD card (EMMC2), USB mass storage; FAT12/16/32 read-write and ext2/3/4 read-only as restartable userspace servers |
+| IPC | Message channels with kernel-attested sender identity and descriptor passing; AF_UNIX sockets |
+| Networking | lwIP-based TCP/IP (IPv4, IPv6/SLAAC, DHCP, DNS), BSD sockets, virtio-net and Pi 4 GENET; SSH (Dropbear), NTP, syslog, telnet/HTTP (BusyBox) |
+| USB | PCIe (ECAM, BCM2711), xHCI, hubs, HID keyboard/mouse (evdev), mass storage |
+| Pi 4 hardware | Firmware mailbox, GPIO, I2C, SPI, framebuffer, RNG200, watchdog with reset reason, thermal governor |
+| Console | PL011 and mini-UART, TTY line discipline, sessions, pseudo-terminals |
+| Lifecycle | A/B updates with Ed25519-signed bundles and firmware `tryboot` rollback; crash log that survives reset (`/proc/last_kmsg`); hardware watchdog; RTC |
+| Userspace | musl 1.2.5, BusyBox 1.36.1 and Dropbear 2024.86 built from vendored sources; `/sbin/init` with service supervision and watchdog feeding |
 
----
+Documentation:
 
-## 2. Supported Architectures & Platforms
+- [Architecture](docs/ARCHITECTURE.md)
+- [Driver guide and hardware test status](docs/DRIVERS.md)
+- [System-call ABI](docs/SYSCALLS.md)
+- [Porting](docs/PORTING.md)
+- [Operating a Pi 4 (install, SSH, updates, crash logs)](docs/OPERATIONS.md)
+- [Security model](docs/SECURITY.md)
+- [Third-party components](THIRD_PARTY.md)
+- [Changelog](CHANGELOG.md)
+- [Production-readiness plan and status](docs/PRODUCTION_READINESS_PLAN.md)
 
-OluxOS compiles and runs across several architectures on QEMU:
+## Building
 
-| Architecture | Target Machine | Core Components Enabled |
-| :--- | :--- | :--- |
-| **ARM64 (AArch64)** | QEMU `virt` / Physical Raspberry Pi 4B | Preemptive Multitasking, GICv2, Physical Timer, VC Mailbox Framebuffer, Userspace Servers, BusyBox. |
-| **RISC-V 64-bit** | QEMU `virt` | Sv39 MMU Paging, preemption via Clint timer interrupts, RISC-V multitasking context switches. |
-| **RISC-V 32-bit** | QEMU `virt` | Boot strap, MMU paging, interrupts, and cooperative multitasking. |
-| **ARM32** | QEMU `virt` | Early boot, page table setup, GICv2, PL011 driver, scheduler. |
-| **x86_64** | QEMU PC | PML4/PDPT paging, Long Mode transitions, GDT, interrupts, APIC, serial console, task execution. |
-| **IA32** | QEMU PC | Original floppy-booting monolithic kernel with menu interface, PCI listing, and serial console. |
+Requirements: an AArch64 GCC cross compiler, GNU make, Python 3, and QEMU for
+running and testing.
 
----
+```bash
+sudo apt install gcc-aarch64-linux-gnu qemu-system-arm python3 make
+make            # kernel (out/Image) + initramfs (out/initramfs.cpio)
+make run        # boot in QEMU virt (SMP=4 MEM=1G by default)
+make test       # host unit tests + QEMU integration tests
+make rpi4       # Raspberry Pi 4 boot files in out/rpi4/
+make sdcard     # Raspberry Pi 4 SD card image (A/B layout) in out/sdcard.img
+make update     # signed A/B update bundle in out/update.tar
+make soak       # long-running load test in QEMU (SOAK_MINUTES=30)
+```
 
-## 3. Prerequisites
+No cross compiler? `toolchains/cross/build-cross-gcc.sh` builds one from
+source (GCC 13.3 + binutils 2.42 + musl), and `make` picks it up
+automatically. See [toolchains/README.md](toolchains/README.md).
 
-To compile and execute the system, ensure the following are installed:
-
-1.  **Bazel** (or `bazelisk`) for the build orchestration.
-2.  **Toolchains**:
-    *   `aarch64-linux-gnu-gcc` (for ARM64 targets)
-    *   `riscv64-unknown-elf-gcc` (for RISC-V targets)
-    *   `arm-linux-gnueabihf-gcc` (for ARM32 targets)
-    *   `gcc` / `binutils` (for x86_64 / IA32 targets)
-3.  **QEMU Simulators**:
-    *   `qemu-system-aarch64`
-    *   `qemu-system-riscv64`
-    *   `qemu-system-i386`
-
----
-
-## 4. Building & Running
-
-OluxOS is compiled and executed via **Bazel** run configurations.
-
-### ARM64 (QEMU Virt Machine)
-*   **Build Kernel ELF**:
-    ```bash
-    bazel build //:arm64_kernel_elf
-    ```
-*   **Run in QEMU**:
-    ```bash
-    bazel run //:run_qemu_arm64
-    ```
+Bazel works too: `bazel build //:image //:rpi4_boot`, `bazel run //:qemu`,
+`bazel test //:unit_tests //:qemu_tests`.
 
 ### Raspberry Pi 4B
-*   **Build Deployable Boot ZIP**:
-    ```bash
-    bazel build //:rpi4_boot_zip
-    ```
-    *(Generates `bazel-bin/rpi4_boot.zip` containing `kernel8.img`, `fat.img`, and `config.txt` ready to copy to a FAT32 micro SD card.)*
-*   **Run Pi 4 in QEMU**:
-    ```bash
-    bazel run //:run_qemu_rpi4
-    ```
 
-### RISC-V 64-bit
-*   **Run in QEMU**:
-    ```bash
-    bazel run //:run_qemu_riscv64
-    ```
+`make sdcard` writes `out/sdcard.img`: an `autoboot.txt` partition, two boot
+slots (firmware, `kernel8.img`, initramfs, configuration) and a data
+partition. Write it to a card with `dd`, connect a 3.3 V USB-serial adapter
+to GPIO 14/15 (pins 8/10) at 115200 8N1, or log in over SSH with a key
+placed in `authorized_keys` on the boot partition. See
+[docs/OPERATIONS.md](docs/OPERATIONS.md). `make rpi4` writes just the boot
+files, for a single FAT32 partition.
 
-### RISC-V 32-bit
-*   **Run in QEMU**:
-    ```bash
-    bazel run //:run_qemu_riscv32
-    ```
+Drivers for hardware that QEMU does not model (GENET Ethernet, PCIe/VL805
+USB, RNG200) have not yet been run on a physical board; see
+[docs/DRIVERS.md](docs/DRIVERS.md).
 
-### ARM32
-*   **Run in QEMU**:
-    ```bash
-    bazel run //:run_qemu_arm32
-    ```
+## Repository layout
 
-### x86_64
-*   **Build Floppy Image**:
-    ```bash
-    bazel build //:OluxOS_img_x86_64
-    ```
+```
+arch/arm64/     boot, exception vectors, MMU, context switch, user access
+kernel/         scheduler, processes, signals, exec, syscalls, time, SMP, IPC, pstore
+mm/             memblock, buddy allocator, kmalloc, vmalloc, address spaces
+fs/             VFS, tmpfs, devtmpfs, procfs, pipes, poll, initramfs, userfs client
+net/            socket layer, AF_UNIX, AF_INET/AF_INET6 over lwIP, network devices
+drivers/        interrupt controller, timer, serial, block, SD, virtio, PCI, USB, input,
+                network, GPIO, I2C, SPI, video, watchdog, RTC, firmware
+lib/            string, printf, device tree parser
+user/prog/      userspace programs (init, fatfsd, ext4fsd, netcfg, olux-update, ...)
+rootfs/         root filesystem skeleton (/etc, scripts)
+tests/          host unit tests (tests/unit), QEMU tests and soak test (tests/qemu)
+toolchains/     userspace and cross toolchain builders
+third_party/    vendored musl, BusyBox, Dropbear and lwIP sources
+docs/           architecture, drivers, ABI, porting, operations, security
+legacy/         the original multi-architecture prototype (not built)
+```
 
-### IA32 (Original Floppy Target)
-*   **Build Floppy Image**:
-    ```bash
-    bazel build //:OluxOS_img
-    ```
-*   **Run in QEMU**:
-    ```bash
-    bazel run //:run_qemu
-    ```
+## Testing
 
----
+- `make unit-test` compiles the kernel's string, printf and device-tree code
+  natively with AddressSanitizer and UBSan. It includes a mutation fuzzer
+  for the DTB parser.
+- `make qemu-test` boots the system and runs `olux-selftest` (51 checks of
+  kernel semantics: COW, signals, threads, mmap, preemption, sockets,
+  PTYs, and more). It then runs about 30 scenarios:
+  - shell and job control;
+  - storage and filesystem servers, including crash and restart;
+  - networking (DHCP, IPv6, HTTP, telnet, SSH);
+  - NTP, USB (typing, mouse, a drive behind a hub, hot-unplug), RTC,
+    latency;
+  - power-off, watchdog reset, crash recovery via pstore, persistence
+    across boots.
 
-## 5. Directory Layout
+  With `--machine raspi4b` it also covers the Pi 4 drivers, the SD card
+  image and the A/B update flow.
+- `make soak` runs a long load test that watches for hangs, panics and
+  memory leaks.
+- CI (`.github/workflows/ci.yml`) runs the unit tests and the QEMU suite
+  on every push: `virt` with 1 or 4 CPUs and GICv2 or GICv3, and
+  `raspi4b`.
 
-*   [`arch/`](file:///home/merck/Code/PACK/oluxos/arch): Platform-specific boot assembly, page table walkers, registers, and context switch mechanics.
-*   [`driver/`](file:///home/merck/Code/PACK/oluxos/driver): Peripheral drivers (PL011/NS16550 serial, GICv2 interrupt handler, ARM timers, mailbox framebuffers).
-*   [`kernel/`](file:///home/merck/Code/PACK/oluxos/kernel): Core PMM, virtual memory maps, spinlocks, and heap manager.
-*   [`user/`](file:///home/merck/Code/PACK/oluxos/user): Userspace servers, standard library POSIX bindings (`ulib/`), shell built-in commands, and the ELF program loader.
-*   [`utils/`](file:///home/merck/Code/PACK/oluxos/utils): Helper host tools (`krnimg`, `kdbger`, etc.) to bundle the kernel images.
+## License
+
+The OluxOS sources do not declare a license yet; the copyright holder needs
+to choose one before redistribution. Vendored third-party components keep
+their own licenses (musl: MIT, BusyBox: GPL-2.0, Dropbear: MIT-style, lwIP:
+BSD-3-Clause; the Raspberry Pi firmware fetched by `scripts/mkrpi4.sh` is
+under Broadcom's redistribution licence). See [THIRD_PARTY.md](THIRD_PARTY.md)
+for versions, checksums and obligations.

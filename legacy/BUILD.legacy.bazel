@@ -1,0 +1,887 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+COMMON_COPTS = [
+    "-m32",
+    "-Wall",
+    "-Wstrict-prototypes",
+    "-O2",
+    "-fomit-frame-pointer",
+    "-fno-stack-protector",
+    "-fno-pie",
+    "-fno-pic",
+    "-ffreestanding",
+    "-fno-builtin",
+    "-std=gnu89",
+    "-include", "include/types.h",
+]
+
+COMMON_DEFINES = [
+    "KERNEL_DEBUG",
+    "CONFIG_ARCH_IA32=1",
+    "CONFIG_MENU=1",
+    "CONFIG_SERIAL_CONSOLE=1",
+    "CONFIG_SERIAL=1",
+    "CONFIG_KERNEL_GDB=1",
+    "CONFIG_FS_FAT=1",
+    "CONFIG_KDBGER=0",
+]
+
+cc_library(
+    name = "olux_headers",
+    hdrs = glob(["include/**/*.h"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "kernel_lib",
+    srcs = [
+        "fs/fat.c",
+        "driver/input/kbd.c",
+        "driver/ide/ide.c",
+        "driver/pci/pci.c",
+        "driver/serial/serial.c",
+        "driver/console/menu.c",
+        "driver/console/ksh.c",
+        "driver/console/sercon.c",
+        "driver/console/console.c",
+        "driver/resource/resource.c",
+        "arch/ia32/kernel/setup.S",
+        "arch/ia32/kernel/handler.S",
+        "arch/ia32/kernel/page.c",
+        "arch/ia32/kernel/interrupt.c",
+        "arch/ia32/kernel/krn.c",
+        "arch/ia32/kernel/task.c",
+        "arch/ia32/component/timer.c",
+        "arch/ia32/component/i8259.c",
+        "arch/ia32/lib/kdbger.c",
+        "arch/ia32/lib/debug.c",
+        "arch/ia32/lib/gdb.c",
+        "arch/ia32/lib/io.c",
+        "lib/clib.c",
+        "lib/crc.c",
+    ] + glob(["**/*.h"]),
+    copts = COMMON_COPTS,
+    local_defines = COMMON_DEFINES,
+    includes = ["include"],
+    deps = [":olux_headers"],
+    linkstatic = True,
+)
+cc_library(
+    name = "bootsect_lib",
+    srcs = [
+        "arch/ia32/boot/boot.S",
+        "arch/ia32/boot/info.S",
+        "arch/ia32/boot/pm.S",
+    ] + glob(["**/*.h"]),
+    copts = COMMON_COPTS,
+    local_defines = COMMON_DEFINES,
+    includes = ["include"],
+    deps = [":olux_headers"],
+    linkstatic = True,
+)
+
+genrule(
+    name = "kernel_elf",
+    srcs = [":kernel_lib", "arch/ia32/kernel.lds"],
+    outs = ["kernel.elf"],
+    cmd = "ld -m elf_i386 -nostdlib -static -n -N -T $(location arch/ia32/kernel.lds) $(locations :kernel_lib) -o $@",
+)
+
+genrule(
+    name = "bootsect_elf",
+    srcs = [":bootsect_lib", "arch/ia32/boot/boot.lds"],
+    outs = ["bootsect.elf"],
+    cmd = "ld -m elf_i386 -nostdlib -static -n -N -T $(location arch/ia32/boot/boot.lds) $(locations :bootsect_lib) -o $@",
+)
+
+genrule(
+    name = "kernel_bin",
+    srcs = [":kernel_elf"],
+    outs = ["kernel"],
+    cmd = "cp $< $@",
+)
+
+genrule(
+    name = "bootsect_bin",
+    srcs = [":bootsect_elf"],
+    outs = ["bootsect"],
+    cmd = "cp $< $@",
+)
+
+genrule(
+    name = "OluxOS_krn",
+    srcs = [
+        ":bootsect_bin",
+        ":kernel_bin",
+    ],
+    outs = ["OluxOS.krn"],
+    tools = ["//utils:krnimg"],
+    cmd = "$(location //utils:krnimg) -b $(location :bootsect_bin) -k $(location :kernel_bin) -o $@",
+)
+
+genrule(
+    name = "OluxOS_img",
+    srcs = [":OluxOS_krn"],
+    outs = ["OluxOS.img"],
+    cmd = "dd if=/dev/zero of=$@ bs=1474560 count=1 && dd if=$(location :OluxOS_krn) of=$@ bs=1474560 count=1 conv=notrunc",
+)
+
+sh_binary(
+    name = "run_qemu",
+    srcs = ["scripts/run_qemu.sh"],
+    data = [":OluxOS_img"],
+    args = ["$(location :OluxOS_img)"],
+)
+
+genrule(
+    name = "user_shell_elf",
+    srcs = [
+        "user/shell.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+        "user/ulib/gles.h",
+        "user/ulib/gles.c",
+        "user/ulib/gui.h",
+        "user/ulib/gui.c",
+        "user/ulib/gui_font.h",
+        "user/ulib/ext4.h",
+        "user/ulib/ext4.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["user_shell.elf"],
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) $(location user/ulib/gles.c) $(location user/ulib/gui.c) $(location user/ulib/ext4.c) -Iuser/ulib -Iinclude -o $@",
+)
+
+genrule(
+    name = "user_loader_elf",
+    srcs = [
+        "user/loader.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["loader.elf"],
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/user.lds) $(location user/start.S) $(location user/loader.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) -Iuser/ulib -Iinclude -o $@",
+)
+
+genrule(
+    name = "user_testposix_elf",
+    srcs = [
+        "user/testposix.c",
+        "user/start.S",
+        "user/app.lds",
+        "user/ulib/syscall.h",
+    ] + glob(["include/**/*.h"]),
+    outs = ["tposix.elf"],
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -T $(location user/app.lds) $(location user/start.S) $(location user/testposix.c) -Iuser/ulib -Iinclude -o $@",
+)
+
+genrule(
+    name = "user_shell_bin",
+    srcs = [":user_shell_elf"],
+    outs = ["user_shell.bin"],
+    cmd = "aarch64-linux-gnu-objcopy -O binary $< $@",
+)
+
+genrule(
+    name = "user_shell_h",
+    srcs = [":user_shell_elf"],
+    outs = ["user_shell_bin.h"],
+    cmd = "python3 -c \"import sys; data=open(sys.argv[1],'rb').read(); open(sys.argv[2],'w').write('const unsigned char user_shell_bin[] = {' + ','.join(hex(b) for b in data) + '};\\nconst unsigned int user_shell_bin_len = ' + str(len(data)) + ';\\n')\" $< $@",
+)
+
+genrule(
+    name = "user_shell_elf_riscv64",
+    srcs = [
+        "user/shell.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+        "user/ulib/gles.h",
+        "user/ulib/gles.c",
+        "user/ulib/gui.h",
+        "user/ulib/gui.c",
+        "user/ulib/gui_font.h",
+        "user/ulib/ext4.h",
+        "user/ulib/ext4.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["user_shell_riscv64.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none \
+            -ffreestanding -std=gnu89 \
+            -march=rv64gc -mabi=lp64d \
+            -mcmodel=medany \
+            -mno-relax \
+            -T $(location user/user.lds) \
+            $(location user/start.S) \
+            $(location user/shell.c) \
+            $(location user/ulib/string.c) \
+            $(location user/ulib/stdio.c) \
+            $(location user/ulib/unistd.c) \
+            $(location user/ulib/dirent.c) \
+            $(location user/ulib/gles.c) \
+            $(location user/ulib/gui.c) \
+            $(location user/ulib/ext4.c) \
+            -Iuser/ulib -Iinclude -o $@
+    """,
+)
+
+genrule(
+    name = "user_loader_elf_riscv64",
+    srcs = [
+        "user/loader.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["loader_riscv64.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none \
+            -ffreestanding -std=gnu89 \
+            -march=rv64gc -mabi=lp64d \
+            -mcmodel=medany \
+            -mno-relax \
+            -T $(location user/user.lds) \
+            $(location user/start.S) \
+            $(location user/loader.c) \
+            $(location user/ulib/string.c) \
+            $(location user/ulib/stdio.c) \
+            $(location user/ulib/unistd.c) \
+            $(location user/ulib/dirent.c) \
+            -Iuser/ulib -Iinclude -o $@
+    """,
+)
+
+genrule(
+    name = "user_shell_h_riscv64",
+    srcs = [":user_shell_elf_riscv64"],
+    outs = ["user_shell_bin_riscv64.h"],
+    cmd = "python3 -c \"import sys; data=open(sys.argv[1],'rb').read(); open(sys.argv[2],'w').write('const unsigned char user_shell_bin[] = {' + ','.join(hex(b) for b in data) + '};\\nconst unsigned int user_shell_bin_len = ' + str(len(data)) + ';\\n')\" $< $@",
+)
+
+genrule(
+    name = "user_shell_elf_riscv32",
+    srcs = [
+        "user/shell.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+        "user/ulib/gles.h",
+        "user/ulib/gles.c",
+        "user/ulib/gui.h",
+        "user/ulib/gui.c",
+        "user/ulib/gui_font.h",
+        "user/ulib/ext4.h",
+        "user/ulib/ext4.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["user_shell_riscv32.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none \
+            -ffreestanding -std=gnu89 \
+            -march=rv32imac_zicsr -mabi=ilp32 \
+            -mcmodel=medany \
+            -mno-relax \
+            -T $(location user/user.lds) \
+            $(location user/start.S) \
+            $(location user/shell.c) \
+            $(location user/ulib/string.c) \
+            $(location user/ulib/stdio.c) \
+            $(location user/ulib/unistd.c) \
+            $(location user/ulib/dirent.c) \
+            $(location user/ulib/gles.c) \
+            $(location user/ulib/gui.c) \
+            $(location user/ulib/ext4.c) \
+            -Iuser/ulib -Iinclude -o $@
+    """,
+)
+
+genrule(
+    name = "user_loader_elf_riscv32",
+    srcs = [
+        "user/loader.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/sys/mman.h",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["loader_riscv32.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none \
+            -ffreestanding -std=gnu89 \
+            -march=rv32imac_zicsr -mabi=ilp32 \
+            -mcmodel=medany \
+            -mno-relax \
+            -T $(location user/user.lds) \
+            $(location user/start.S) \
+            $(location user/loader.c) \
+            $(location user/ulib/string.c) \
+            $(location user/ulib/stdio.c) \
+            $(location user/ulib/unistd.c) \
+            $(location user/ulib/dirent.c) \
+            -Iuser/ulib -Iinclude -o $@
+    """,
+)
+
+genrule(
+    name = "user_shell_h_riscv32",
+    srcs = [":user_shell_elf_riscv32"],
+    outs = ["user_shell_bin_riscv32.h"],
+    cmd = "python3 -c \"import sys; data=open(sys.argv[1],'rb').read(); open(sys.argv[2],'w').write('const unsigned char user_shell_bin[] = {' + ','.join(hex(b) for b in data) + '};\\nconst unsigned int user_shell_bin_len = ' + str(len(data)) + ';\\n')\" $< $@",
+)
+
+genrule(
+    name = "arm64_kernel_elf",
+    srcs = [
+        "arch/arm64/boot.S",
+        "arch/arm64/kernel/vector.S",
+        "arch/arm64/kernel/switch.S",
+        "arch/arm64/kernel/interrupt.c",
+        "arch/arm64/kernel/task.c",
+        "arch/arm64/kernel/krn.c",
+        "kernel/pmm.c",
+        "kernel/heap.c",
+        "arch/arm64/kernel/vmm.c",
+        "kernel/spinlock.c",
+        "driver/serial/pl011.c",
+        "driver/interrupt/gicv2.c",
+        "driver/timer/arm_timer.c",
+        "driver/video/fb.c",
+        "driver/mailbox/mbox.c",
+        "lib/clib.c",
+        "arch/arm64/kernel/kdbger.c",
+        "arch/arm64/kernel.lds",
+        ":user_shell_h",
+    ] + glob(["include/**/*.h"]),
+    outs = ["arm64_kernel.elf"],
+    cmd = """
+        aarch64-linux-gnu-gcc -Wall -g -O2 -nostdlib -nostartfiles -ffreestanding \
+            -std=gnu89 -DCONFIG_ARCH_ARM64=1 -mno-outline-atomics \
+            -mgeneral-regs-only \
+            -DCONFIG_KDBGER=0 \
+            -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
+            -T $(location arch/arm64/kernel.lds) \
+            $(location arch/arm64/boot.S) \
+            $(location arch/arm64/kernel/vector.S) \
+            $(location arch/arm64/kernel/switch.S) \
+            $(location arch/arm64/kernel/interrupt.c) \
+            $(location arch/arm64/kernel/task.c) \
+            $(location arch/arm64/kernel/krn.c) \
+            $(location arch/arm64/kernel/kdbger.c) \
+            $(location kernel/pmm.c) \
+            $(location kernel/heap.c) \
+            $(location arch/arm64/kernel/vmm.c) \
+            $(location kernel/spinlock.c) \
+            $(location driver/serial/pl011.c) \
+            $(location driver/interrupt/gicv2.c) \
+            $(location driver/timer/arm_timer.c) \
+            $(location driver/video/fb.c) \
+            $(location driver/mailbox/mbox.c) \
+            $(location lib/clib.c) \
+            -o $@
+    """,
+)
+
+sh_binary(
+    name = "run_qemu_arm64",
+    srcs = ["scripts/run_qemu_arm64.sh"],
+    data = [
+        ":arm64_kernel_elf",
+        ":rootfs_img",
+    ],
+    args = ["$(location :arm64_kernel_elf)", "$(location :rootfs_img)"],
+)
+
+genrule(
+    name = "user_shell_elf_rpi4",
+    srcs = [
+        "user/shell.c",
+        "user/start.S",
+        "user/user.lds",
+        "user/ulib/string.h",
+        "user/ulib/string.c",
+        "user/ulib/stdio.h",
+        "user/ulib/stdio.c",
+        "user/ulib/syscall.h",
+        "user/ulib/unistd.h",
+        "user/ulib/unistd.c",
+        "user/ulib/dirent.h",
+        "user/ulib/dirent.c",
+        "user/ulib/gles.h",
+        "user/ulib/gles.c",
+        "user/ulib/gui.h",
+        "user/ulib/gui.c",
+        "user/ulib/gui_font.h",
+        "user/ulib/ext4.h",
+        "user/ulib/ext4.c",
+    ] + glob(["include/**/*.h"]),
+    outs = ["user_shell_rpi4.elf"],
+    cmd = "aarch64-linux-gnu-gcc -Wall -O0 -nostdlib -nostartfiles -static -Wl,--build-id=none -ffreestanding -std=gnu89 -mgeneral-regs-only -DCONFIG_BOARD_RPI4=1 -T $(location user/user.lds) $(location user/start.S) $(location user/shell.c) $(location user/ulib/string.c) $(location user/ulib/stdio.c) $(location user/ulib/unistd.c) $(location user/ulib/dirent.c) $(location user/ulib/gles.c) $(location user/ulib/gui.c) $(location user/ulib/ext4.c) -Iuser/ulib -Iinclude -o $@",
+)
+
+genrule(
+    name = "user_shell_bin_rpi4",
+    srcs = [":user_shell_elf_rpi4"],
+    outs = ["user_shell_rpi4.bin"],
+    cmd = "aarch64-linux-gnu-objcopy -O binary $< $@",
+)
+
+genrule(
+    name = "user_shell_h_rpi4",
+    srcs = [":user_shell_elf_rpi4"],
+    outs = ["user_shell_bin_rpi4.h"],
+    cmd = "python3 -c \"import sys; data=open(sys.argv[1],'rb').read(); open(sys.argv[2],'w').write('const unsigned char user_shell_bin[] = {' + ','.join(hex(b) for b in data) + '};\\nconst unsigned int user_shell_bin_len = ' + str(len(data)) + ';\\n')\" $< $@",
+)
+
+genrule(
+    name = "rpi4_kernel_elf",
+    srcs = [
+        "arch/arm64/boot.S",
+        "arch/arm64/kernel/vector.S",
+        "arch/arm64/kernel/switch.S",
+        "arch/arm64/kernel/interrupt.c",
+        "arch/arm64/kernel/task.c",
+        "arch/arm64/kernel/krn.c",
+        "driver/serial/pl011.c",
+        "driver/interrupt/gicv2.c",
+        "driver/timer/arm_timer.c",
+        "driver/video/fb.c",
+        "driver/mailbox/mbox.c",
+        "lib/clib.c",
+        "kernel/pmm.c",
+        "kernel/heap.c",
+        "arch/arm64/kernel/vmm.c",
+        "kernel/spinlock.c",
+        "arch/arm64/kernel/kdbger.c",
+        "arch/arm64/kernel.lds",
+        ":user_shell_h_rpi4",
+    ] + glob(["include/**/*.h"]),
+    outs = ["rpi4_kernel.elf"],
+    cmd = """
+        aarch64-linux-gnu-gcc -Wall -g -O2 -nostdlib -nostartfiles -ffreestanding \
+            -std=gnu89 -DCONFIG_ARCH_ARM64=1 -mno-outline-atomics \
+            -mgeneral-regs-only \
+            -DCONFIG_BOARD_RPI4=1 \
+            -DCONFIG_KDBGER=0 \
+            -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
+            -T $(location arch/arm64/kernel.lds) \
+            $(location arch/arm64/boot.S) \
+            $(location arch/arm64/kernel/vector.S) \
+            $(location arch/arm64/kernel/switch.S) \
+            $(location arch/arm64/kernel/interrupt.c) \
+            $(location arch/arm64/kernel/task.c) \
+            $(location arch/arm64/kernel/krn.c) \
+            $(location arch/arm64/kernel/kdbger.c) \
+            $(location driver/serial/pl011.c) \
+            $(location driver/interrupt/gicv2.c) \
+            $(location driver/timer/arm_timer.c) \
+            $(location driver/video/fb.c) \
+            $(location driver/mailbox/mbox.c) \
+            $(location kernel/pmm.c) \
+            $(location kernel/heap.c) \
+            $(location arch/arm64/kernel/vmm.c) \
+            $(location kernel/spinlock.c) \
+            $(location lib/clib.c) \
+            -o $@
+    """,
+)
+
+genrule(
+    name = "rpi4_kernel_img",
+    srcs = [":rpi4_kernel_elf"],
+    outs = ["kernel8.img"],
+    cmd = "aarch64-linux-gnu-objcopy -O binary $< $@",
+)
+
+genrule(
+    name = "rpi4_boot_zip",
+    srcs = [
+        ":rpi4_kernel_img",
+        ":rootfs_img",
+    ],
+    outs = ["rpi4_boot.zip"],
+    cmd = """
+        mkdir -p $(@D)/rpi4_boot_dir
+        cp $(location :rpi4_kernel_img) $(@D)/rpi4_boot_dir/kernel8.img
+        cp $(location :rootfs_img) $(@D)/rpi4_boot_dir/fat.img
+        echo "arm_64bit=1" > $(@D)/rpi4_boot_dir/config.txt
+        echo "kernel_address=0x40080000" >> $(@D)/rpi4_boot_dir/config.txt
+        echo "enable_uart=1" >> $(@D)/rpi4_boot_dir/config.txt
+        echo "dtoverlay=disable-bt" >> $(@D)/rpi4_boot_dir/config.txt
+        echo "kernel=kernel8.img" >> $(@D)/rpi4_boot_dir/config.txt
+        echo "initramfs fat.img 0x48000000" >> $(@D)/rpi4_boot_dir/config.txt
+        zip -j $@ $(@D)/rpi4_boot_dir/*
+        rm -rf $(@D)/rpi4_boot_dir
+    """,
+)
+
+
+sh_binary(
+    name = "run_qemu_rpi4",
+    srcs = ["scripts/run_qemu_rpi4.sh"],
+    data = [
+        ":rpi4_kernel_elf",
+        ":rootfs_img",
+    ],
+    args = ["$(location :rpi4_kernel_elf)", "$(location :rootfs_img)"],
+)
+
+
+x86_64_COMMON_COPTS = [
+    "-m64",
+    "-Wall",
+    "-Wstrict-prototypes",
+    "-O2",
+    "-fomit-frame-pointer",
+    "-fno-stack-protector",
+    "-fno-pie",
+    "-fno-pic",
+    "-ffreestanding",
+    "-fno-builtin",
+    "-mcmodel=large",
+    "-mno-red-zone",
+    "-std=gnu89",
+    "-include", "include/types.h",
+]
+
+x86_64_COMMON_DEFINES = [
+    "KERNEL_DEBUG",
+    "CONFIG_ARCH_X86_64=1",
+    "CONFIG_MENU=1",
+    "CONFIG_SERIAL_CONSOLE=1",
+    "CONFIG_SERIAL=1",
+    "CONFIG_KERNEL_GDB=1",
+    "CONFIG_FS_FAT=1",
+    "CONFIG_KDBGER=0",
+]
+
+cc_library(
+    name = "x86_64_kernel_lib",
+    srcs = [
+        "fs/fat.c",
+        "driver/input/kbd.c",
+        "driver/ide/ide.c",
+        "driver/pci/pci.c",
+        "driver/serial/serial.c",
+        "driver/console/menu.c",
+        "driver/console/ksh.c",
+        "driver/console/sercon.c",
+        "driver/console/console.c",
+        "driver/resource/resource.c",
+        "arch/x86_64/kernel/setup.S",
+        "arch/x86_64/kernel/handler.S",
+        "arch/x86_64/kernel/page.c",
+        "arch/x86_64/kernel/interrupt.c",
+        "arch/x86_64/kernel/krn.c",
+        "arch/x86_64/kernel/task.c",
+        "arch/x86_64/component/timer.c",
+        "arch/x86_64/component/i8259.c",
+        "arch/x86_64/lib/kdbger.c",
+        "arch/x86_64/lib/debug.c",
+        "arch/x86_64/lib/gdb.c",
+        "arch/x86_64/lib/io.c",
+        "lib/clib.c",
+        "lib/crc.c",
+    ] + glob(["**/*.h"]),
+    copts = x86_64_COMMON_COPTS,
+    local_defines = x86_64_COMMON_DEFINES,
+    includes = ["include"],
+    deps = [":olux_headers"],
+    linkstatic = True,
+)
+
+cc_library(
+    name = "x86_64_bootsect_lib",
+    srcs = [
+        "arch/x86_64/boot/boot.S",
+        "arch/x86_64/boot/info.S",
+        "arch/x86_64/boot/pm.S",
+    ] + glob(["**/*.h"]),
+    copts = x86_64_COMMON_COPTS,
+    local_defines = x86_64_COMMON_DEFINES,
+    includes = ["include"],
+    deps = [":olux_headers"],
+    linkstatic = True,
+)
+
+genrule(
+    name = "x86_64_kernel_elf",
+    srcs = [":x86_64_kernel_lib", "arch/x86_64/kernel.lds"],
+    outs = ["x86_64_kernel.elf"],
+    cmd = "ld -m elf_x86_64 -nostdlib -static -n -N -T $(location arch/x86_64/kernel.lds) $(locations :x86_64_kernel_lib) -o $@",
+)
+
+genrule(
+    name = "x86_64_bootsect_elf",
+    srcs = [":x86_64_bootsect_lib", "arch/x86_64/boot/boot.lds"],
+    outs = ["x86_64_bootsect.elf"],
+    cmd = "ld -m elf_x86_64 -nostdlib -static -n -N -T $(location arch/x86_64/boot/boot.lds) $(locations :x86_64_bootsect_lib) -o $@",
+)
+
+genrule(
+    name = "x86_64_kernel_bin",
+    srcs = [":x86_64_kernel_elf"],
+    outs = ["x86_64_kernel"],
+    cmd = "objcopy -O binary $< $@",
+)
+
+genrule(
+    name = "x86_64_bootsect_bin",
+    srcs = [":x86_64_bootsect_elf"],
+    outs = ["x86_64_bootsect"],
+    cmd = "cp $< $@",
+)
+
+genrule(
+    name = "OluxOS_krn_x86_64",
+    srcs = [
+        ":x86_64_bootsect_bin",
+        ":x86_64_kernel_bin",
+    ],
+    outs = ["OluxOS_x86_64.krn"],
+    tools = ["//utils:krnimg"],
+    cmd = "$(location //utils:krnimg) -b $(location :x86_64_bootsect_bin) -k $(location :x86_64_kernel_bin) -o $@",
+)
+
+genrule(
+    name = "OluxOS_img_x86_64",
+    srcs = [":OluxOS_krn_x86_64"],
+    outs = ["OluxOS_x86_64.img"],
+    cmd = "dd if=/dev/zero of=$@ bs=1474560 count=1 && dd if=$(location :OluxOS_krn_x86_64) of=$@ bs=1474560 count=1 conv=notrunc",
+)
+
+genrule(
+    name = "arm32_kernel_elf",
+    srcs = [
+        "arch/arm/boot.S",
+        "arch/arm/krn.c",
+        "driver/serial/pl011.c",
+        "lib/clib.c",
+        "arch/arm/kernel.lds",
+    ] + glob(["include/**/*.h"]),
+    outs = ["arm32_kernel.elf"],
+    cmd = """
+        arm-linux-gnueabihf-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \\
+            -std=gnu89 \\
+            -march=armv7-a \\
+            -marm \\
+            -mfloat-abi=soft \\
+            -Iinclude -I. \\
+            -T $(location arch/arm/kernel.lds) \\
+            $(location arch/arm/boot.S) \\
+            $(location arch/arm/krn.c) \\
+            $(location driver/serial/pl011.c) \\
+            $(location lib/clib.c) \\
+            -o $@
+    """,
+)
+
+sh_binary(
+    name = "run_qemu_arm32",
+    srcs = ["scripts/run_qemu_arm32.sh"],
+    data = [":arm32_kernel_elf"],
+    args = ["$(location :arm32_kernel_elf)"],
+)
+
+genrule(
+    name = "riscv64_kernel_elf",
+    srcs = [
+        "arch/riscv64/boot.S",
+        "arch/riscv64/kernel/switch.S",
+        "arch/riscv64/kernel/vector.S",
+        "arch/riscv64/kernel/krn.c",
+        "arch/riscv64/kernel/task.c",
+        "arch/riscv64/kernel/interrupt.c",
+        "kernel/pmm.c",
+        "kernel/heap.c",
+        "arch/riscv64/kernel/vmm.c",
+        "kernel/spinlock.c",
+        "kernel/cpu.c",
+        "driver/serial/ns16550.c",
+        "lib/clib.c",
+        "arch/riscv64/kernel.lds",
+        ":user_shell_h_riscv64",
+    ] + glob(["include/**/*.h"]),
+    outs = ["riscv64_kernel.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
+            -std=gnu89 -DCONFIG_ARCH_RISCV64=1 \
+            -march=rv64gc -mabi=lp64d \
+            -mcmodel=medany \
+            -mno-relax \
+            -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
+            -T $(location arch/riscv64/kernel.lds) \
+            $(location arch/riscv64/boot.S) \
+            $(location arch/riscv64/kernel/switch.S) \
+            $(location arch/riscv64/kernel/vector.S) \
+            $(location arch/riscv64/kernel/krn.c) \
+            $(location arch/riscv64/kernel/task.c) \
+            $(location arch/riscv64/kernel/interrupt.c) \
+            $(location kernel/pmm.c) \
+            $(location kernel/heap.c) \
+            $(location arch/riscv64/kernel/vmm.c) \
+            $(location kernel/spinlock.c) \
+            $(location kernel/cpu.c) \
+            $(location driver/serial/ns16550.c) \
+            $(location lib/clib.c) \
+            -o $@
+    """,
+)
+
+sh_binary(
+    name = "run_qemu_riscv64",
+    srcs = ["scripts/run_qemu_riscv64.sh"],
+    data = [
+        ":riscv64_kernel_elf",
+        "testdata/fat.img",
+    ],
+    args = ["$(location :riscv64_kernel_elf)"],
+)
+
+genrule(
+    name = "riscv32_kernel_elf",
+    srcs = [
+        "arch/riscv32/boot.S",
+        "arch/riscv32/kernel/vector.S",
+        "arch/riscv32/kernel/switch.S",
+        "arch/riscv32/kernel/interrupt.c",
+        "arch/riscv32/kernel/task.c",
+        "arch/riscv32/kernel/krn.c",
+        "kernel/pmm.c",
+        "kernel/heap.c",
+        "arch/riscv32/kernel/vmm.c",
+        "kernel/spinlock.c",
+        "driver/serial/ns16550.c",
+        "lib/clib.c",
+        "arch/riscv32/kernel.lds",
+        ":user_shell_h_riscv32",
+    ] + glob(["include/**/*.h"]),
+    outs = ["riscv32_kernel.elf"],
+    cmd = """
+        riscv64-unknown-elf-gcc -Wall -O2 -nostdlib -nostartfiles -ffreestanding \
+            -std=gnu89 -DCONFIG_ARCH_RISCV32=1 \
+            -march=rv32imac_zicsr -mabi=ilp32 \
+            -mcmodel=medany \
+            -mno-relax \
+            -Iinclude -I. -I$(BINDIR) -I$(GENDIR) \
+            -T $(location arch/riscv32/kernel.lds) \
+            $(location arch/riscv32/boot.S) \
+            $(location arch/riscv32/kernel/vector.S) \
+            $(location arch/riscv32/kernel/switch.S) \
+            $(location arch/riscv32/kernel/interrupt.c) \
+            $(location arch/riscv32/kernel/task.c) \
+            $(location arch/riscv32/kernel/krn.c) \
+            $(location kernel/pmm.c) \
+            $(location kernel/heap.c) \
+            $(location arch/riscv32/kernel/vmm.c) \
+            $(location kernel/spinlock.c) \
+            $(location driver/serial/ns16550.c) \
+            $(location lib/clib.c) \
+            -o $@
+    """,
+)
+
+sh_binary(
+    name = "run_qemu_riscv32",
+    srcs = ["scripts/run_qemu_riscv32.sh"],
+    data = [
+        ":riscv32_kernel_elf",
+    ],
+    args = ["$(location :riscv32_kernel_elf)"],
+)
+
+
+# ---------------------------------------------------------------------------
+# Self-contained userspace: musl + BusyBox built from vendored sources.
+# ---------------------------------------------------------------------------
+
+filegroup(
+    name = "userspace_toolchain_srcs",
+    srcs = [
+        "third_party/busybox/busybox-1.36.1.tar.bz2",
+        "third_party/musl/musl-1.2.5.tar.gz",
+        "toolchains/userspace/build.sh",
+        "toolchains/userspace/busybox.config",
+    ] + glob(["toolchains/userspace/patches/**"]),
+)
+
+genrule(
+    name = "busybox_elf",
+    srcs = [":userspace_toolchain_srcs"],
+    outs = ["busybox"],
+    cmd = """
+        W=$$(mktemp -d)
+        OUT=$$W toolchains/userspace/build.sh busybox >$$W/log 2>&1 || { cat $$W/log; exit 1; }
+        cp $$W/bin/busybox $@
+        rm -rf $$W
+    """,
+)
+
+# Root filesystem image (FAT32) loaded by firmware/QEMU at 0x48000000.
+genrule(
+    name = "rootfs_img",
+    srcs = [
+        ":busybox_elf",
+        ":user_loader_elf",
+        ":user_testposix_elf",
+        "scripts/mkrootfs.sh",
+    ],
+    outs = ["rootfs.img"],
+    cmd = "scripts/mkrootfs.sh $@ $(location :busybox_elf) $(location :user_loader_elf) $(location :user_testposix_elf)",
+)
