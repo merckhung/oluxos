@@ -45,6 +45,23 @@ Documentation:
 - [Third-party components](THIRD_PARTY.md)
 - [Changelog](CHANGELOG.md)
 - [Production-readiness plan and status](docs/PRODUCTION_READINESS_PLAN.md)
+- [bootviz](tools/bootviz/README.md): an animated explanation of how OluxOS boots on a
+  Raspberry Pi 4 (C++, Skia, Vulkan)
+
+## How it boots (bootviz)
+
+[`tools/bootviz`](tools/bootviz/README.md) is an animated walk through the OluxOS boot on
+a Raspberry Pi 4 (C++, Skia 2D, Vulkan): from the VideoCore boot ROM and the A/B slot
+choice to `head.S`, `start_kernel`, `kernel_init`, `/sbin/init` and a shell. Each stage
+lights up the parts of the board involved, animates what moves between them, fills in
+physical memory and replays the recorded serial console.
+
+| | |
+|---|---|
+| ![1. Power-on](tools/bootviz/docs/screenshots/01_Power-on.png)<br>1. Power-on: the VideoCore boot ROM | ![2. Bootloader](tools/bootviz/docs/screenshots/02_Bootloader.png)<br>2. The EEPROM bootloader picks a boot slot |
+| ![3. Firmware](tools/bootviz/docs/screenshots/03_Firmware.png)<br>3. start4.elf loads OluxOS | ![4. head.S](tools/bootviz/docs/screenshots/04_head.S.png)<br>4. Kernel entry: head.S |
+| ![5. start_kernel](tools/bootviz/docs/screenshots/05_start_kernel.png)<br>5. start_kernel(): memory, interrupts, console | ![6. kernel_init](tools/bootviz/docs/screenshots/06_kernel_init.png)<br>6. kernel_init(): drivers, SMP, root filesystem |
+| ![7. /sbin/init](tools/bootviz/docs/screenshots/07_sbin_init.png)<br>7. /sbin/init: supervised services | ![8. Shell](tools/bootviz/docs/screenshots/08_Shell.png)<br>8. Up and running |
 
 ## Building
 

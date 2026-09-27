@@ -1,0 +1,33 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//bazel:shaders.bzl", "spirv_library")
+
+package(default_visibility = ["//visibility:public"])
+
+spirv_library(
+    name = "bootviz_shaders",
+    srcs = [
+        "shaders/backdrop.frag",
+        "shaders/fullscreen.vert",
+        "shaders/overlay.frag",
+    ],
+)
+
+cc_library(
+    name = "render",
+    srcs = [
+        "compositor.cc",
+        "vk_context.cc",
+        "vk_loader.cc",
+    ],
+    hdrs = [
+        "compositor.h",
+        "vk_context.h",
+        "vk_loader.h",
+    ],
+    linkopts = ["-ldl"],
+    deps = [
+        ":bootviz_shaders",
+        "@system_glfw//:glfw",
+        "@vulkan_headers//:vulkan_headers_no_prototypes",
+    ],
+)
