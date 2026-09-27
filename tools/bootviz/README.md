@@ -12,9 +12,14 @@ the Skia overlay and the Vulkan plumbing follow
 
 | | |
 |---|---|
-| ![Power-on](docs/screenshots/01_Power-on.png) | ![Bootloader](docs/screenshots/02_Bootloader.png) |
-| ![Firmware](docs/screenshots/03_Firmware.png) | ![head.S](docs/screenshots/04_head.S.png) |
-| ![start_kernel](docs/screenshots/05_start_kernel.png) | ![/sbin/init](docs/screenshots/07_sbin_init.png) |
+| ![Power-on](docs/screenshots/01_Power-on.png)<br>1. Power-on | ![Bootloader](docs/screenshots/02_Bootloader.png)<br>2. Bootloader |
+| ![Firmware](docs/screenshots/03_Firmware.png)<br>3. Firmware | ![head.S](docs/screenshots/04_head.S.png)<br>4. head.S |
+| ![start_kernel](docs/screenshots/05_start_kernel.png)<br>5. start_kernel | ![kernel_init](docs/screenshots/06_kernel_init.png)<br>6. kernel_init |
+| ![/sbin/init](docs/screenshots/07_sbin_init.png)<br>7. /sbin/init | ![Shell](docs/screenshots/08_Shell.png)<br>8. Shell |
+
+The interactive window (captured on a virtual X display; key hints at the top right):
+
+![Window](docs/screenshots/window.png)
 
 ## What it shows
 
